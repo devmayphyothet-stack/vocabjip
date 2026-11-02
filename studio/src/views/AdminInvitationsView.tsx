@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/auth-context';
-import { InvitationRecord } from '../types';
-import { 
-  Send, 
-  Copy, 
-  Check, 
-  Plus, 
-  Trash2, 
-  Clock, 
-  UserCheck, 
-  KeyRound, 
-  Sparkles,
-  ExternalLink,
+import {
+  AlertCircle,
+  Check,
+  Clock,
+  Copy,
+  KeyRound,
+  Plus,
   ShieldCheck,
-  AlertCircle
+  Sparkles,
+  Trash2,
+  UserCheck
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/auth-context';
+import { supabase } from '../lib/supabase';
+import { InvitationRecord } from '../types';
 
 export function AdminInvitationsView() {
   const { user } = useAuth();
@@ -159,23 +157,20 @@ export function AdminInvitationsView() {
         <div className="flex rounded-xl bg-slate-200/60 p-1 w-fit">
           <button
             onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              filter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-            }`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}>
             All ({invitations.length})
           </button>
           <button
             onClick={() => setFilter('active')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              filter === 'active' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-            }`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filter === 'active' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}>
             Active ({invitations.filter(i => !i.is_used).length})
           </button>
           <button
             onClick={() => setFilter('used')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              filter === 'used' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-            }`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filter === 'used' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}>
             Used ({invitations.filter(i => i.is_used).length})
           </button>
         </div>
@@ -235,11 +230,10 @@ export function AdminInvitationsView() {
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold uppercase text-[10px] ${
-                          inv.role === 'admin' 
-                            ? 'bg-purple-100 text-purple-700' 
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold uppercase text-[10px] ${inv.role === 'admin'
+                            ? 'bg-purple-100 text-purple-700'
                             : 'bg-blue-100 text-blue-700'
-                        }`}>
+                          }`}>
                           {inv.role === 'admin' ? <ShieldCheck className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
                           {inv.role}
                         </span>
@@ -372,7 +366,7 @@ export function AdminInvitationsView() {
                     type="email"
                     value={invitedEmail}
                     onChange={(e) => setInvitedEmail(e.target.value)}
-                    placeholder="e.g. teacher.su@gmail.com"
+                    placeholder="e.g. example@gmail.com"
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -385,7 +379,7 @@ export function AdminInvitationsView() {
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Sayama Su Myat - TOPIK Level 6 Teacher in Seoul"
+                    placeholder="e.g. Su Su - TOPIK Level 6"
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
