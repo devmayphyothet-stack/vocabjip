@@ -18,6 +18,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { STATEMENT_SECTIONS } from '@/data/statement-sections';
 import { useSaved } from '@/context/saved-context';
 import { useAi } from '@/context/ai-context';
+import { useAuth } from '@/context/auth-context';
+import { StreakService } from '@/services/streak-service';
 
 export default function StatementEditorModal() {
   const scheme = useColorScheme() ?? 'light';
@@ -26,6 +28,7 @@ export default function StatementEditorModal() {
   const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
   const { saveDraft } = useSaved();
   const { isConnected } = useAi();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{ university?: string; major?: string }>();
 
   const targetUniversity = params.university || 'Korean University';
@@ -72,6 +75,9 @@ export default function StatementEditorModal() {
       content: currentContent,
       charCount: currentContent.length,
     });
+    if (currentContent.trim().length > 10) {
+      StreakService.recordActivity(user?.id);
+    }
     Alert.alert('Draft Saved', 'Your statement draft is safely saved on this device and synced.');
   };
 
