@@ -1,5 +1,5 @@
-import { VOCAB_DATA } from '@/data/vocab-data';
 import { PATTERNS_DATA } from '@/data/patterns-data';
+import { VOCAB_DATA } from '@/data/vocab-data';
 
 export interface WordDefinition {
   korean: string;
@@ -488,7 +488,7 @@ export class KoreanDictionaryService {
       korean: trimmed,
       rootWord: stem || trimmed,
       romaja: 'Korean Expression',
-      myanmarMeaning: 'Coming Soon (မကြာမီ ထပ်မံဖြည့်စွက်ပါမည်)',
+      myanmarMeaning: 'မကြာမီ ထပ်မံဖြည့်စွက်ပါမည်',
       englishMeaning: 'Detailed explanation coming soon',
       topikTip: 'စကားလုံး၏ အသံထွက်ကို အောက်ပါ Listen ခလုတ်ဖြင့် နားဆင်နိုင်ပါသည်။',
       category: 'General',
