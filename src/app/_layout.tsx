@@ -60,6 +60,18 @@ export default function RootLayout() {
                 name="modal/ocr-confirm"
                 options={{ presentation: 'modal', headerShown: false }}
               />
+              <Stack.Screen
+                name="modal/admissions"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/statement-editor"
+                options={{ presentation: 'fullScreenModal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/statement-feedback"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
             </Stack>
           </AiProvider>
         </SavedProvider>

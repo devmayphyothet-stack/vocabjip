@@ -177,6 +177,37 @@ export default function PracticeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* University Personal Statements (자기소개서) Card */}
+        <TouchableOpacity
+          onPress={() => router.push('/modal/admissions')}
+          style={[
+            styles.topicCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={styles.topicHeader}>
+            <View style={[styles.qTag, { backgroundColor: colors.accentLight }]}>
+              <Text style={[styles.qTagText, { color: colors.accent }]}>ADMISSIONS</Text>
+            </View>
+            <Text style={[styles.charTarget, { color: colors.textSecondary }]}>
+              4-STEP WIZARD
+            </Text>
+          </View>
+
+          <Text style={[styles.topicTitle, { color: colors.text }]}>
+            University Personal Statements (자기소개서)
+          </Text>
+          <Text style={[styles.topicDesc, { color: colors.textSecondary }]}>
+            Tell your story for Korean university and scholarship applications. Step-by-step drafting with admissions professor AI coaching.
+          </Text>
+
+          <View style={[styles.openEditorBtn, { backgroundColor: colors.primary, marginTop: 4 }]}>
+            <Ionicons name="school-outline" size={16} color={colors.primaryContrast} />
+            <Text style={[styles.openEditorText, { color: colors.primaryContrast, fontWeight: '700' }]}>
+              Open Statement Builder
+            </Text>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
