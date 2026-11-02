@@ -26,10 +26,12 @@ alter table public.profiles add column if not exists role text check (role in ('
 -- Enable RLS on profiles
 alter table public.profiles enable row level security;
 
+drop policy if exists "Users can view their own profile" on public.profiles;
 create policy "Users can view their own profile"
   on public.profiles for select
   using (auth.uid() = id);
 
+drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile"
   on public.profiles for update
   using (auth.uid() = id);
@@ -45,6 +47,7 @@ create table if not exists public.saved_vocabs (
 
 alter table public.saved_vocabs enable row level security;
 
+drop policy if exists "Users can manage their saved vocabs" on public.saved_vocabs;
 create policy "Users can manage their saved vocabs"
   on public.saved_vocabs for all
   using (auth.uid() = user_id);
@@ -60,6 +63,7 @@ create table if not exists public.saved_patterns (
 
 alter table public.saved_patterns enable row level security;
 
+drop policy if exists "Users can manage their saved patterns" on public.saved_patterns;
 create policy "Users can manage their saved patterns"
   on public.saved_patterns for all
   using (auth.uid() = user_id);
@@ -78,6 +82,7 @@ create table if not exists public.drafts (
 
 alter table public.drafts enable row level security;
 
+drop policy if exists "Users can manage their drafts" on public.drafts;
 create policy "Users can manage their drafts"
   on public.drafts for all
   using (auth.uid() = user_id);
@@ -97,14 +102,17 @@ create table if not exists public.community_essays (
 
 alter table public.community_essays enable row level security;
 
+drop policy if exists "Anyone can read published community essays" on public.community_essays;
 create policy "Anyone can read published community essays"
   on public.community_essays for select
   using (true);
 
+drop policy if exists "Authenticated users can insert essays" on public.community_essays;
 create policy "Authenticated users can insert essays"
   on public.community_essays for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update or delete their own published essays" on public.community_essays;
 create policy "Users can update or delete their own published essays"
   on public.community_essays for update
   using (auth.uid() = user_id);
@@ -146,10 +154,12 @@ create table if not exists public.user_feedback (
 
 alter table public.user_feedback enable row level security;
 
+drop policy if exists "Anyone can insert user feedback" on public.user_feedback;
 create policy "Anyone can insert user feedback"
   on public.user_feedback for insert
   with check (true);
 
+drop policy if exists "Users can view their own feedback" on public.user_feedback;
 create policy "Users can view their own feedback"
   on public.user_feedback for select
   using (auth.uid() = user_id);
@@ -179,26 +189,31 @@ create table if not exists public.vocabularies (
 alter table public.vocabularies enable row level security;
 
 -- Mobile users / students read all approved vocabularies
+drop policy if exists "Anyone can read approved vocabularies" on public.vocabularies;
 create policy "Anyone can read approved vocabularies"
   on public.vocabularies for select
   using (status = 'approved');
 
 -- Contributors can view their own submissions (draft, pending, rejected)
+drop policy if exists "Contributors can view their own vocab submissions" on public.vocabularies;
 create policy "Contributors can view their own vocab submissions"
   on public.vocabularies for select
   using (auth.uid() = created_by);
 
 -- Contributors can submit new vocabularies
+drop policy if exists "Contributors can insert vocabularies" on public.vocabularies;
 create policy "Contributors can insert vocabularies"
   on public.vocabularies for insert
   with check (auth.uid() = created_by);
 
 -- Contributors can update their own drafts
+drop policy if exists "Contributors can update their own drafts" on public.vocabularies;
 create policy "Contributors can update their own drafts"
   on public.vocabularies for update
   using (auth.uid() = created_by and status in ('draft', 'rejected'));
 
 -- Admins can view, update, approve, and delete all vocabularies
+drop policy if exists "Admins have full access on vocabularies" on public.vocabularies;
 create policy "Admins have full access on vocabularies"
   on public.vocabularies for all
   using (
@@ -232,26 +247,31 @@ create table if not exists public.sentence_patterns (
 alter table public.sentence_patterns enable row level security;
 
 -- Mobile users read all approved sentence patterns
+drop policy if exists "Anyone can read approved patterns" on public.sentence_patterns;
 create policy "Anyone can read approved patterns"
   on public.sentence_patterns for select
   using (status = 'approved');
 
 -- Contributors view their own pattern submissions
+drop policy if exists "Contributors can view their own pattern submissions" on public.sentence_patterns;
 create policy "Contributors can view their own pattern submissions"
   on public.sentence_patterns for select
   using (auth.uid() = created_by);
 
 -- Contributors insert new patterns
+drop policy if exists "Contributors can insert patterns" on public.sentence_patterns;
 create policy "Contributors can insert patterns"
   on public.sentence_patterns for insert
   with check (auth.uid() = created_by);
 
 -- Contributors update their drafts
+drop policy if exists "Contributors can update their own pattern drafts" on public.sentence_patterns;
 create policy "Contributors can update their own pattern drafts"
   on public.sentence_patterns for update
   using (auth.uid() = created_by and status in ('draft', 'rejected'));
 
 -- Admins have full access on patterns
+drop policy if exists "Admins have full access on patterns" on public.sentence_patterns;
 create policy "Admins have full access on patterns"
   on public.sentence_patterns for all
   using (
@@ -282,10 +302,12 @@ create table if not exists public.essay_prompts (
 
 alter table public.essay_prompts enable row level security;
 
+drop policy if exists "Anyone can read approved essay prompts" on public.essay_prompts;
 create policy "Anyone can read approved essay prompts"
   on public.essay_prompts for select
   using (status = 'approved');
 
+drop policy if exists "Admins have full access on essay prompts" on public.essay_prompts;
 create policy "Admins have full access on essay prompts"
   on public.essay_prompts for all
   using (
@@ -295,9 +317,3 @@ create policy "Admins have full access on essay prompts"
     )
   );
 
-
-
-
--- ============================================================
--- 10. INITIAL SEED DATA (Approved Starter Curriculum)
--- ============================================================
