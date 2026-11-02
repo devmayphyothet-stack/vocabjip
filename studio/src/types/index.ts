@@ -71,3 +71,4 @@ export interface EssayPromptRecord {
   created_at: string;
   updated_at: string;
 }
+

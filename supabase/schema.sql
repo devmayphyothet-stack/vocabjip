@@ -126,7 +126,7 @@ begin
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'display_name', 'TOPIK Learner'),
-    case when lower(new.email) = 'dev.mayphyothet@gmail.com' then 'admin' else 'user' end
+    case when lower(new.email) in ('admin@vocabjip.com', 'dev.mayphyothet@gmail.com') then 'admin' else 'user' end
   );
   return new;
 end;

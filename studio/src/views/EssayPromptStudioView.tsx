@@ -207,3 +207,4 @@ export function EssayPromptStudioView({ onSubmitted }: { onSubmitted?: () => voi
     </div>
   );
 }
+

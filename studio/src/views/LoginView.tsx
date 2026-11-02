@@ -108,7 +108,7 @@ export function LoginView() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. dev.mayphyothet@gmail.com"
+              placeholder="e.g. admin@vocabjip.com"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
@@ -139,9 +139,10 @@ export function LoginView() {
         {/* Demo credentials hint */}
         <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 text-center space-y-1">
           <p className="font-semibold text-slate-600">Admin Account</p>
-          <p>Login with <code className="text-blue-700 font-mono">dev.mayphyothet@gmail.com</code> for full Admin access</p>
+          <p>Login with <code className="text-blue-700 font-mono">admin@vocabjip.com</code> for full Admin access</p>
         </div>
       </div>
     </div>
   );
 }
+

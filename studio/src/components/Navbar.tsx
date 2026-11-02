@@ -79,3 +79,4 @@ export function Navbar({ activeView, setActiveView, pendingReviewCount = 0 }: Na
     </header>
   );
 }
+

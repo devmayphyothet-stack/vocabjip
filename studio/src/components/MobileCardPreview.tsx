@@ -147,3 +147,4 @@ export function MobileCardPreview({ type, data }: MobileCardPreviewProps) {
     </div>
   );
 }
+

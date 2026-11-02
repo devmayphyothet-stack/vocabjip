@@ -299,3 +299,4 @@ export function VocabStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
     </div>
   );
 }
+

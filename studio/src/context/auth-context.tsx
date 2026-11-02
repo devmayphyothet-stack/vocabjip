@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Fallback if profile row is not yet created
-    const fallbackRole = email.toLowerCase() === 'dev.mayphyothet@gmail.com' ? 'admin' : 'contributor';
+    const fallbackRole = (email.toLowerCase() === 'admin@vocabjip.com' || email.toLowerCase() === 'dev.mayphyothet@gmail.com') ? 'admin' : 'contributor';
     setUser({
       id: userId,
       email,
@@ -140,3 +140,4 @@ export function useAuth() {
   }
   return context;
 }
+

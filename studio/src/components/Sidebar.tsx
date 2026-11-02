@@ -157,3 +157,4 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
     </aside>
   );
 }
+
