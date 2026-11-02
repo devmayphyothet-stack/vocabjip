@@ -1,11 +1,11 @@
-import { useServerDocumentContext } from 'expo-router/html';
-import type { ReactNode } from 'react';
+import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html';
+import type { PropsWithChildren } from 'react';
 
-export default function Root({ children }: { children: ReactNode }) {
-  const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } = useServerDocumentContext();
+export default function Root({ children }: PropsWithChildren) {
+  const { headNodes, bodyNodes, htmlAttributes, bodyAttributes } = useServerDocumentContext();
 
   return (
-    <html {...htmlAttributes} lang="en">
+    <html lang="en" {...htmlAttributes}>
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -29,9 +29,12 @@ export default function Root({ children }: { children: ReactNode }) {
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" href="/favicon.png" />
 
+        {/* Essential for React Native ScrollView and screen layout on web */}
+        <ScrollViewStyleReset />
+
         {headNodes}
       </head>
-      <body {...bodyAttributes}>
+      <body {...bodyAttributes} style={{ backgroundColor: '#FFFFFF', margin: 0, padding: 0 }}>
         {children}
         {bodyNodes}
       </body>
