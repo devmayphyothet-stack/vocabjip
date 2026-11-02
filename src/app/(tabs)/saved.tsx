@@ -16,6 +16,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved, SavedDraft } from '@/context/saved-context';
 import { VOCAB_DATA } from '@/data/vocab-data';
 import { PATTERNS_DATA } from '@/data/patterns-data';
+import { EmptyCollectionState } from '@/components/EmptyCollectionState';
 
 type SavedTab = 'vocab' | 'patterns' | 'drafts';
 
@@ -150,15 +151,10 @@ export default function SavedScreen() {
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Ionicons name="bookmark-outline" size={44} color={colors.textMuted} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                Make this space yours
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                No saved vocabulary yet. Save words from the Learn tab to review them here.
-              </Text>
-            </View>
+            <EmptyCollectionState
+              onExploreVocab={() => router.push('/(tabs)/learn')}
+              onExplorePatterns={() => router.push('/(tabs)/learn')}
+            />
           }
         />
       )}
@@ -203,15 +199,10 @@ export default function SavedScreen() {
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Ionicons name="book-outline" size={44} color={colors.textMuted} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                No saved patterns
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                Bookmark key TOPIK 51-54 patterns to build your writing reflex.
-              </Text>
-            </View>
+            <EmptyCollectionState
+              onExploreVocab={() => router.push('/(tabs)/learn')}
+              onExplorePatterns={() => router.push('/(tabs)/learn')}
+            />
           }
         />
       )}

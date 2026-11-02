@@ -350,52 +350,79 @@ export default function AiFeedbackModal() {
         </ScrollView>
       )}
 
-      {/* STAGE 4: ERROR STATE */}
+      {/* STAGE 4: ERROR STATE (figma/quota and figma/reviewFailure) */}
       {stage === 'error' && (
-        <View style={styles.centeredContent}>
-          <View style={[styles.heroIconBox, { backgroundColor: colors.errorLight }]}>
-            <Ionicons name="alert-circle" size={44} color={colors.error} />
-          </View>
-
-          <Text style={[styles.title, { color: colors.text }]}>
-            {errorInfo.type === 'QUOTA'
-              ? 'Your AI needs a break'
-              : errorInfo.type === 'INVALID_KEY'
-              ? 'Check your AI key'
-              : 'Review interrupted'}
-          </Text>
-
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {errorInfo.message}
-          </Text>
-
-          <View style={[styles.processingTipCard, { backgroundColor: colors.cardMuted }]}>
-            <Text style={[styles.processingTipTitle, { color: colors.text }]}>
-              Your writing is safe
+        <ScrollView contentContainerStyle={styles.quotaScrollContent} showsVerticalScrollIndicator={false}>
+          {/* Header Title */}
+          <View style={styles.quotaHeader}>
+            <Text style={[styles.quotaTitle, { color: colors.text }]}>
+              {errorInfo.type === 'QUOTA' ? 'Your AI needs a break' : 'Review interrupted'}
             </Text>
-            <Text style={[styles.processingTipText, { color: colors.textSecondary }]}>
-              No changes were made to your draft. You can continue editing or reconnect your Gemini key.
+            <Text style={[styles.quotaSubtitle, { color: colors.textSecondary }]}>
+              {errorInfo.type === 'QUOTA'
+                ? 'Google project limit reached'
+                : 'Unable to complete review'}
             </Text>
           </View>
 
-          {errorInfo.type === 'INVALID_KEY' ? (
-            <TouchableOpacity
-              onPress={() => router.replace('/modal/ai-connect')}
-              style={[styles.primaryBtn, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
-                Reconnect Gemini Key
-              </Text>
-            </TouchableOpacity>
-          ) : (
+          {/* Draft is Safe Card */}
+          <View
+            style={[
+              styles.safeCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}>
+            <View style={styles.safeTitleRow}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.accent} />
+              <Text style={[styles.safeTitle, { color: colors.text }]}>Your draft is safe</Text>
+            </View>
+            <Text style={[styles.safeDesc, { color: colors.textSecondary }]}>
+              No feedback was generated. You can continue editing without losing any progress.
+            </Text>
+          </View>
+
+          {/* Why this happened Card */}
+          <View
+            style={[
+              styles.whyCard,
+              { backgroundColor: colors.streakLight, borderColor: colors.borderLight },
+            ]}>
+            <Text style={[styles.whyTitle, { color: colors.streak }]}>
+              Why this happened
+            </Text>
+            <Text style={[styles.whyDesc, { color: colors.textSecondary }]}>
+              {errorInfo.type === 'QUOTA'
+                ? 'Your Google project has reached a request or usage limit. Limits vary by model and plan.'
+                : errorInfo.message || 'The network connection was interrupted or the key is invalid.'}
+            </Text>
+          </View>
+
+          {/* Notice text */}
+          <Text style={[styles.quotaNoticeText, { color: colors.textMuted }]}>
+            Check quota in Google AI Studio, then retry when available. VocabJip cannot reset Google limits.
+          </Text>
+
+          {/* Buttons */}
+          <View style={styles.quotaBtnStack}>
             <TouchableOpacity
               onPress={handleStartReview}
               style={[styles.primaryBtn, { backgroundColor: colors.primary }]}>
               <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
-                Try Again
+                Try again
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
+
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={[
+                styles.secondaryBtn,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}>
+              <Text style={[styles.secondaryBtnText, { color: colors.text }]}>
+                Keep writing
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -504,6 +531,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+  },
+  secondaryBtnText: {
     fontSize: 15,
     fontWeight: '700',
   },
@@ -652,6 +693,66 @@ const styles = StyleSheet.create({
   vocabReason: {
     fontSize: 12,
     lineHeight: 17,
+  },
+  quotaScrollContent: {
+    padding: Spacing.four,
+    gap: Spacing.four,
+  },
+  quotaHeader: {
+    marginBottom: Spacing.one,
+  },
+  quotaTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  quotaSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+  safeCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
+  },
+  safeTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  safeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  safeDesc: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  whyCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 6,
+  },
+  whyTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  whyDesc: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  quotaNoticeText: {
+    fontSize: 12,
+    lineHeight: 18,
+    paddingHorizontal: 4,
+  },
+  quotaBtnStack: {
+    gap: 12,
+    marginTop: Spacing.two,
   },
 });
 

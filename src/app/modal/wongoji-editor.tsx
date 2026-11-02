@@ -17,6 +17,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
 import { useAi } from '@/context/ai-context';
+import { PracticePausedModal, PracticeTimeUpModal } from '@/components/timer-modals';
 
 type ViewMode = 'text' | 'grid';
 
@@ -53,16 +54,34 @@ export default function WongojiEditorModal() {
   const [secondsLeft, setSecondsLeft] = useState(1200);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [isSavedFeedback, setIsSavedFeedback] = useState(false);
+  const [showPausedModal, setShowPausedModal] = useState(false);
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
 
   useEffect(() => {
     let interval: any = null;
     if (isTimerRunning && secondsLeft > 0) {
       interval = setInterval(() => {
-        setSecondsLeft((prev) => prev - 1);
+        setSecondsLeft((prev) => {
+          if (prev <= 1) {
+            setIsTimerRunning(false);
+            setShowTimeUpModal(true);
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, secondsLeft]);
+
+  const handleToggleTimer = () => {
+    if (isTimerRunning) {
+      setIsTimerRunning(false);
+      setShowPausedModal(true);
+    } else {
+      setIsTimerRunning(true);
+    }
+  };
 
   // Format timer MM:SS
   const formatTime = (secs: number) => {
@@ -182,7 +201,7 @@ export default function WongojiEditorModal() {
 
         {/* Timer Pill */}
         <TouchableOpacity
-          onPress={() => setIsTimerRunning(!isTimerRunning)}
+          onPress={handleToggleTimer}
           style={[styles.timerPill, { backgroundColor: colors.cardMuted }]}>
           <Ionicons
             name={isTimerRunning ? 'pause' : 'play'}
@@ -331,6 +350,41 @@ export default function WongojiEditorModal() {
           </View>
         )}
       </View>
+
+      {/* Practice Paused Modal (figma/timerPaused) */}
+      <PracticePausedModal
+        visible={showPausedModal}
+        secondsLeft={secondsLeft}
+        onResume={() => {
+          setShowPausedModal(false);
+          setIsTimerRunning(true);
+        }}
+        onFinish={async () => {
+          setShowPausedModal(false);
+          await handleManualSave();
+          router.back();
+        }}
+      />
+
+      {/* Practice Time Up Modal (figma/timeUp) */}
+      <PracticeTimeUpModal
+        visible={showTimeUpModal}
+        questionType={type}
+        promptTitle={promptTitle}
+        charCount={content.length}
+        onReviewAi={() => {
+          setShowTimeUpModal(false);
+          handleAiReview();
+        }}
+        onKeepEditing={() => {
+          setShowTimeUpModal(false);
+        }}
+        onSaveFinish={async () => {
+          setShowTimeUpModal(false);
+          await handleManualSave();
+          router.back();
+        }}
+      />
     </View>
   );
 }
