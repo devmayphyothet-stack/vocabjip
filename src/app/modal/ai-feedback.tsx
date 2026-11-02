@@ -6,8 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,6 +22,8 @@ type ScreenStage = 'consent' | 'processing' | 'result' | 'error';
 export default function AiFeedbackModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
   const { isConnected, evaluateEssay, latestEvaluation } = useAi();
   const params = useLocalSearchParams<{
     essayText?: string;
@@ -72,9 +75,9 @@ export default function AiFeedbackModal() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: topInset }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={[styles.closeBtn, { borderColor: colors.border }]}>
@@ -394,7 +397,7 @@ export default function AiFeedbackModal() {
           )}
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

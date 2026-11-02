@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/context/auth-context';
 import { SavedProvider } from '@/context/saved-context';
@@ -17,11 +18,12 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <SavedProvider>
-          <AiProvider>
-            <Stack screenOptions={{ headerShown: false }}>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <SavedProvider>
+            <AiProvider>
+              <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/sign-up" options={{ headerShown: false }} />
@@ -97,5 +99,6 @@ export default function RootLayout() {
         </SavedProvider>
       </AuthProvider>
     </ThemeProvider>
-  );
+  </SafeAreaProvider>
+);
 }

@@ -7,8 +7,9 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,6 +22,8 @@ import { useAi } from '@/context/ai-context';
 export default function StatementEditorModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
   const { saveDraft } = useSaved();
   const { isConnected } = useAi();
   const params = useLocalSearchParams<{ university?: string; major?: string }>();
@@ -110,9 +113,9 @@ export default function StatementEditorModal() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: topInset }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={[styles.closeBtn, { borderColor: colors.border }]}>
@@ -272,7 +275,7 @@ export default function StatementEditorModal() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -23,6 +23,9 @@ type ViewMode = 'text' | 'grid';
 export default function WongojiEditorModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
+
   const { saveDraft } = useSaved();
   const { isConnected } = useAi();
   const params = useLocalSearchParams<{
@@ -167,11 +170,14 @@ export default function WongojiEditorModal() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Header */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-          <Ionicons name="close" size={22} color={colors.text} />
+      <View style={[styles.topBar, { paddingTop: topInset }]}>
+        <TouchableOpacity
+          onPress={handleClose}
+          style={[styles.closeBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+          accessibilityLabel="Close Editor">
+          <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
 
         {/* Timer Pill */}
@@ -180,7 +186,7 @@ export default function WongojiEditorModal() {
           style={[styles.timerPill, { backgroundColor: colors.cardMuted }]}>
           <Ionicons
             name={isTimerRunning ? 'pause' : 'play'}
-            size={14}
+            size={13}
             color={colors.accent}
           />
           <Text style={[styles.timerText, { color: colors.text }]}>
@@ -192,36 +198,30 @@ export default function WongojiEditorModal() {
         <View style={styles.topActionGroup}>
           <TouchableOpacity
             onPress={() => router.push('/modal/scan-handwriting')}
-            style={[styles.scanIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+            style={[styles.actionIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
             accessibilityLabel="Scan Handwriting">
-            <Ionicons name="camera-outline" size={16} color={colors.text} />
+            <Ionicons name="camera-outline" size={17} color={colors.text} />
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleManualSave}
             style={[
-              styles.saveBtn,
+              styles.actionIconBtn,
               { backgroundColor: isSavedFeedback ? colors.successLight : colors.card },
               { borderColor: isSavedFeedback ? colors.success : colors.border },
-            ]}>
+            ]}
+            accessibilityLabel="Save Draft">
             <Ionicons
               name={isSavedFeedback ? 'checkmark' : 'save-outline'}
-              size={15}
+              size={17}
               color={isSavedFeedback ? colors.success : colors.text}
             />
-            <Text
-              style={[
-                styles.saveBtnText,
-                { color: isSavedFeedback ? colors.success : colors.text },
-              ]}>
-              {isSavedFeedback ? 'Saved' : 'Save'}
-            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleAiReview}
             style={[styles.aiReviewBtn, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}>
-            <Ionicons name="sparkles" size={15} color={colors.accent} />
+            <Ionicons name="sparkles" size={14} color={colors.accent} />
             <Text style={[styles.aiReviewBtnText, { color: colors.accent }]}>
               AI Review
             </Text>
@@ -331,7 +331,7 @@ export default function WongojiEditorModal() {
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -344,61 +344,49 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
+    paddingBottom: Spacing.two,
   },
   closeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timerPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    gap: 5,
   },
   timerText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
   },
   topActionGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  scanIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  actionIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 9,
-    borderWidth: 1,
-  },
-  saveBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   aiReviewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    height: 36,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 9,
+    borderRadius: 10,
     borderWidth: 1,
   },
   aiReviewBtnText: {
