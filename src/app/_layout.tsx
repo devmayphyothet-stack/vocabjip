@@ -94,6 +94,10 @@ export default function RootLayout() {
                 name="modal/account-privacy"
                 options={{ presentation: 'modal', headerShown: false }}
               />
+              <Stack.Screen
+                name="modal/about"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
             </Stack>
           </AiProvider>
         </SavedProvider>

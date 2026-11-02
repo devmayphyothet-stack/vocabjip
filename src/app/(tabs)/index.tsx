@@ -37,7 +37,12 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}>
         {/* Top Header */}
         <View style={styles.headerRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => router.push('/modal/about')}
+            activeOpacity={0.7}
+            accessibilityLabel="About VocabJip"
+            accessibilityRole="button"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <BrandLogo size={40} />
             <View>
               <Text style={[styles.dateText, { color: colors.textSecondary }]}>
@@ -45,7 +50,7 @@ export default function HomeScreen() {
               </Text>
               <Text style={[styles.brandTitle, { color: colors.text }]}>VocabJip</Text>
             </View>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/profile')}
             style={[styles.profileAvatar, { backgroundColor: colors.card, borderColor: colors.border }]}>

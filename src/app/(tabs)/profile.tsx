@@ -185,6 +185,24 @@ export default function ProfileScreen() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          {/* About VocabJip */}
+          <TouchableOpacity
+            onPress={() => router.push('/modal/about')}
+            style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>About VocabJip</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
+                Purpose, features & developer credits
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* Sign Out (if logged in) */}
@@ -201,12 +219,15 @@ export default function ProfileScreen() {
         )}
 
         {/* Version & Brand info */}
-        <View style={styles.brandingFooter}>
+        <TouchableOpacity
+          onPress={() => router.push('/modal/about')}
+          activeOpacity={0.7}
+          style={styles.brandingFooter}>
           <BrandLogo size={46} containerStyle={{ marginBottom: 6 }} />
           <Text style={[styles.versionText, { color: colors.textMuted }]}>
-            VocabJip v1.0.0 • Offline-First TOPIK Companion
+            VocabJip v1.0.0 • About & Colophon →
           </Text>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
