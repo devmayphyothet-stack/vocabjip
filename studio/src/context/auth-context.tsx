@@ -9,7 +9,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isContributor: boolean;
   signIn: (email: string, pass: string) => Promise<{ error?: string }>;
-  signUp: (email: string, pass: string, displayName: string) => Promise<{ error?: string }>;
+  signUp: (email: string, pass: string, displayName: string, inviteCode?: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -85,7 +85,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {};
   };
 
-  const signUp = async (email: string, pass: string, displayName: string) => {
+  const signUp = async (email: string, pass: string, displayName: string, inviteCode?: string) => {
+    let targetRole: UserRole = 'contributor';
+    let validInviteId: string | null = null;
+
+    if (inviteCode && inviteCode.trim()) {
+      try {
+        const { data: inv, error: invErr } = await supabase
+          .from('invitations')
+          .select('*')
+          .eq('code', inviteCode.trim().toUpperCase())
+          .eq('is_used', false)
+          .maybeSingle();
+
+        if (invErr || !inv) {
+          return { error: 'Invalid or already used invitation code. (ဖိတ်ခေါ်ကုဒ် မမှန်ကန်ပါ သို့မဟုတ် သုံးပြီးသားဖြစ်နေပါသည်)' };
+        }
+
+        if (inv.expires_at && new Date(inv.expires_at) < new Date()) {
+          return { error: 'This invitation code has expired. (ဖိတ်ခေါ်ကုဒ် သက်တမ်းကုန်ဆုံးသွားပါပြီ)' };
+        }
+
+        targetRole = (inv.role as UserRole) || 'contributor';
+        validInviteId = inv.id;
+      } catch (err) {
+        console.warn('Error validating invite code:', err);
+      }
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password: pass,
@@ -94,7 +121,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
     if (error) return { error: error.message };
+    
     if (data.user) {
+      // If signed up with valid invite or for studio, update role to targetRole
+      try {
+        await supabase
+          .from('profiles')
+          .update({ role: targetRole, display_name: displayName.trim() })
+          .eq('id', data.user.id);
+
+        if (validInviteId) {
+          await supabase
+            .from('invitations')
+            .update({
+              is_used: true,
+              used_by: data.user.id,
+              used_at: new Date().toISOString(),
+            })
+            .eq('id', validInviteId);
+        }
+      } catch (profileErr) {
+        console.warn('Error updating profile on signup:', profileErr);
+      }
+
       await fetchProfile(data.user.id, data.user.email || email);
     }
     return {};

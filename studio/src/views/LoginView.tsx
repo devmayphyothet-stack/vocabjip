@@ -9,8 +9,20 @@ export function LoginView() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const codeFromUrl = params.get('invite');
+      if (codeFromUrl) {
+        setInviteCode(codeFromUrl.toUpperCase());
+        setMode('signup');
+      }
+    } catch (_) {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +39,12 @@ export function LoginView() {
         const res = await signIn(email, password);
         if (res.error) setError(res.error);
       } else {
-        const res = await signUp(email, password, displayName || email.split('@')[0]);
+        const res = await signUp(
+          email,
+          password,
+          displayName || email.split('@')[0],
+          inviteCode.trim() || undefined
+        );
         if (res.error) setError(res.error);
       }
     } finally {
@@ -85,18 +102,34 @@ export function LoginView() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Display Name (နာမည် / ဆရာ/ဆရာမ အမည်)
-              </label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. Teacher May / TOPIK Level 6"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Display Name (နာမည် / ဆရာ/ဆရာမ အမည်)
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Teacher May / TOPIK Level 6"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center justify-between">
+                  <span>Invitation Code (ဖိတ်ခေါ်ကုဒ် - ရှိပါက ထည့်ရန်)</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+                </label>
+                <input
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. INV-XXXXXX"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono tracking-wider uppercase"
+                />
+              </div>
+            </>
           )}
 
           <div>

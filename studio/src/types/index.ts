@@ -72,3 +72,44 @@ export interface EssayPromptRecord {
   updated_at: string;
 }
 
+export interface InvitationRecord {
+  id: string;
+  code: string;
+  invited_email?: string | null;
+  role: 'contributor' | 'admin';
+  notes?: string | null;
+  created_by?: string | null;
+  expires_at?: string | null;
+  is_used: boolean;
+  used_by?: string | null;
+  used_at?: string | null;
+  created_at: string;
+}
+
+export type FeedbackStatus = 'new' | 'in_progress' | 'resolved' | 'closed';
+
+export interface FeedbackRecord {
+  id: string;
+  user_id?: string | null;
+  category: string;
+  rating: number;
+  title: string;
+  message: string;
+  email?: string | null;
+  status: FeedbackStatus;
+  admin_notes?: string | null;
+  created_at: string;
+}
+
+export interface ContributorLeaderboardItem {
+  id: string;
+  display_name: string;
+  email: string;
+  role: UserRole;
+  approved_vocabs: number;
+  approved_patterns: number;
+  pending_items: number;
+  total_score: number;
+}
+
+

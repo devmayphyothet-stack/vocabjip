@@ -76,7 +76,7 @@ export default function PracticeScreen() {
               Scan Paper Wongoji
             </Text>
             <Text style={[styles.scanCardDesc, { color: colors.textSecondary }]}>
-              Photograph your handwritten Korean manuscript and edit directly in the app.
+              မိမိကိုရီးယားလက်ရေးစာမူကို ဓာတ်ပုံရိုက်ပြီး App ထဲမှာ တိုက်ရိုက် edit လုပ်ပါ။
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -197,7 +197,7 @@ export default function PracticeScreen() {
             University Personal Statements (자기소개서)
           </Text>
           <Text style={[styles.topicDesc, { color: colors.textSecondary }]}>
-            Tell your story for Korean university and scholarship applications. Step-by-step drafting with admissions professor AI coaching.
+            ကိုရီးယား တက္ကသိုလ်နဲ့ ပညာသင်ဆု လျှောက်လွှာတွေအတွက် ကိုယ့်ရဲ့ story ကိုတင်ပြပါ။ AI ရဲ့ လမ်းညွှန်မှုနဲ့အတူ အဆင့်ဆင့် ရေးသားပါ။
           </Text>
 
           <View style={[styles.openEditorBtn, { backgroundColor: colors.primary, marginTop: 4 }]}>

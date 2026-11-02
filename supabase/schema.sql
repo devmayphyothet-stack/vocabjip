@@ -149,8 +149,14 @@ create table if not exists public.user_feedback (
   title text not null,
   message text not null,
   email text,
+  status text default 'new' check (status in ('new', 'in_progress', 'resolved', 'closed')),
+  admin_notes text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Ensure columns exist if table was already created
+alter table public.user_feedback add column if not exists status text default 'new';
+alter table public.user_feedback add column if not exists admin_notes text;
 
 alter table public.user_feedback enable row level security;
 
@@ -163,6 +169,26 @@ drop policy if exists "Users can view their own feedback" on public.user_feedbac
 create policy "Users can view their own feedback"
   on public.user_feedback for select
   using (auth.uid() = user_id);
+
+drop policy if exists "Admins can view all feedback" on public.user_feedback;
+create policy "Admins can view all feedback"
+  on public.user_feedback for select
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+drop policy if exists "Admins can update feedback status" on public.user_feedback;
+create policy "Admins can update feedback status"
+  on public.user_feedback for update
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
 
 -- ============================================================
 -- 7. DYNAMIC CURRICULUM: VOCABULARIES TABLE
@@ -316,4 +342,47 @@ create policy "Admins have full access on essay prompts"
       where id = auth.uid() and role = 'admin'
     )
   );
+
+-- ============================================================
+-- 10. CONTRIBUTOR INVITATIONS TABLE (PHASE 3)
+-- ============================================================
+create table if not exists public.invitations (
+  id uuid default uuid_generate_v4() primary key,
+  code text unique not null,
+  invited_email text,
+  role text default 'contributor' check (role in ('contributor', 'admin')),
+  notes text,
+  created_by uuid references public.profiles(id) on delete set null,
+  expires_at timestamp with time zone,
+  is_used boolean default false,
+  used_by uuid references public.profiles(id) on delete set null,
+  used_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.invitations enable row level security;
+
+-- Admins full access to invitations
+drop policy if exists "Admins manage invitations" on public.invitations;
+create policy "Admins manage invitations"
+  on public.invitations for all
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- Anyone can check unused invitations by code for registration
+drop policy if exists "Anyone can check unused invitations" on public.invitations;
+create policy "Anyone can check unused invitations"
+  on public.invitations for select
+  using (not is_used);
+
+-- Anyone can mark an invitation as used during signup
+drop policy if exists "Anyone can redeem invitation" on public.invitations;
+create policy "Anyone can redeem invitation"
+  on public.invitations for update
+  using (not is_used);
+
 

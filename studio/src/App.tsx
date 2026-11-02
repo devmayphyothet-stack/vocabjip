@@ -10,6 +10,9 @@ import { BulkImportView } from './views/BulkImportView';
 import { MySubmissionsView } from './views/MySubmissionsView';
 import { AdminReviewView } from './views/AdminReviewView';
 import { AdminUsersView } from './views/AdminUsersView';
+import { AdminInvitationsView } from './views/AdminInvitationsView';
+import { AdminFeedbackView } from './views/AdminFeedbackView';
+import { AdminAnalyticsView } from './views/AdminAnalyticsView';
 import { LoginView } from './views/LoginView';
 import { Loader2 } from 'lucide-react';
 
@@ -76,6 +79,9 @@ export function AppContent() {
           {activeView === 'bulk' && <BulkImportView onSubmitted={fetchPendingCount} />}
           {activeView === 'submissions' && <MySubmissionsView />}
           {activeView === 'review' && <AdminReviewView onReviewDone={fetchPendingCount} />}
+          {activeView === 'invitations' && <AdminInvitationsView />}
+          {activeView === 'feedback' && <AdminFeedbackView />}
+          {activeView === 'analytics' && <AdminAnalyticsView />}
           {activeView === 'users' && <AdminUsersView />}
         </main>
       </div>

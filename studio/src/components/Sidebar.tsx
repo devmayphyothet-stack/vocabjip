@@ -9,6 +9,9 @@ import {
   Users,
   Layers,
   Sparkles,
+  KeyRound,
+  MessageSquare,
+  BarChart3,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -48,7 +51,7 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
     {
       id: 'submissions',
       label: 'My Submissions',
-      subtitle: 'Track review & approval status',
+      subtitle: 'Track review & revision status',
       icon: Layers,
     },
   ];
@@ -62,9 +65,27 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
       badge: pendingReviewCount,
     },
     {
+      id: 'invitations',
+      label: 'Contributor Invites',
+      subtitle: 'Magic links for teachers',
+      icon: KeyRound,
+    },
+    {
+      id: 'feedback',
+      label: 'Mobile Feedback',
+      subtitle: 'Student bug reports & ideas',
+      icon: MessageSquare,
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics & Leaderboard',
+      subtitle: 'Top mentors & coverage',
+      icon: BarChart3,
+    },
+    {
       id: 'users',
-      label: 'User Roles & Invites',
-      subtitle: 'Manage Contributors & Admins',
+      label: 'User Roles',
+      subtitle: 'Promote contributors & admins',
       icon: Users,
     },
   ];
