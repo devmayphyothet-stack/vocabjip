@@ -89,8 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isDirectAdmin = email.trim().toLowerCase() === 'admin@vocabjip.com' || email.trim().toLowerCase() === 'dev.mayphyothet@gmail.com';
 
     if (!isDirectAdmin && (!inviteCode || !inviteCode.trim())) {
-      return { 
-        error: 'Registration is invite-only. A valid invitation code from an Admin is required. (ဖိတ်ခေါ်ကုဒ် ရှိသူများသာ စာရင်းသွင်းနိုင်ပါသည်)' 
+      return {
+        error: 'Registration is invite-only. A valid invitation code from an Admin is required.'
       };
     }
 
@@ -107,11 +107,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (invErr || !inv) {
-          return { error: 'Invalid or already used invitation code. (ဖိတ်ခေါ်ကုဒ် မမှန်ကန်ပါ သို့မဟုတ် သုံးပြီးသားဖြစ်နေပါသည်)' };
+          return { error: 'Invalid or already used invitation code.' };
         }
 
         if (inv.expires_at && new Date(inv.expires_at) < new Date()) {
-          return { error: 'This invitation code has expired. (ဖိတ်ခေါ်ကုဒ် သက်တမ်းကုန်ဆုံးသွားပါပြီ)' };
+          return { error: 'This invitation code has expired.' };
         }
 
         targetRole = (inv.role as UserRole) || 'contributor';
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
     if (error) return { error: error.message };
-    
+
     if (data.user) {
       // If signed up with valid invite or for studio, update role to targetRole
       try {

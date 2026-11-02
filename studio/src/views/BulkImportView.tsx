@@ -1,18 +1,16 @@
-import React, { useState, useRef } from 'react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  Sparkles,
+  Upload
+} from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../context/auth-context';
 import { supabase } from '../lib/supabase';
-import { 
-  UploadCloud, 
-  CheckCircle2, 
-  AlertTriangle, 
-  FileSpreadsheet, 
-  ArrowRight, 
-  Loader2, 
-  Download, 
-  Upload,
-  Sparkles,
-  ExternalLink
-} from 'lucide-react';
 
 interface ParsedVocabRow {
   spoken: string;
@@ -255,7 +253,7 @@ export function BulkImportView({ onSubmitted }: { onSubmitted?: () => void }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Excel / Google Sheets Column Format (တိုင် အစီအစဉ်)</span>
+            <span>Excel / Google Sheets Column Format</span>
           </div>
 
           <button

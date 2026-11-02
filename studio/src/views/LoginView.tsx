@@ -1,6 +1,6 @@
+import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, LogIn, UserPlus } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../context/auth-context';
-import { LogIn, UserPlus, AlertCircle, Sparkles, KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export function LoginView() {
   const { signIn, signUp } = useAuth();
@@ -22,7 +22,7 @@ export function LoginView() {
         setInviteCode(codeFromUrl.toUpperCase());
         setMode('invite');
       }
-    } catch (_) {}
+    } catch (_) { }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,7 +78,7 @@ export function LoginView() {
           <img src="/logo.png" alt="VocabJip" className="w-16 h-16 rounded-2xl mx-auto shadow-sm object-contain" />
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">VocabJip Studio</h1>
           <p className="text-xs text-slate-500 font-medium">
-            {mode === 'signin' 
+            {mode === 'signin'
               ? 'Contributor & Admin Portal for TOPIK II Writing Platform'
               : 'Exclusive Onboarding for TOPIK Educators & Mentors'}
           </p>
@@ -126,7 +126,7 @@ export function LoginView() {
             <>
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Invitation Code (ဖိတ်ခေါ်ကုဒ်) *
+                  Invitation Code *
                 </label>
                 <input
                   type="text"
@@ -140,7 +140,7 @@ export function LoginView() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Display Name (ဆရာ/ဆရာမ အမည်)
+                  Display Name
                 </label>
                 <input
                   type="text"
@@ -156,7 +156,7 @@ export function LoginView() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Email Address (အီးမေးလ်)
+              Email Address
             </label>
             <input
               type="email"
@@ -170,7 +170,7 @@ export function LoginView() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Password (စကားဝှက်)
+              Password
             </label>
             <input
               type="password"
@@ -188,11 +188,11 @@ export function LoginView() {
             className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
             {mode === 'signin' ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
             <span>
-              {submitting 
-                ? 'Authenticating...' 
-                : mode === 'signin' 
-                ? 'Sign In to Studio' 
-                : 'Redeem Code & Create Account'}
+              {submitting
+                ? 'Authenticating...'
+                : mode === 'signin'
+                  ? 'Sign In to Studio'
+                  : 'Redeem Code & Create Account'}
             </span>
           </button>
         </form>
@@ -212,12 +212,6 @@ export function LoginView() {
             </button>
           </div>
         )}
-
-        {/* Admin hint */}
-        <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 text-center space-y-1">
-          <p className="font-semibold text-slate-600">Admin Account</p>
-          <p>Login with <code className="text-blue-700 font-mono">admin@vocabjip.com</code> for full Admin access</p>
-        </div>
       </div>
     </div>
   );
