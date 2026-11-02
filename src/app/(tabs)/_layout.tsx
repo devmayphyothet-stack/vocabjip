@@ -4,10 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'web' ? 24 : 12);
 
   return (
     <Tabs
@@ -18,6 +21,9 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.borderLight,
+          height: 56 + bottomPadding,
+          paddingBottom: bottomPadding + 4,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,

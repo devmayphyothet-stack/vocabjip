@@ -206,10 +206,12 @@ export default function HomeScreen() {
             <Ionicons name="people" size={20} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <Text style={[styles.communityBadge, { backgroundColor: colors.streakLight, color: colors.streak }]}>
-                COMMUNITY
-              </Text>
+            <View style={styles.communityHeaderRow}>
+              <View style={[styles.communityBadgeBox, { backgroundColor: colors.streakLight }]}>
+                <Text style={[styles.communityBadge, { color: colors.streak }]}>
+                  COMMUNITY
+                </Text>
+              </View>
               <Text style={[styles.communityTitle, { color: colors.text }]}>
                 Peer Essay Showcase
               </Text>
@@ -478,18 +480,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  communityBadge: {
-    fontSize: 10,
-    fontWeight: '800',
+  communityHeaderRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  communityBadgeBox: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+  communityBadge: {
+    fontSize: 10,
+    fontWeight: '800',
     letterSpacing: 0.5,
   },
   communityTitle: {
     fontSize: 15,
     fontWeight: '700',
+    flexShrink: 1,
   },
   communityDesc: {
     fontSize: 12,

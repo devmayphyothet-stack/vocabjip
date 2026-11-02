@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SpeechService } from '@/services/speech-service';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface InteractiveKoreanTextProps {
   content: string;
@@ -49,7 +49,7 @@ export function InteractiveKoreanText({ content, onPressWord }: InteractiveKorea
         <View style={styles.tipBox}>
           <Ionicons name="hand-left-outline" size={14} color={colors.accent} />
           <Text style={[styles.tipBannerText, { color: colors.textSecondary }]}>
-            စကားလုံးကို နှိပ်၍ အသံထွက်နှင့် ဘာသာပြန် ကြည့်ပါ
+            tap the words
           </Text>
         </View>
 

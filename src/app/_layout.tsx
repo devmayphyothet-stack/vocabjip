@@ -1,9 +1,10 @@
-import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
+import { DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
-import { useColorScheme, Platform, View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/context/auth-context';
 import { SavedProvider } from '@/context/saved-context';
 import { AiProvider } from '@/context/ai-context';
@@ -11,10 +12,8 @@ import { AiProvider } from '@/context/ai-context';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const outerBg = isDark ? '#090D16' : '#F1F5F9';
-  const innerBg = isDark ? '#0F172A' : '#FFFFFF';
+  const outerBg = '#F1F5F9';
+  const innerBg = '#FFFFFF';
 
   useEffect(() => {
     SplashScreen.hideAsync();
@@ -22,7 +21,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={DefaultTheme}>
         <AuthProvider>
           <SavedProvider>
             <AiProvider>

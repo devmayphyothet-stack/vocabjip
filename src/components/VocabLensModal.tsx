@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  Pressable,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
+import { useSaved } from '@/context/saved-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { WordDefinition } from '@/services/korean-dictionary-service';
 import { SpeechService } from '@/services/speech-service';
-import { useSaved } from '@/context/saved-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface VocabLensModalProps {
   visible: boolean;
@@ -199,7 +199,7 @@ export function VocabLensModal({ visible, word, onClose }: VocabLensModalProps) 
               ]}>
               <Ionicons name="volume-high-outline" size={16} color={colors.text} />
               <Text style={[styles.listenAgainText, { color: colors.text }]}>
-                Listen (အသံထွက်)
+                Listen
               </Text>
             </TouchableOpacity>
 
