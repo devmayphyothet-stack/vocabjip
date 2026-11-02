@@ -116,7 +116,7 @@ export function AdminUsersView() {
           <div>
             <div className="text-xs text-slate-400 font-semibold uppercase">Approved Contributors</div>
             <div className="text-xl font-extrabold text-emerald-700">
-              {users.filter((u) => u.role === 'contributor' || u.role === 'admin').length}
+              {users.filter((u) => u.role === 'contributor').length}
             </div>
           </div>
         </div>
@@ -126,7 +126,7 @@ export function AdminUsersView() {
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-semibold uppercase">Core Admins</div>
+            <div className="text-xs text-slate-400 font-semibold uppercase">Core Admin</div>
             <div className="text-xl font-extrabold text-purple-700">
               {users.filter((u) => u.role === 'admin').length}
             </div>

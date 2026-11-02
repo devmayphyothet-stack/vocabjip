@@ -109,11 +109,13 @@ export function AdminAnalyticsView() {
         }
       });
 
-      // Calculate score: (approved * 10) + (pending * 2)
-      const list = Object.values(statsMap).map(item => ({
-        ...item,
-        total_score: (item.approved_vocabs * 10) + (item.approved_patterns * 15) + (item.pending_items * 2),
-      }));
+      // Filter OUT Admin so only actual teachers/contributors are scored and ranked
+      const list = Object.values(statsMap)
+        .filter(item => item.role === 'contributor')
+        .map(item => ({
+          ...item,
+          total_score: (item.approved_vocabs * 10) + (item.approved_patterns * 15) + (item.pending_items * 2),
+        }));
 
       // Sort by score descending
       list.sort((a, b) => b.total_score - a.total_score);
@@ -195,7 +197,7 @@ export function AdminAnalyticsView() {
             <Users className="w-4 h-4 text-indigo-500" />
           </div>
           <div className="text-3xl font-black text-slate-900">
-            {leaderboard.filter(l => l.role !== 'user' || l.total_score > 0).length}
+            {leaderboard.length}
           </div>
           <div className="text-[11px] text-indigo-600 font-semibold flex items-center gap-1">
             <Flame className="w-3.5 h-3.5" />
