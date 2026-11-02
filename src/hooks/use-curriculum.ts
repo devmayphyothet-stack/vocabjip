@@ -67,3 +67,4 @@ export function useCurriculum() {
     patternCount: patterns.length,
   };
 }
+

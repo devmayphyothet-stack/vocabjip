@@ -42,6 +42,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "studio": "cd studio && npm run dev",
+    "build:studio": "cd studio && npm run build",
     "lint": "expo lint"
   },
   "private": true

@@ -195,3 +195,4 @@ export async function syncCurriculumFromCloud(force: boolean = false): Promise<{
 export async function getCurriculumLastSync(): Promise<string | null> {
   return AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
 }
+
