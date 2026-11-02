@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 
 import { AuthProvider } from '@/context/auth-context';
 import { SavedProvider } from '@/context/saved-context';
+import { AiProvider } from '@/context/ai-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -12,7 +13,6 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    // Hide splash screen smoothly once mounted
     SplashScreen.hideAsync();
   }, []);
 
@@ -20,30 +20,40 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <SavedProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)/sign-up" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)/verify-otp" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)/forgot-password" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)/reset-password" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal/vocab-detail"
-              options={{ presentation: 'modal', headerShown: false }}
-            />
-            <Stack.Screen
-              name="modal/pattern-detail"
-              options={{ presentation: 'modal', headerShown: false }}
-            />
-            <Stack.Screen
-              name="modal/quiz"
-              options={{ presentation: 'modal', headerShown: false }}
-            />
-            <Stack.Screen
-              name="modal/wongoji-editor"
-              options={{ presentation: 'fullScreenModal', headerShown: false }}
-            />
-          </Stack>
+          <AiProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/sign-up" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/verify-otp" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/forgot-password" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/reset-password" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="modal/vocab-detail"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/pattern-detail"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/quiz"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/wongoji-editor"
+                options={{ presentation: 'fullScreenModal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/ai-connect"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/ai-feedback"
+                options={{ presentation: 'fullScreenModal', headerShown: false }}
+              />
+            </Stack>
+          </AiProvider>
         </SavedProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
+import { useAi } from '@/context/ai-context';
 
 type ViewMode = 'text' | 'grid';
 
@@ -23,6 +24,7 @@ export default function WongojiEditorModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { saveDraft } = useSaved();
+  const { isConnected } = useAi();
   const params = useLocalSearchParams<{
     type?: string;
     promptTitle?: string;
@@ -31,7 +33,9 @@ export default function WongojiEditorModal() {
   }>();
 
   const type = (params.type as 'Q53' | 'Q54') || 'Q53';
-  const promptTitle = params.promptTitle || (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
+  const promptTitle =
+    params.promptTitle ||
+    (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
   const charTarget = params.charTarget || (type === 'Q53' ? '200 – 300' : '600 – 700');
 
   const [viewMode, setViewMode] = useState<ViewMode>('text');
@@ -76,9 +80,36 @@ export default function WongojiEditorModal() {
     setTimeout(() => setIsSavedFeedback(false), 2000);
   };
 
+  const handleAiReview = async () => {
+    if (!content.trim()) {
+      Alert.alert('Empty Draft', 'Please write some sentences before requesting an AI review.');
+      return;
+    }
+    // Auto save draft before navigating
+    await saveDraft({
+      id: `draft-${Date.now()}`,
+      type,
+      title: promptTitle,
+      content,
+      charCount: content.length,
+    });
+
+    if (!isConnected) {
+      router.push('/modal/ai-connect');
+    } else {
+      router.push({
+        pathname: '/modal/ai-feedback',
+        params: {
+          essayText: content,
+          questionType: type,
+          promptTopic: promptTitle,
+        },
+      });
+    }
+  };
+
   const handleClose = () => {
     if (content.trim()) {
-      // Auto save on close
       saveDraft({
         id: `draft-${Date.now()}`,
         type,
@@ -157,27 +188,38 @@ export default function WongojiEditorModal() {
           </Text>
         </TouchableOpacity>
 
-        {/* Save Button */}
-        <TouchableOpacity
-          onPress={handleManualSave}
-          style={[
-            styles.saveBtn,
-            { backgroundColor: isSavedFeedback ? colors.successLight : colors.card },
-            { borderColor: isSavedFeedback ? colors.success : colors.border },
-          ]}>
-          <Ionicons
-            name={isSavedFeedback ? 'checkmark' : 'save-outline'}
-            size={16}
-            color={isSavedFeedback ? colors.success : colors.text}
-          />
-          <Text
+        {/* Action Buttons: Save & AI Review */}
+        <View style={styles.topActionGroup}>
+          <TouchableOpacity
+            onPress={handleManualSave}
             style={[
-              styles.saveBtnText,
-              { color: isSavedFeedback ? colors.success : colors.text },
+              styles.saveBtn,
+              { backgroundColor: isSavedFeedback ? colors.successLight : colors.card },
+              { borderColor: isSavedFeedback ? colors.success : colors.border },
             ]}>
-            {isSavedFeedback ? 'Saved' : 'Save'}
-          </Text>
-        </TouchableOpacity>
+            <Ionicons
+              name={isSavedFeedback ? 'checkmark' : 'save-outline'}
+              size={15}
+              color={isSavedFeedback ? colors.success : colors.text}
+            />
+            <Text
+              style={[
+                styles.saveBtnText,
+                { color: isSavedFeedback ? colors.success : colors.text },
+              ]}>
+              {isSavedFeedback ? 'Saved' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleAiReview}
+            style={[styles.aiReviewBtn, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}>
+            <Ionicons name="sparkles" size={15} color={colors.accent} />
+            <Text style={[styles.aiReviewBtnText, { color: colors.accent }]}>
+              AI Review
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Title & Target Bar */}
@@ -317,18 +359,36 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
   },
+  topActionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
+    gap: 4,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 9,
     borderWidth: 1,
   },
   saveBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
+  },
+  aiReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 9,
+    borderWidth: 1,
+  },
+  aiReviewBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   metaBar: {
     flexDirection: 'row',
@@ -443,4 +503,3 @@ const styles = StyleSheet.create({
     color: '#292524',
   },
 });
-

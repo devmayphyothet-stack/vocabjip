@@ -12,6 +12,7 @@ import { router, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/auth-context';
+import { useAi } from '@/context/ai-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest, signOut } = useAuth();
+  const { isConnected, maskedKey } = useAi();
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -115,17 +117,36 @@ export default function ProfileScreen() {
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}>
           {/* AI Connection */}
-          <TouchableOpacity style={styles.menuRow}>
-            <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
-              <Ionicons name="hardware-chip-outline" size={18} color={colors.accent} />
+          <TouchableOpacity
+            onPress={() => router.push('/modal/ai-connect')}
+            style={styles.menuRow}>
+            <View
+              style={[
+                styles.menuIconBox,
+                { backgroundColor: isConnected ? colors.successLight : colors.accentLight },
+              ]}>
+              <Ionicons
+                name="hardware-chip-outline"
+                size={18}
+                color={isConnected ? colors.success : colors.accent}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.menuTitle, { color: colors.text }]}>AI Connection</Text>
               <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
-                Connect Google Gemini BYOK (Free tier)
+                {isConnected ? maskedKey : 'Connect Google Gemini BYOK (Free tier)'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            <View style={styles.badgeRow}>
+              <Text
+                style={[
+                  styles.badgeValue,
+                  { color: isConnected ? colors.success : colors.accent, fontWeight: '700' },
+                ]}>
+                {isConnected ? 'Active' : 'Setup'}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </View>
           </TouchableOpacity>
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -313,6 +334,11 @@ const styles = StyleSheet.create({
   badgeValue: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   divider: {
     height: 1,
