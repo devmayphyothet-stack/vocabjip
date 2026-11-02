@@ -200,9 +200,9 @@ export default function PracticeScreen() {
             ကိုရီးယား တက္ကသိုလ်နဲ့ ပညာသင်ဆု လျှောက်လွှာတွေအတွက် ကိုယ့်ရဲ့ story ကိုတင်ပြပါ။ AI ရဲ့ လမ်းညွှန်မှုနဲ့အတူ အဆင့်ဆင့် ရေးသားပါ။
           </Text>
 
-          <View style={[styles.openEditorBtn, { backgroundColor: colors.primary, marginTop: 4 }]}>
-            <Ionicons name="school-outline" size={16} color={colors.primaryContrast} />
-            <Text style={[styles.openEditorText, { color: colors.primaryContrast, fontWeight: '700' }]}>
+          <View style={[styles.statementBuilderBtn, { backgroundColor: colors.primary }]}>
+            <Ionicons name="school-outline" size={18} color={colors.primaryContrast} />
+            <Text style={[styles.statementBuilderText, { color: colors.primaryContrast }]}>
               Open Statement Builder
             </Text>
           </View>
@@ -368,8 +368,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 42,
-    borderRadius: 10,
+    height: 46,
+    borderRadius: 12,
     gap: 6,
   },
   openEditorText: {
@@ -381,13 +381,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 42,
-    borderRadius: 10,
+    height: 46,
+    borderRadius: 12,
     gap: 6,
   },
   startTimedText: {
     color: '#FFFFFF',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  statementBuilderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 8,
+  },
+  statementBuilderText: {
+    fontSize: 14,
     fontWeight: '700',
   },
 });

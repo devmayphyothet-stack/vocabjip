@@ -10,7 +10,7 @@ export default function TabLayout() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'web' ? 24 : 12);
+  const bottomInset = Platform.OS === 'web' ? 10 : Math.max(insets.bottom, 6);
 
   return (
     <Tabs
@@ -22,13 +22,14 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.borderLight,
-          height: 56 + bottomPadding,
-          paddingBottom: bottomPadding + 4,
-          paddingTop: 8,
+          height: 64 + bottomInset,
+          paddingBottom: bottomInset,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          marginBottom: 3,
         },
       }}>
       <Tabs.Screen
