@@ -18,8 +18,26 @@ import { Loader2 } from 'lucide-react';
 
 export function AppContent() {
   const { user, loading, isAdmin } = useAuth();
-  const [activeView, setActiveView] = useState('vocab');
+  const [activeView, setActiveView] = useState<string>('');
   const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      if (isAdmin) {
+        // If current view is a contributor view, switch to admin default
+        const contributorViews = ['vocab', 'patterns', 'prompts', 'bulk', 'submissions'];
+        if (!activeView || contributorViews.includes(activeView)) {
+          setActiveView('review');
+        }
+      } else {
+        // If current view is an admin view, switch to contributor default
+        const adminViews = ['review', 'invitations', 'feedback', 'analytics', 'users'];
+        if (!activeView || adminViews.includes(activeView)) {
+          setActiveView('vocab');
+        }
+      }
+    }
+  }, [user, isAdmin]);
 
   const fetchPendingCount = async () => {
     if (!isAdmin) return;

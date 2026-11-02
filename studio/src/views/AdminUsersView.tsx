@@ -173,17 +173,18 @@ export function AdminUsersView() {
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      {isSelf ? (
-                        <span className="text-[11px] text-slate-400 font-semibold italic">Current Admin</span>
+                      {isSelf || u.role === 'admin' ? (
+                        <span className="text-[11px] text-purple-700 font-bold bg-purple-50 px-2 py-1 rounded-md border border-purple-200">
+                          Sole Admin
+                        </span>
                       ) : (
                         <select
                           disabled={updatingId === u.id}
                           value={u.role || 'user'}
                           onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
                           className="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="user">Student (User)</option>
-                          <option value="contributor">Contributor (Creator)</option>
-                          <option value="admin">Admin (Full Control)</option>
+                          <option value="user">Student (App Learner)</option>
+                          <option value="contributor">Contributor (Content Creator)</option>
                         </select>
                       )}
                     </td>

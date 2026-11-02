@@ -15,16 +15,20 @@ export function Navbar({ activeView, setActiveView, pendingReviewCount = 0 }: Na
     <header className="sticky top-0 z-30 h-16 border-b border-slate-200 bg-white/95 backdrop-blur px-6 flex items-center justify-between shadow-sm">
       {/* Brand & Title */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActiveView('vocab')}>
+        <div 
+          className="flex items-center gap-2.5 cursor-pointer" 
+          onClick={() => setActiveView(isAdmin ? 'review' : 'vocab')}>
           <img src="/logo.png" alt="VocabJip" className="w-9 h-9 rounded-xl object-contain shadow-xs" />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-lg text-slate-900 tracking-tight">VocabJip Studio</span>
               <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
-                v1.0 • Web
+                {isAdmin ? 'Admin Console' : 'Contributor Workspace'}
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium">Contributor & Admin Management</p>
+            <p className="text-xs text-slate-500 font-medium">
+              {isAdmin ? 'Content Moderation & Teacher Management' : 'TOPIK II Curriculum Creator'}
+            </p>
           </div>
         </div>
       </div>

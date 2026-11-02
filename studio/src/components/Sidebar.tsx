@@ -21,7 +21,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: SidebarProps) {
-  const { isAdmin, isContributor } = useAuth();
+  const { isAdmin } = useAuth();
 
   const contributorNav = [
     {
@@ -84,8 +84,8 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
     },
     {
       id: 'users',
-      label: 'User Roles',
-      subtitle: 'Promote contributors & admins',
+      label: 'Manage Contributors',
+      subtitle: 'Review & manage contributors',
       icon: Users,
     },
   ];
@@ -93,43 +93,12 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
   return (
     <aside className="w-64 border-r border-slate-200 bg-[#FAF9F5] flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
       <div className="p-4 space-y-6">
-        {/* Contributor Section */}
-        <div>
-          <div className="px-3 mb-2 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            <span>Contributor Workspace</span>
-            <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-          </div>
-
-          <nav className="space-y-1">
-            {contributorNav.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeView === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveView(item.id)}
-                  className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition ${
-                    isActive
-                      ? 'bg-white text-blue-700 shadow-sm border border-slate-200 font-bold'
-                      : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900 font-medium'
-                  }`}>
-                  <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <div>
-                    <div className="text-xs font-semibold leading-tight">{item.label}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{item.subtitle}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Admin Section (Visible to Admins) */}
-        {isAdmin && (
+        {/* If Admin: Show ONLY Admin Moderation Suite */}
+        {isAdmin ? (
           <div>
             <div className="px-3 mb-2 flex items-center justify-between text-[11px] font-bold text-blue-900 uppercase tracking-wider">
               <span>Admin Management</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
             </div>
 
             <nav className="space-y-1">
@@ -167,13 +136,46 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
               })}
             </nav>
           </div>
+        ) : (
+          /* If Contributor: Show ONLY Contributor Content Creation Workspace */
+          <div>
+            <div className="px-3 mb-2 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <span>Contributor Workspace</span>
+              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+            </div>
+
+            <nav className="space-y-1">
+              {contributorNav.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveView(item.id)}
+                    className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left transition ${
+                      isActive
+                        ? 'bg-white text-blue-700 shadow-sm border border-slate-200 font-bold'
+                        : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900 font-medium'
+                    }`}>
+                    <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <div>
+                      <div className="text-xs font-semibold leading-tight">{item.label}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{item.subtitle}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         )}
       </div>
 
       {/* Footer Info */}
       <div className="p-4 border-t border-slate-200 text-center text-[11px] text-slate-400 space-y-1">
-        <p className="font-semibold text-slate-600">VocabJip Publishing Cloud</p>
-        <p>Syncs directly to Myanmar TOPIK learners</p>
+        <p className="font-semibold text-slate-600">
+          {isAdmin ? 'VocabJip Admin Console' : 'VocabJip Publishing Cloud'}
+        </p>
+        <p>{isAdmin ? 'Review & publish TOPIK lessons' : 'Syncs directly to Myanmar TOPIK learners'}</p>
       </div>
     </aside>
   );

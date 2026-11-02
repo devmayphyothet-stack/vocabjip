@@ -356,32 +356,11 @@ export function AdminInvitationsView() {
               <form onSubmit={handleCreateInvitation} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Target Role (အခန်းကဏ္ဍ)
+                    Invited Role
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTargetRole('contributor')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
-                        targetRole === 'contributor'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                      }`}>
-                      <UserCheck className="w-4 h-4" />
-                      <span>Contributor</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setTargetRole('admin')}
-                      className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
-                        targetRole === 'admin'
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                      }`}>
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Admin</span>
-                    </button>
+                  <div className="p-3 rounded-xl border border-blue-500 bg-blue-50 text-blue-700 text-xs font-bold flex items-center gap-2">
+                    <UserCheck className="w-4 h-4" />
+                    <span>Verified Contributor (TOPIK Teacher / Mentor)</span>
                   </div>
                 </div>
 
