@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/auth-context';
-import { LogIn, UserPlus, AlertCircle, Sparkles, BookOpen } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, Sparkles, KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export function LoginView() {
   const { signIn, signUp } = useAuth();
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   React.useEffect(() => {
@@ -19,7 +20,7 @@ export function LoginView() {
       const codeFromUrl = params.get('invite');
       if (codeFromUrl) {
         setInviteCode(codeFromUrl.toUpperCase());
-        setMode('signup');
+        setMode('invite');
       }
     } catch (_) {}
   }, []);
@@ -31,21 +32,37 @@ export function LoginView() {
       return;
     }
 
+    if (mode === 'invite' && !inviteCode.trim()) {
+      setError('Invitation code is required to create a contributor account.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
+    setSuccessMsg(null);
 
     try {
       if (mode === 'signin') {
         const res = await signIn(email, password);
-        if (res.error) setError(res.error);
+        if (res.error) {
+          if (res.error.toLowerCase().includes('email not confirmed')) {
+            setError('Email not confirmed. Supabase SQL ထဲတွင် confirm လုပ်ပေးပါ သို့မဟုတ် Auth Settings တွင် "Confirm email" ကို ပိတ်ပေးပါ။');
+          } else {
+            setError(res.error);
+          }
+        }
       } else {
         const res = await signUp(
           email,
           password,
           displayName || email.split('@')[0],
-          inviteCode.trim() || undefined
+          inviteCode.trim()
         );
-        if (res.error) setError(res.error);
+        if (res.error) {
+          setError(res.error);
+        } else {
+          setSuccessMsg('Account created successfully! Signing you in...');
+        }
       }
     } finally {
       setSubmitting(false);
@@ -61,35 +78,31 @@ export function LoginView() {
           <img src="/logo.png" alt="VocabJip" className="w-16 h-16 rounded-2xl mx-auto shadow-sm object-contain" />
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">VocabJip Studio</h1>
           <p className="text-xs text-slate-500 font-medium">
-            Contributor & Admin Portal for TOPIK II Writing Platform
+            {mode === 'signin' 
+              ? 'Contributor & Admin Portal for TOPIK II Writing Platform'
+              : 'Exclusive Onboarding for TOPIK Educators & Mentors'}
           </p>
         </div>
 
-        {/* Tab switch */}
-        <div className="flex rounded-xl bg-slate-100 p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signin');
-              setError(null);
-            }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-              mode === 'signin' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-            }`}>
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signup');
-              setError(null);
-            }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-              mode === 'signup' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-            }`}>
-            New Contributor
-          </button>
-        </div>
+        {/* Mode Title (Invite vs Sign In) */}
+        {mode === 'invite' && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between">
+            <div className="flex items-center gap-2 text-blue-800 text-xs font-bold">
+              <KeyRound className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Redeem Invitation Code</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signin');
+                setError(null);
+              }}
+              className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              <ArrowLeft className="w-3 h-3" />
+              <span>Sign In</span>
+            </button>
+          </div>
+        )}
 
         {/* Error notification */}
         {error && (
@@ -99,34 +112,43 @@ export function LoginView() {
           </div>
         )}
 
+        {/* Success notification */}
+        {successMsg && (
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'signup' && (
+          {mode === 'invite' && (
             <>
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Display Name (နာမည် / ဆရာ/ဆရာမ အမည်)
+                  Invitation Code (ဖိတ်ခေါ်ကုဒ်) *
                 </label>
                 <input
                   type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. Teacher May / TOPIK Level 6"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  required
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. INV-XXXXXX"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-blue-300 bg-blue-50/30 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono tracking-widest uppercase font-bold text-blue-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center justify-between">
-                  <span>Invitation Code (ဖိတ်ခေါ်ကုဒ် - ရှိပါက ထည့်ရန်)</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Display Name (ဆရာ/ဆရာမ အမည်)
                 </label>
                 <input
                   type="text"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. INV-XXXXXX"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono tracking-wider uppercase"
+                  required
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Sayama Su / TOPIK Level 6"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
               </div>
             </>
@@ -165,11 +187,33 @@ export function LoginView() {
             disabled={submitting}
             className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
             {mode === 'signin' ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-            <span>{submitting ? 'Authenticating...' : mode === 'signin' ? 'Sign In to Studio' : 'Create Contributor Account'}</span>
+            <span>
+              {submitting 
+                ? 'Authenticating...' 
+                : mode === 'signin' 
+                ? 'Sign In to Studio' 
+                : 'Redeem Code & Create Account'}
+            </span>
           </button>
         </form>
 
-        {/* Demo credentials hint */}
+        {/* Invite link toggle (for teachers who have a code) */}
+        {mode === 'signin' && (
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('invite');
+                setError(null);
+              }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 transition inline-flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Have an Invitation Code? Join as Contributor</span>
+            </button>
+          </div>
+        )}
+
+        {/* Admin hint */}
         <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 text-center space-y-1">
           <p className="font-semibold text-slate-600">Admin Account</p>
           <p>Login with <code className="text-blue-700 font-mono">admin@vocabjip.com</code> for full Admin access</p>
@@ -178,4 +222,3 @@ export function LoginView() {
     </div>
   );
 }
-
