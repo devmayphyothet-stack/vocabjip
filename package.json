@@ -43,7 +43,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "studio": "cd studio && npm run dev",
-    "build:studio": "cd studio && npm run build",
+    "build": "cd studio && npm install && npm run build",
+    "build:studio": "cd studio && npm install && npm run build",
     "lint": "expo lint"
   },
   "private": true
