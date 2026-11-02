@@ -14,6 +14,7 @@ import { VOCAB_DATA } from '@/data/vocab-data';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
+import { SpeechService } from '@/services/speech-service';
 
 export default function VocabDetailModal() {
   const scheme = useColorScheme() ?? 'light';
@@ -23,6 +24,16 @@ export default function VocabDetailModal() {
 
   const item = VOCAB_DATA.find((v) => v.id === id) || VOCAB_DATA[0];
   const saved = isVocabSaved(item.id);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+
+  const handlePronounce = async (text: string) => {
+    setIsPlaying(true);
+    await SpeechService.speakKorean(text, {
+      rate: 0.88,
+      onDone: () => setIsPlaying(false),
+      onError: () => setIsPlaying(false),
+    });
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -74,12 +85,25 @@ export default function VocabDetailModal() {
             </Text>
           </View>
 
-          <View style={styles.pronounceRow}>
-            <Ionicons name="volume-medium-outline" size={18} color={colors.accent} />
-            <Text style={[styles.pronounceText, { color: colors.textSecondary }]}>
+          <TouchableOpacity
+            onPress={() => handlePronounce(item.written)}
+            style={[
+              styles.pronounceRow,
+              { backgroundColor: isPlaying ? colors.accentLight : 'transparent' },
+            ]}
+            accessibilityLabel="Listen to pronunciation">
+            <Ionicons
+              name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
+              size={20}
+              color={colors.accent}
+            />
+            <Text style={[styles.pronounceText, { color: colors.accent, fontWeight: '700' }]}>
               [{item.pronunciation}]
             </Text>
-          </View>
+            <Text style={{ fontSize: 11, color: colors.textSecondary, marginLeft: 4 }}>
+              (Tap to listen)
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Myanmar Meaning */}

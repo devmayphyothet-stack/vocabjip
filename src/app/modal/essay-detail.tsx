@@ -13,6 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { InteractiveKoreanText } from '@/components/InteractiveKoreanText';
+import { VocabLensModal } from '@/components/VocabLensModal';
+import { KoreanDictionaryService, WordDefinition } from '@/services/korean-dictionary-service';
 
 export default function EssayDetailModal() {
   const scheme = useColorScheme() ?? 'light';
@@ -37,6 +40,16 @@ export default function EssayDetailModal() {
 
   const [likes, setLikes] = useState(parseInt(params.likesCount || '24', 10));
   const [isLiked, setIsLiked] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<WordDefinition | null>(null);
+  const [lensVisible, setLensVisible] = useState(false);
+
+  const handlePressWord = (rawWord: string) => {
+    const definition = KoreanDictionaryService.lookupWord(rawWord);
+    if (definition) {
+      setSelectedWord(definition);
+      setLensVisible(true);
+    }
+  };
 
   const handleToggleLike = () => {
     if (isLiked) {
@@ -103,14 +116,24 @@ export default function EssayDetailModal() {
         {/* Essay Title */}
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
 
-        {/* Essay Content Card */}
+        {/* Essay Content Card with Interactive Korean Words & Pronunciation */}
         <View
           style={[
             styles.essayCard,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}>
-          <Text style={[styles.essayBody, { color: colors.text }]}>{content}</Text>
+          <InteractiveKoreanText
+            content={content}
+            onPressWord={handlePressWord}
+          />
         </View>
+
+        {/* Smart Vocab Lens Modal */}
+        <VocabLensModal
+          visible={lensVisible}
+          word={selectedWord}
+          onClose={() => setLensVisible(false)}
+        />
 
         {/* Actions Bar */}
         <View style={styles.actionsBar}>
