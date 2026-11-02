@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -14,9 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { VOCAB_DATA, VocabItem } from '@/data/vocab-data';
-import { PATTERNS_DATA, PatternItem } from '@/data/patterns-data';
+import { VocabItem } from '@/data/vocab-data';
+import { PatternItem } from '@/data/patterns-data';
 import { useSaved } from '@/context/saved-context';
+import { useCurriculum } from '@/hooks/use-curriculum';
 
 type TabMode = 'vocab' | 'patterns';
 
@@ -27,14 +29,15 @@ export default function LearnScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { isVocabSaved, toggleSaveVocab, isPatternSaved, toggleSavePattern } = useSaved();
+  const { vocabularies, patterns, isSyncing, syncNow } = useCurriculum();
 
   const [activeTab, setActiveTab] = useState<TabMode>('vocab');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedQuestion, setSelectedQuestion] = useState('All');
 
-  // Filtered Vocab
-  const filteredVocab = VOCAB_DATA.filter((item) => {
+  // Filtered Vocab (combines offline bundled + dynamic approved words)
+  const filteredVocab = vocabularies.filter((item) => {
     const matchesSearch =
       item.spoken.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.written.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -44,8 +47,8 @@ export default function LearnScreen() {
     return matchesSearch && matchesCat;
   });
 
-  // Filtered Patterns
-  const filteredPatterns = PATTERNS_DATA.filter((pat) => {
+  // Filtered Patterns (combines offline bundled + dynamic approved patterns)
+  const filteredPatterns = patterns.filter((pat) => {
     const matchesSearch =
       pat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pat.myanmarTitle.includes(searchQuery) ||
@@ -187,7 +190,7 @@ export default function LearnScreen() {
                 styles.segmentText,
                 { color: activeTab === 'vocab' ? colors.text : colors.textSecondary },
               ]}>
-              Everyday → Academic
+              Everyday → Academic ({vocabularies.length})
             </Text>
           </TouchableOpacity>
 
@@ -208,7 +211,7 @@ export default function LearnScreen() {
                     activeTab === 'patterns' ? colors.text : colors.textSecondary,
                 },
               ]}>
-              Writing Patterns
+              Writing Patterns ({patterns.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -304,6 +307,14 @@ export default function LearnScreen() {
           renderItem={renderVocabCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isSyncing}
+              onRefresh={syncNow}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={36} color={colors.textMuted} />
@@ -320,6 +331,14 @@ export default function LearnScreen() {
           renderItem={renderPatternCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isSyncing}
+              onRefresh={syncNow}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={36} color={colors.textMuted} />

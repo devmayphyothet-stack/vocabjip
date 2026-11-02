@@ -14,11 +14,13 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { VOCAB_DATA } from '@/data/vocab-data';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest } = useAuth();
+  const { vocabularies } = useCurriculum();
 
   const streakDays = user?.streakDays ?? 7;
   const dailyGoal = user?.dailyGoal ?? 3;
@@ -223,7 +225,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {VOCAB_DATA.slice(0, 3).map((item) => (
+        {(vocabularies.length > 0 ? vocabularies : VOCAB_DATA).slice(0, 3).map((item) => (
           <TouchableOpacity
             key={item.id}
             onPress={() =>

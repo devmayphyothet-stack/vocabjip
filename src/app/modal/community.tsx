@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-  View,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { fetchCommunityEssays } from '@/services/community-service';
-import { CommunityEssay } from '@/types/community';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { fetchCommunityEssays } from '@/services/community-service';
+import { CommunityEssay } from '@/types/community';
 
 const FILTER_TABS = ['All', 'Q54 Essays', 'Q53 Graphs', 'Admissions'];
 
@@ -81,7 +81,7 @@ export default function CommunityModal() {
       <View style={styles.headerSection}>
         <Text style={[styles.title, { color: colors.text }]}>Learn from each other</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Browse high-scoring essays and study plans written by fellow TOPIK learners.
+          TOPIK လေ့လာနေအချင်းချင်း ရေးထားတဲ့ အမှတ်ကောင်းတဲ့စာမူတွေကို လေ့လာပါ။
         </Text>
 
         {/* Search Bar */}
@@ -191,8 +191,8 @@ export default function CommunityModal() {
                       item.type === 'Q54'
                         ? colors.streakLight
                         : item.type === 'Q53'
-                        ? colors.accentLight
-                        : colors.cardMuted,
+                          ? colors.accentLight
+                          : colors.cardMuted,
                   },
                 ]}>
                 <Text
@@ -203,8 +203,8 @@ export default function CommunityModal() {
                         item.type === 'Q54'
                           ? colors.streak
                           : item.type === 'Q53'
-                          ? colors.accent
-                          : colors.text,
+                            ? colors.accent
+                            : colors.text,
                     },
                   ]}>
                   {item.type.toUpperCase()}

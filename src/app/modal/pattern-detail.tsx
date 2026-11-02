@@ -15,14 +15,16 @@ import { PATTERNS_DATA } from '@/data/patterns-data';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
+import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function PatternDetailModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isPatternSaved, toggleSavePattern } = useSaved();
+  const { patterns } = useCurriculum();
 
-  const pattern = PATTERNS_DATA.find((p) => p.id === id) || PATTERNS_DATA[0];
+  const pattern = patterns.find((p) => p.id === id) || PATTERNS_DATA.find((p) => p.id === id) || PATTERNS_DATA[0];
   const saved = isPatternSaved(pattern.id);
 
   return (

@@ -12,12 +12,16 @@ create table if not exists public.profiles (
   email text,
   display_name text default 'TOPIK Learner',
   target_level text default 'TOPIK II Level 4',
+  role text check (role in ('user', 'contributor', 'admin')) default 'user',
   streak_days int default 1,
   daily_goal int default 3,
   daily_completed int default 0,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Ensure column exists if table was already created
+alter table public.profiles add column if not exists role text check (role in ('user', 'contributor', 'admin')) default 'user';
 
 -- Enable RLS on profiles
 alter table public.profiles enable row level security;
@@ -109,11 +113,12 @@ create policy "Users can update or delete their own published essays"
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, display_name)
+  insert into public.profiles (id, email, display_name, role)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'display_name', 'TOPIK Learner')
+    coalesce(new.raw_user_meta_data->>'display_name', 'TOPIK Learner'),
+    case when lower(new.email) = 'dev.mayphyothet@gmail.com' then 'admin' else 'user' end
   );
   return new;
 end;
@@ -149,4 +154,150 @@ create policy "Users can view their own feedback"
   on public.user_feedback for select
   using (auth.uid() = user_id);
 
+-- ============================================================
+-- 7. DYNAMIC CURRICULUM: VOCABULARIES TABLE
+-- ============================================================
+create table if not exists public.vocabularies (
+  id text primary key,
+  spoken text not null,
+  written text not null,
+  pronunciation text default '',
+  category text not null,
+  myanmar_meaning text not null,
+  english_meaning text not null,
+  usage_tip text default '',
+  example_korean text not null,
+  example_myanmar text not null,
+  status text check (status in ('draft', 'pending_review', 'approved', 'rejected')) default 'pending_review',
+  rejection_reason text,
+  created_by uuid references public.profiles(id) on delete set null,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
+alter table public.vocabularies enable row level security;
+
+-- Mobile users / students read all approved vocabularies
+create policy "Anyone can read approved vocabularies"
+  on public.vocabularies for select
+  using (status = 'approved');
+
+-- Contributors can view their own submissions (draft, pending, rejected)
+create policy "Contributors can view their own vocab submissions"
+  on public.vocabularies for select
+  using (auth.uid() = created_by);
+
+-- Contributors can submit new vocabularies
+create policy "Contributors can insert vocabularies"
+  on public.vocabularies for insert
+  with check (auth.uid() = created_by);
+
+-- Contributors can update their own drafts
+create policy "Contributors can update their own drafts"
+  on public.vocabularies for update
+  using (auth.uid() = created_by and status in ('draft', 'rejected'));
+
+-- Admins can view, update, approve, and delete all vocabularies
+create policy "Admins have full access on vocabularies"
+  on public.vocabularies for all
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- ============================================================
+-- 8. DYNAMIC CURRICULUM: SENTENCE PATTERNS TABLE
+-- ============================================================
+create table if not exists public.sentence_patterns (
+  id text primary key,
+  question_number text check (question_number in ('Q51', 'Q52', 'Q53', 'Q54')) not null,
+  title text not null,
+  myanmar_title text not null,
+  description text not null,
+  pattern_formula text not null,
+  example_korean text not null,
+  example_myanmar text not null,
+  key_phrases text[] default array[]::text[],
+  status text check (status in ('draft', 'pending_review', 'approved', 'rejected')) default 'pending_review',
+  rejection_reason text,
+  created_by uuid references public.profiles(id) on delete set null,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.sentence_patterns enable row level security;
+
+-- Mobile users read all approved sentence patterns
+create policy "Anyone can read approved patterns"
+  on public.sentence_patterns for select
+  using (status = 'approved');
+
+-- Contributors view their own pattern submissions
+create policy "Contributors can view their own pattern submissions"
+  on public.sentence_patterns for select
+  using (auth.uid() = created_by);
+
+-- Contributors insert new patterns
+create policy "Contributors can insert patterns"
+  on public.sentence_patterns for insert
+  with check (auth.uid() = created_by);
+
+-- Contributors update their drafts
+create policy "Contributors can update their own pattern drafts"
+  on public.sentence_patterns for update
+  using (auth.uid() = created_by and status in ('draft', 'rejected'));
+
+-- Admins have full access on patterns
+create policy "Admins have full access on patterns"
+  on public.sentence_patterns for all
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- ============================================================
+-- 9. DYNAMIC CURRICULUM: ESSAY PROMPTS TABLE
+-- ============================================================
+create table if not exists public.essay_prompts (
+  id text primary key,
+  type text check (type in ('Q53', 'Q54', 'statement')) not null,
+  title text not null,
+  prompt_text text not null,
+  sub_questions text[] default array[]::text[],
+  sample_answer text,
+  scoring_criteria text,
+  status text check (status in ('draft', 'pending_review', 'approved', 'rejected')) default 'pending_review',
+  rejection_reason text,
+  created_by uuid references public.profiles(id) on delete set null,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.essay_prompts enable row level security;
+
+create policy "Anyone can read approved essay prompts"
+  on public.essay_prompts for select
+  using (status = 'approved');
+
+create policy "Admins have full access on essay prompts"
+  on public.essay_prompts for all
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+
+
+
+-- ============================================================
+-- 10. INITIAL SEED DATA (Approved Starter Curriculum)
+-- ============================================================

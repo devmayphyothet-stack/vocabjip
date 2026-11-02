@@ -1,14 +1,13 @@
-import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import {
-  View,
-  Text,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -49,7 +48,7 @@ export default function PracticeScreen() {
           </View>
           <Text style={styles.focusCardTitle}>Timed TOPIK Simulation</Text>
           <Text style={styles.focusCardDesc}>
-            Practice writing within 20 minutes on realistic Wongoji grid with auto-save.
+            Wongoji အကွက်တွေပေါ်မှာ မိနစ် ၂၀ အတွင်း အရေးအသားလေ့ကျင့်ပါ။
           </Text>
           <View style={styles.focusStartBtn}>
             <Text style={styles.focusStartText}>Start 20-min Session</Text>

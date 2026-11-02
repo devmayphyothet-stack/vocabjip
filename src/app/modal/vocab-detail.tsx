@@ -15,14 +15,16 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
 import { SpeechService } from '@/services/speech-service';
+import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function VocabDetailModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isVocabSaved, toggleSaveVocab } = useSaved();
+  const { vocabularies } = useCurriculum();
 
-  const item = VOCAB_DATA.find((v) => v.id === id) || VOCAB_DATA[0];
+  const item = vocabularies.find((v) => v.id === id) || VOCAB_DATA.find((v) => v.id === id) || VOCAB_DATA[0];
   const saved = isVocabSaved(item.id);
   const [isPlaying, setIsPlaying] = React.useState(false);
 

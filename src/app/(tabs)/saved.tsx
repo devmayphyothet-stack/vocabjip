@@ -14,9 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved, SavedDraft } from '@/context/saved-context';
-import { VOCAB_DATA } from '@/data/vocab-data';
-import { PATTERNS_DATA } from '@/data/patterns-data';
 import { EmptyCollectionState } from '@/components/EmptyCollectionState';
+import { useCurriculum } from '@/hooks/use-curriculum';
 
 type SavedTab = 'vocab' | 'patterns' | 'drafts';
 
@@ -31,11 +30,12 @@ export default function SavedScreen() {
     toggleSavePattern,
     deleteDraft,
   } = useSaved();
+  const { vocabularies, patterns } = useCurriculum();
 
   const [activeTab, setActiveTab] = useState<SavedTab>('vocab');
 
-  const savedVocabs = VOCAB_DATA.filter((v) => savedVocabIds.includes(v.id));
-  const savedPatterns = PATTERNS_DATA.filter((p) => savedPatternIds.includes(p.id));
+  const savedVocabs = vocabularies.filter((v) => savedVocabIds.includes(v.id));
+  const savedPatterns = patterns.filter((p) => savedPatternIds.includes(p.id));
 
   const handleDeleteDraft = (draft: SavedDraft) => {
     Alert.alert('Delete Draft', `Are you sure you want to delete "${draft.title}"?`, [

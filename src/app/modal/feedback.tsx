@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Linking,
-  ActivityIndicator,
-} from 'react-native';
+import { Colors, Spacing } from '@/constants/theme';
+import { useAuth } from '@/context/auth-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuth } from '@/context/auth-context';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 type FeedbackCategory = 'feature' | 'bug' | 'content' | 'general';
 
@@ -108,7 +108,7 @@ export default function FeedbackScreen() {
     const body = encodeURIComponent(
       `App: VocabJip v1.0.0\nCategory: ${category}\nRating: ${rating}/5\nUser Email: ${contactEmail || 'Not provided'}\n\nMessage:\n${message}`
     );
-    Linking.openURL(`mailto:dev.mayphyothet@gmail.com?subject=${subject}&body=${body}`).catch(() => {});
+    Linking.openURL(`mailto:dev.mayphyothet@gmail.com?subject=${subject}&body=${body}`).catch(() => { });
   };
 
   return (
@@ -202,7 +202,7 @@ export default function FeedbackScreen() {
             {/* Category Selector */}
             <View style={styles.formGroup}>
               <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                အကြံပြုချက် အမျိုးအစား (Category)
+                အကြံပြုချက် အမျိုးအစား
               </Text>
               <View style={styles.categoryGrid}>
                 {CATEGORIES.map((item) => {
@@ -253,7 +253,7 @@ export default function FeedbackScreen() {
             {/* Satisfaction Rating */}
             <View style={styles.formGroup}>
               <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                App အသုံးပြုရ အဆင်ပြေမှု (Overall Rating)
+                App အသုံးပြုရ အဆင်ပြေမှု
               </Text>
               <View style={[styles.ratingCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.starRow}>
@@ -283,7 +283,7 @@ export default function FeedbackScreen() {
             {/* Subject / Title */}
             <View style={styles.formGroup}>
               <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                ခေါင်းစဉ် (Title / Subject)
+                ခေါင်းစဉ်
               </Text>
               <TextInput
                 value={title}
@@ -305,7 +305,7 @@ export default function FeedbackScreen() {
             <View style={styles.formGroup}>
               <View style={styles.labelCountRow}>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                  အသေးစိတ် အကြံပြုချက် (Detailed Message) *
+                  အသေးစိတ် အကြံပြုချက် *
                 </Text>
                 <Text style={[styles.charCount, { color: colors.textMuted }]}>
                   {message.length} / 500
@@ -333,7 +333,7 @@ export default function FeedbackScreen() {
             {/* Contact Email */}
             <View style={styles.formGroup}>
               <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                ဆက်သွယ်ရန် အီးမေးလ် (Contact Email - Optional)
+                ဆက်သွယ်ရန် အီးမေးလ် (Optional)
               </Text>
               <TextInput
                 value={contactEmail}
@@ -381,7 +381,7 @@ export default function FeedbackScreen() {
                 <>
                   <Ionicons name="paper-plane-outline" size={18} color={colors.primaryContrast} />
                   <Text style={[styles.primarySubmitText, { color: colors.primaryContrast }]}>
-                    အကြံပြုချက် ပေးပို့မည် (Submit Feedback)
+                    Submit Feedback
                   </Text>
                 </>
               )}
@@ -596,3 +596,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
