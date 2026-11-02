@@ -72,6 +72,26 @@ export default function RootLayout() {
                 name="modal/statement-feedback"
                 options={{ presentation: 'modal', headerShown: false }}
               />
+              <Stack.Screen
+                name="modal/community"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/essay-detail"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/publish-essay"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/report-essay"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/account-privacy"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
             </Stack>
           </AiProvider>
         </SavedProvider>

@@ -171,17 +171,17 @@ export default function ProfileScreen() {
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
-          {/* Export Data */}
+          {/* Account, Privacy & Export */}
           <TouchableOpacity
-            onPress={() => Alert.alert('Export Data', 'Drafts export feature is ready.')}
+            onPress={() => router.push('/modal/account-privacy')}
             style={styles.menuRow}>
-            <View style={[styles.menuIconBox, { backgroundColor: colors.cardMuted }]}>
-              <Ionicons name="download-outline" size={18} color={colors.text} />
+            <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={colors.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Export Writing</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Account & Privacy</Text>
               <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
-                Download copies of your Wongoji essay drafts
+                Data export, anonymous sharing & account settings
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

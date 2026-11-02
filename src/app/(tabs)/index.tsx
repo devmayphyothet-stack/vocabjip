@@ -181,6 +181,32 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Community Essays Showcase Card */}
+        <TouchableOpacity
+          onPress={() => router.push('/modal/community')}
+          style={[
+            styles.communityCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={[styles.communityIconBox, { backgroundColor: colors.accentLight }]}>
+            <Ionicons name="people" size={20} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <Text style={[styles.communityBadge, { backgroundColor: colors.streakLight, color: colors.streak }]}>
+                COMMUNITY
+              </Text>
+              <Text style={[styles.communityTitle, { color: colors.text }]}>
+                Peer Essay Showcase
+              </Text>
+            </View>
+            <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>
+              Browse scored Q53/Q54 essays from fellow Myanmar learners & share your drafts.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Featured Vocab of the Day */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionHeading, { color: colors.text }]}>
@@ -417,6 +443,38 @@ const styles = StyleSheet.create({
   },
   vocabMeaning: {
     fontSize: 13,
+  },
+  communityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  communityIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  communityBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
+    letterSpacing: 0.5,
+  },
+  communityTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  communityDesc: {
+    fontSize: 12,
+    lineHeight: 17,
   },
 });
 

@@ -37,3 +37,4 @@ export interface StatementAiFeedback {
   keyImprovements: string[];
   sentenceImprovements: StatementSentenceImprovement[];
 }
+

@@ -74,3 +74,4 @@ export const STATEMENT_SECTIONS: StatementSectionMeta[] = [
     ],
   },
 ];
+
