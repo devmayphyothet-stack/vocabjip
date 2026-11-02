@@ -39,3 +39,4 @@ export function useDailyStreak() {
     setDailyGoal,
   };
 }
+

@@ -1,13 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd studio && npm install && npm run build",
-  "outputDirectory": "studio/dist",
-  "framework": "vite",
+  "buildCommand": "npx expo export -p web",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|_expo/).*)",
       "destination": "/index.html"
     }
   ]
 }
-
