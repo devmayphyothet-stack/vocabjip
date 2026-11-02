@@ -37,25 +37,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingOtp, setPendingOtp] = useState<PendingOtpSession | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Helper to fetch profile from Supabase profiles table
+  const fetchSupabaseProfile = async (userId: string, email: string): Promise<UserProfile> => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        return {
+          id: profile.id,
+          email: profile.email || email,
+          displayName: profile.display_name || 'TOPIK Learner',
+          targetLevel: profile.target_level || 'TOPIK II Level 4',
+          streakDays: profile.streak_days ?? 1,
+          dailyGoal: profile.daily_goal ?? 3,
+          dailyCompleted: profile.daily_completed ?? 0,
+          createdAt: profile.created_at || new Date().toISOString(),
+        };
+      }
+    } catch (_) {}
+
+    return {
+      id: userId,
+      email,
+      displayName: 'TOPIK Learner',
+      targetLevel: 'TOPIK II Level 4',
+      streakDays: 1,
+      dailyGoal: 3,
+      dailyCompleted: 0,
+      createdAt: new Date().toISOString(),
+    };
+  };
+
   // Restore persistent state on mount
   const restoreSession = useCallback(async () => {
     try {
-      const [storedUserJson, storedGuest, storedOtpJson] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE),
-        AsyncStorage.getItem(STORAGE_KEYS.IS_GUEST),
-        AsyncStorage.getItem(STORAGE_KEYS.PENDING_OTP),
-      ]);
-
-      if (storedUserJson) {
-        setUser(JSON.parse(storedUserJson));
-      } else if (storedGuest === 'true') {
-        setIsGuest(true);
+      if (isSupabaseConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const profile = await fetchSupabaseProfile(
+            session.user.id,
+            session.user.email || ''
+          );
+          setUser(profile);
+          setIsGuest(false);
+          await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+          await AsyncStorage.removeItem(STORAGE_KEYS.IS_GUEST);
+        } else {
+          const storedGuest = await AsyncStorage.getItem(STORAGE_KEYS.IS_GUEST);
+          if (storedGuest === 'true') {
+            setIsGuest(true);
+          }
+        }
+      } else {
+        const [storedUserJson, storedGuest] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE),
+          AsyncStorage.getItem(STORAGE_KEYS.IS_GUEST),
+        ]);
+        if (storedUserJson) {
+          setUser(JSON.parse(storedUserJson));
+        } else if (storedGuest === 'true') {
+          setIsGuest(true);
+        }
       }
 
+      // Check pending OTP session
+      const storedOtpJson = await AsyncStorage.getItem(STORAGE_KEYS.PENDING_OTP);
       if (storedOtpJson) {
         const parsedOtp: PendingOtpSession = JSON.parse(storedOtpJson);
         const now = Date.now();
-        // If not expired, restore pending OTP
         if (parsedOtp.expiresAt > now) {
           setPendingOtp(parsedOtp);
         } else {
@@ -75,7 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen to AppState changes (e.g. user returns from Gmail)
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
-        // Refresh and ensure pending OTP is still verified
         AsyncStorage.getItem(STORAGE_KEYS.PENDING_OTP).then((val) => {
           if (val) {
             try {
@@ -94,7 +146,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [restoreSession]);
 
-  // Persist Pending OTP to AsyncStorage
   const savePendingOtp = async (session: PendingOtpSession) => {
     setPendingOtp(session);
     await AsyncStorage.setItem(STORAGE_KEYS.PENDING_OTP, JSON.stringify(session));
@@ -162,24 +213,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        const newUser: UserProfile = {
-          id: data.user.id,
-          email: pendingOtp.email,
-          displayName: pendingOtp.displayName || data.user.user_metadata?.display_name || 'TOPIK Learner',
-          targetLevel: 'TOPIK II Level 4',
-          streakDays: 1,
-          dailyGoal: 3,
-          dailyCompleted: 0,
-          createdAt: new Date().toISOString(),
-        };
-        setUser(newUser);
+        const profile = await fetchSupabaseProfile(
+          data.user.id,
+          pendingOtp.email
+        );
+        setUser(profile);
         setIsGuest(false);
-        await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(newUser));
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
         await AsyncStorage.removeItem(STORAGE_KEYS.IS_GUEST);
       }
     } else {
-      // Demo / Mock mode for local preview before Supabase is configured
-      // Accepts 6-digit code (e.g. 123456 or any 6 digits)
+      // Demo mode
       if (token.length !== 6) {
         return { success: false, error: 'Please enter a valid 6-digit code.' };
       }
@@ -293,23 +337,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        const loggedInUser: UserProfile = {
-          id: data.user.id,
-          email: trimmedEmail,
-          displayName: data.user.user_metadata?.display_name || 'TOPIK Learner',
-          targetLevel: 'TOPIK II Level 4',
-          streakDays: 7,
-          dailyGoal: 3,
-          dailyCompleted: 2,
-          createdAt: new Date().toISOString(),
-        };
-        setUser(loggedInUser);
+        const profile = await fetchSupabaseProfile(data.user.id, trimmedEmail);
+        setUser(profile);
         setIsGuest(false);
-        await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(loggedInUser));
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
         await AsyncStorage.removeItem(STORAGE_KEYS.IS_GUEST);
       }
     } else {
-      // Demo login
       const demoUser: UserProfile = {
         id: 'demo-user-1',
         email: trimmedEmail,
@@ -369,4 +403,3 @@ export function useAuth(): AuthContextType {
   }
   return context;
 }
-

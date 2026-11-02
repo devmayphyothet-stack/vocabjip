@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/auth-context';
 
 const STORAGE_KEYS = {
   SAVED_VOCAB_IDS: '@vocabjip/saved_vocab_ids',
@@ -31,6 +33,7 @@ interface SavedContextType {
 const SavedContext = createContext<SavedContextType | undefined>(undefined);
 
 export function SavedProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [savedVocabIds, setSavedVocabIds] = useState<string[]>(['v-1', 'v-2']);
   const [savedPatternIds, setSavedPatternIds] = useState<string[]>(['p-1']);
   const [drafts, setDrafts] = useState<SavedDraft[]>([
@@ -45,8 +48,8 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
     },
   ]);
 
+  // Initial load from local AsyncStorage
   useEffect(() => {
-    // Load from local storage
     (async () => {
       try {
         const [vocabsJson, patternsJson, draftsJson] = await Promise.all([
@@ -58,27 +61,143 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
         if (patternsJson) setSavedPatternIds(JSON.parse(patternsJson));
         if (draftsJson) setDrafts(JSON.parse(draftsJson));
       } catch (e) {
-        console.warn('Failed to load saved items:', e);
+        console.warn('Failed to load local saved items:', e);
       }
     })();
   }, []);
 
+  // Sync with Supabase whenever authenticated user changes
+  const syncWithSupabase = useCallback(async () => {
+    if (!user || !isSupabaseConfigured) return;
+
+    try {
+      // 1. Fetch cloud saved vocabs
+      const { data: cloudVocabs } = await supabase
+        .from('saved_vocabs')
+        .select('vocab_id')
+        .eq('user_id', user.id);
+
+      // 2. Fetch cloud saved patterns
+      const { data: cloudPatterns } = await supabase
+        .from('saved_patterns')
+        .select('pattern_id')
+        .eq('user_id', user.id);
+
+      // 3. Fetch cloud drafts
+      const { data: cloudDrafts } = await supabase
+        .from('drafts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      // Merge cloud vocabs with any local vocabs
+      const cloudVocabIds = (cloudVocabs || []).map((r: any) => r.vocab_id);
+      const mergedVocabIds = Array.from(new Set([...savedVocabIds, ...cloudVocabIds]));
+      setSavedVocabIds(mergedVocabIds);
+      AsyncStorage.setItem(STORAGE_KEYS.SAVED_VOCAB_IDS, JSON.stringify(mergedVocabIds));
+
+      // Upload local vocabs that are missing in cloud
+      const missingInCloudVocabs = savedVocabIds.filter((id) => !cloudVocabIds.includes(id));
+      if (missingInCloudVocabs.length > 0) {
+        await supabase.from('saved_vocabs').upsert(
+          missingInCloudVocabs.map((vocab_id) => ({
+            user_id: user.id,
+            vocab_id,
+          }))
+        );
+      }
+
+      // Merge patterns
+      const cloudPatternIds = (cloudPatterns || []).map((r: any) => r.pattern_id);
+      const mergedPatternIds = Array.from(new Set([...savedPatternIds, ...cloudPatternIds]));
+      setSavedPatternIds(mergedPatternIds);
+      AsyncStorage.setItem(STORAGE_KEYS.SAVED_PATTERN_IDS, JSON.stringify(mergedPatternIds));
+
+      // Upload local patterns missing in cloud
+      const missingInCloudPatterns = savedPatternIds.filter((id) => !cloudPatternIds.includes(id));
+      if (missingInCloudPatterns.length > 0) {
+        await supabase.from('saved_patterns').upsert(
+          missingInCloudPatterns.map((pattern_id) => ({
+            user_id: user.id,
+            pattern_id,
+          }))
+        );
+      }
+
+      // Merge drafts
+      if (cloudDrafts && cloudDrafts.length > 0) {
+        const formattedCloudDrafts: SavedDraft[] = cloudDrafts.map((d: any) => ({
+          id: d.id,
+          type: d.type,
+          title: d.title,
+          content: d.content || '',
+          charCount: d.char_count || 0,
+          updatedAt: d.updated_at,
+        }));
+        setDrafts(formattedCloudDrafts);
+        AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(formattedCloudDrafts));
+      }
+    } catch (e) {
+      console.warn('Failed background Supabase sync:', e);
+    }
+  }, [user, savedVocabIds, savedPatternIds]);
+
+  useEffect(() => {
+    if (user) {
+      syncWithSupabase();
+    }
+  }, [user?.id]);
+
   const toggleSaveVocab = async (id: string) => {
-    setSavedVocabIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
-      AsyncStorage.setItem(STORAGE_KEYS.SAVED_VOCAB_IDS, JSON.stringify(next));
-      return next;
-    });
+    const isCurrentlySaved = savedVocabIds.includes(id);
+    const next = isCurrentlySaved
+      ? savedVocabIds.filter((i) => i !== id)
+      : [...savedVocabIds, id];
+
+    setSavedVocabIds(next);
+    await AsyncStorage.setItem(STORAGE_KEYS.SAVED_VOCAB_IDS, JSON.stringify(next));
+
+    // Background sync to Supabase
+    if (user && isSupabaseConfigured) {
+      if (isCurrentlySaved) {
+        await supabase
+          .from('saved_vocabs')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('vocab_id', id);
+      } else {
+        await supabase
+          .from('saved_vocabs')
+          .upsert({ user_id: user.id, vocab_id: id });
+      }
+    }
   };
 
   const isVocabSaved = (id: string) => savedVocabIds.includes(id);
 
   const toggleSavePattern = async (id: string) => {
-    setSavedPatternIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id];
-      AsyncStorage.setItem(STORAGE_KEYS.SAVED_PATTERN_IDS, JSON.stringify(next));
-      return next;
-    });
+    const isCurrentlySaved = savedPatternIds.includes(id);
+    const next = isCurrentlySaved
+      ? savedPatternIds.filter((i) => i !== id)
+      : [...savedPatternIds, id];
+
+    setSavedPatternIds(next);
+    await AsyncStorage.setItem(STORAGE_KEYS.SAVED_PATTERN_IDS, JSON.stringify(next));
+
+    // Background sync to Supabase
+    if (user && isSupabaseConfigured) {
+      if (isCurrentlySaved) {
+        await supabase
+          .from('saved_patterns')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('pattern_id', id);
+      } else {
+        await supabase
+          .from('saved_patterns')
+          .upsert({ user_id: user.id, pattern_id: id });
+      }
+    }
   };
 
   const isPatternSaved = (id: string) => savedPatternIds.includes(id);
@@ -88,20 +207,37 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
       ...draft,
       updatedAt: new Date().toISOString(),
     };
-    setDrafts((prev) => {
-      const filtered = prev.filter((d) => d.id !== draft.id);
-      const next = [updatedDraft, ...filtered];
-      AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next));
-      return next;
-    });
+    const next = [updatedDraft, ...drafts.filter((d) => d.id !== draft.id)];
+    setDrafts(next);
+    await AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next));
+
+    // Background sync to Supabase
+    if (user && isSupabaseConfigured) {
+      await supabase.from('drafts').upsert({
+        id: draft.id,
+        user_id: user.id,
+        type: draft.type,
+        title: draft.title,
+        content: draft.content,
+        char_count: draft.charCount,
+        updated_at: updatedDraft.updatedAt,
+      });
+    }
   };
 
   const deleteDraft = async (id: string) => {
-    setDrafts((prev) => {
-      const next = prev.filter((d) => d.id !== id);
-      AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next));
-      return next;
-    });
+    const next = drafts.filter((d) => d.id !== id);
+    setDrafts(next);
+    await AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next));
+
+    // Background delete from Supabase
+    if (user && isSupabaseConfigured) {
+      await supabase
+        .from('drafts')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('id', id);
+    }
   };
 
   return (
@@ -129,4 +265,3 @@ export function useSaved(): SavedContextType {
   }
   return context;
 }
-
