@@ -52,6 +52,14 @@ export default function RootLayout() {
                 name="modal/ai-feedback"
                 options={{ presentation: 'fullScreenModal', headerShown: false }}
               />
+              <Stack.Screen
+                name="modal/scan-handwriting"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
+              <Stack.Screen
+                name="modal/ocr-confirm"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
             </Stack>
           </AiProvider>
         </SavedProvider>

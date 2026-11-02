@@ -48,3 +48,4 @@ export interface AiEvaluationResponse {
   error?: string;
   errorType?: AiErrorType;
 }
+

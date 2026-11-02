@@ -57,6 +57,32 @@ export default function PracticeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Handwriting Scan Feature Card */}
+        <TouchableOpacity
+          onPress={() => router.push('/modal/scan-handwriting')}
+          style={[
+            styles.scanCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={[styles.scanIconBox, { backgroundColor: colors.accentLight }]}>
+            <Ionicons name="camera" size={24} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.scanBadgeRow}>
+              <Text style={[styles.scanBadge, { backgroundColor: colors.cardMuted, color: colors.accent }]}>
+                HANDWRITING → TEXT
+              </Text>
+            </View>
+            <Text style={[styles.scanCardTitle, { color: colors.text }]}>
+              Scan Paper Wongoji
+            </Text>
+            <Text style={[styles.scanCardDesc, { color: colors.textSecondary }]}>
+              Photograph your handwritten Korean manuscript and edit directly in the app.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Practice Topics Section */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
           Choose Question Type
@@ -220,6 +246,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  scanCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 14,
+  },
+  scanIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanBadgeRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  scanBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  scanCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  scanCardDesc: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   sectionTitle: {
     fontSize: 17,

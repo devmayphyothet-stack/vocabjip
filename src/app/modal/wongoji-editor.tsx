@@ -188,8 +188,15 @@ export default function WongojiEditorModal() {
           </Text>
         </TouchableOpacity>
 
-        {/* Action Buttons: Save & AI Review */}
+        {/* Action Buttons: Scan, Save & AI Review */}
         <View style={styles.topActionGroup}>
+          <TouchableOpacity
+            onPress={() => router.push('/modal/scan-handwriting')}
+            style={[styles.scanIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+            accessibilityLabel="Scan Handwriting">
+            <Ionicons name="camera-outline" size={16} color={colors.text} />
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={handleManualSave}
             style={[
@@ -363,6 +370,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  scanIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveBtn: {
     flexDirection: 'row',
