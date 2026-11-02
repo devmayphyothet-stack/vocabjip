@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StreakService } from '@/services/streak-service';
+import { useAuth } from '@/context/auth-context';
 
 interface QuizQuestion {
   id: number;
@@ -72,6 +74,7 @@ const QUIZ_QUESTIONS: QuizQuestion[] = [
 ];
 
 export default function QuizModal() {
+  const { user } = useAuth();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
@@ -104,6 +107,7 @@ export default function QuizModal() {
       setIsAnswerSubmitted(false);
     } else {
       setIsFinished(true);
+      StreakService.recordActivity(user?.id);
     }
   };
 

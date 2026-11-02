@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Switch,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Link } from 'expo-router';
@@ -16,12 +18,42 @@ import { useAi } from '@/context/ai-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BrandLogo } from '@/components/BrandLogo';
+import { NotificationService } from '@/services/notification-service';
+import { useDailyStreak } from '@/hooks/use-daily-streak';
 
 export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest, signOut } = useAuth();
   const { isConnected, maskedKey } = useAi();
+  const { dailyGoal, setDailyGoal } = useDailyStreak();
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+
+  useEffect(() => {
+    NotificationService.isReminderEnabled().then(setReminderEnabled);
+  }, []);
+
+  const handleToggleReminder = async (val: boolean) => {
+    if (val) {
+      const success = await NotificationService.scheduleDailyReminder(20, 0);
+      if (success) {
+        setReminderEnabled(true);
+        Alert.alert('Study Reminder Set! ⏰', 'နေ့စဉ် ည ၈:၀၀ နာရီတိုင်း TOPIK လေ့ကျင့်ရန် သတိပေးချက် ပို့ပေးပါမည်။');
+      } else {
+        Alert.alert('Notification Permission', 'Notification ခွင့်ပြုချက် မရရှိပါခင်ဗျာ။ ဖုန်း Settings ထဲတွင် Notification ဖွင့်ပေးပါ။');
+      }
+    } else {
+      await NotificationService.cancelDailyReminder();
+      setReminderEnabled(false);
+    }
+  };
+
+  const handleCycleDailyGoal = () => {
+    const goals = [3, 5, 10];
+    const currentIndex = goals.indexOf(dailyGoal);
+    const nextGoal = goals[(currentIndex + 1) % goals.length];
+    setDailyGoal(nextGoal);
+  };
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -115,6 +147,54 @@ export default function ProfileScreen() {
             styles.menuGroup,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}>
+          {/* Daily Goal Target */}
+          <TouchableOpacity
+            onPress={handleCycleDailyGoal}
+            style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.streakLight }]}>
+              <Ionicons name="flame-outline" size={18} color={colors.streak} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Daily Study Goal</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
+                {dailyGoal} activities per day (Tap to change)
+              </Text>
+            </View>
+            <View style={styles.badgeRow}>
+              <Text
+                style={[
+                  styles.badgeValue,
+                  { color: colors.streak, fontWeight: '700' },
+                ]}>
+                {dailyGoal} / day
+              </Text>
+              <Ionicons name="swap-vertical-outline" size={16} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          {/* Daily Study Reminder */}
+          <View style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
+              <Ionicons name="notifications-outline" size={18} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Daily Study Reminder</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
+                Every day at 8:00 PM (Offline-ready)
+              </Text>
+            </View>
+            <Switch
+              value={reminderEnabled}
+              onValueChange={handleToggleReminder}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={Platform.OS === 'ios' ? undefined : '#FFFFFF'}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
           {/* AI Connection */}
           <TouchableOpacity
             onPress={() => router.push('/modal/ai-connect')}

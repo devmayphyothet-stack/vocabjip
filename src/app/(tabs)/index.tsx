@@ -15,16 +15,14 @@ import { useAuth } from '@/context/auth-context';
 import { VOCAB_DATA } from '@/data/vocab-data';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCurriculum } from '@/hooks/use-curriculum';
+import { useDailyStreak } from '@/hooks/use-daily-streak';
 
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest } = useAuth();
   const { vocabularies } = useCurriculum();
-
-  const streakDays = user?.streakDays ?? 7;
-  const dailyGoal = user?.dailyGoal ?? 3;
-  const dailyCompleted = user?.dailyCompleted ?? 2;
+  const { streakDays, dailyGoal, dailyCompleted, isGoalAchieved } = useDailyStreak();
 
   const today = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -99,18 +97,26 @@ export default function HomeScreen() {
           <View
             style={[
               styles.statCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
+              { 
+                backgroundColor: colors.card, 
+                borderColor: isGoalAchieved ? colors.streak : colors.border,
+                borderWidth: isGoalAchieved ? 1.5 : 1,
+              },
             ]}>
             <View style={styles.statIconRow}>
-              <View style={[styles.iconPill, { backgroundColor: colors.accentLight }]}>
-                <Ionicons name="checkmark-done" size={18} color={colors.accent} />
+              <View style={[styles.iconPill, { backgroundColor: isGoalAchieved ? colors.streakLight : colors.accentLight }]}>
+                <Ionicons 
+                  name={isGoalAchieved ? "trophy" : "checkmark-done"} 
+                  size={18} 
+                  color={isGoalAchieved ? colors.streak : colors.accent} 
+                />
               </View>
-              <Text style={[styles.statValue, { color: colors.text }]}>
+              <Text style={[styles.statValue, { color: isGoalAchieved ? colors.streak : colors.text }]}>
                 {dailyCompleted}/{dailyGoal}
               </Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              Daily Goal
+            <Text style={[styles.statLabel, { color: isGoalAchieved ? colors.streak : colors.textSecondary }]}>
+              {isGoalAchieved ? "Goal Done! 🎉" : "Daily Goal"}
             </Text>
           </View>
         </View>

@@ -17,6 +17,8 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
 import { useAi } from '@/context/ai-context';
+import { useAuth } from '@/context/auth-context';
+import { StreakService } from '@/services/streak-service';
 import { PracticePausedModal, PracticeTimeUpModal } from '@/components/timer-modals';
 
 type ViewMode = 'text' | 'grid';
@@ -24,6 +26,7 @@ type ViewMode = 'text' | 'grid';
 export default function WongojiEditorModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
 
@@ -98,6 +101,9 @@ export default function WongojiEditorModal() {
       content,
       charCount: content.length,
     });
+    if (content.trim().length > 10) {
+      StreakService.recordActivity(user?.id);
+    }
     setIsSavedFeedback(true);
     setTimeout(() => setIsSavedFeedback(false), 2000);
   };
