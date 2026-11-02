@@ -1,19 +1,18 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
-  Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BrandLogo } from '@/components/BrandLogo';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { BrandLogo } from '@/components/BrandLogo';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import {
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AboutScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -21,11 +20,11 @@ export default function AboutScreen() {
   const insets = useSafeAreaInsets();
 
   const handleEmailPress = () => {
-    Linking.openURL('mailto:dev.mayphyothet@gmail.com').catch(() => {});
+    Linking.openURL('mailto:dev.mayphyothet@gmail.com').catch(() => { });
   };
 
   const handlePhonePress = () => {
-    Linking.openURL('tel:+821075915740').catch(() => {});
+    Linking.openURL('tel:+821075915740').catch(() => { });
   };
 
   return (
@@ -68,12 +67,8 @@ export default function AboutScreen() {
           <Text style={[styles.taglineKorean, { color: colors.primary }]}>
             단어를 담는 집, 생각을 짓는 공간
           </Text>
-          <Text style={[styles.taglineBurmese, { color: colors.textSecondary }]}>
-            စကားလုံးများ စုစည်းရာ၊ အတွေးများကို ပုံဖော်ရာ အိမ်ကလေး
-          </Text>
-
           <View style={[styles.versionPill, { backgroundColor: colors.cardMuted }]}>
-            <Text style={[styles.versionText, { color: colors.textMuted }]}>Version 1.0.0 (Release)</Text>
+            <Text style={[styles.versionText, { color: colors.textMuted }]}>Version 1.0.0</Text>
           </View>
         </View>
 
@@ -161,6 +156,27 @@ export default function AboutScreen() {
           </View>
         </View>
 
+        {/* Feedback Banner */}
+        <TouchableOpacity
+          onPress={() => {
+            router.push('/modal/feedback');
+          }}
+          activeOpacity={0.7}
+          style={[styles.feedbackBanner, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}>
+          <View style={styles.feedbackBannerContent}>
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.accent} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[styles.feedbackBannerTitle, { color: colors.accent }]}>
+                Share your feedback & ideas
+              </Text>
+              <Text style={[styles.feedbackBannerSubtitle, { color: colors.textSecondary }]}>
+                ကြုံတွေ့ရသည့် အခက်အခဲများနှင့် လိုအပ်ချက်များကို အကြံပြုပေးပို့ပါ
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward" size={18} color={colors.accent} />
+          </View>
+        </TouchableOpacity>
+
         {/* Quiet Colophon / Developer Info Section */}
         <View style={[styles.colophonContainer, { borderColor: colors.border }]}>
           <Text style={[styles.colophonHeading, { color: colors.textMuted }]}>
@@ -168,7 +184,7 @@ export default function AboutScreen() {
           </Text>
 
           <Text style={[styles.colophonIntro, { color: colors.textMuted }]}>
-            ဤ Application အား ကိုရီးယားနိုင်ငံတွင် ပညာသင်ယူနေသော မြန်မာကျောင်းသား/သူများနှင့် TOPIK II အောင်မြင်လိုသူများ စာစီစာကုံး အရေးအသားကို အထောက်အကူပြုစေရန် ရည်သန်၍ ရေးသားဖန်တီးထားခြင်း ဖြစ်ပါသည်။
+            ဤ Application အား ကိုရီးယားနိုင်ငံတွင် ပညာသင်ယူနေသော မြန်မာကျောင်းသား/သူများနှင့် TOPIK II အောင်မြင်လိုသူများ စာစီစာကုံး အရေးအသားကို အထောက်အကူပြုစေရန် ရည်ရွယ်၍ ပြုလုပ်ထားခြင်း ဖြစ်ပါသည်။
           </Text>
 
           <View style={styles.colophonDetails}>
@@ -195,13 +211,6 @@ export default function AboutScreen() {
                   +82 10-7591-5740
                 </Text>
               </TouchableOpacity>
-            </View>
-
-            <View style={styles.colophonRow}>
-              <Text style={[styles.colophonLabel, { color: colors.textMuted }]}>Crafted with</Text>
-              <Text style={[styles.colophonValue, { color: colors.textSecondary }]}>
-                React Native • Expo SDK 58 • Supabase
-              </Text>
             </View>
           </View>
 
@@ -341,6 +350,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     gap: 12,
   },
+  feedbackBanner: {
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginVertical: 4,
+  },
+  feedbackBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  feedbackBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  feedbackBannerSubtitle: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
   colophonHeading: {
     fontSize: 11,
     fontWeight: '700',
@@ -380,3 +408,4 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
 });
+

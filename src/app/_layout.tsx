@@ -98,6 +98,10 @@ export default function RootLayout() {
                 name="modal/about"
                 options={{ presentation: 'modal', headerShown: false }}
               />
+              <Stack.Screen
+                name="modal/feedback"
+                options={{ presentation: 'modal', headerShown: false }}
+              />
             </Stack>
           </AiProvider>
         </SavedProvider>

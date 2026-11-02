@@ -203,6 +203,24 @@ export default function ProfileScreen() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+          {/* Send Feedback */}
+          <TouchableOpacity
+            onPress={() => router.push('/modal/feedback')}
+            style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Send Feedback</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
+                Feature requests, bug reports & thoughts
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* Sign Out (if logged in) */}

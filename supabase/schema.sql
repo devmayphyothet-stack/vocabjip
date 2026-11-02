@@ -125,3 +125,28 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+-- ============================================================
+-- 6. USER FEEDBACK TABLE
+-- ============================================================
+create table if not exists public.user_feedback (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete set null,
+  category text not null,
+  rating int default 5,
+  title text not null,
+  message text not null,
+  email text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.user_feedback enable row level security;
+
+create policy "Anyone can insert user feedback"
+  on public.user_feedback for insert
+  with check (true);
+
+create policy "Users can view their own feedback"
+  on public.user_feedback for select
+  using (auth.uid() = user_id);
+
+

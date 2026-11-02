@@ -1,20 +1,19 @@
-import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import {
-  View,
-  Text,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Link } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { useAuth } from '@/context/auth-context';
-import { Colors, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { VOCAB_DATA } from '@/data/vocab-data';
 import { BrandLogo } from '@/components/BrandLogo';
+import { Colors, Spacing } from '@/constants/theme';
+import { useAuth } from '@/context/auth-context';
+import { VOCAB_DATA } from '@/data/vocab-data';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -208,7 +207,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>
-              Browse scored Q53/Q54 essays from fellow Myanmar learners & share your drafts.
+              မြန်မာဘာသာစကား လေ့လာနေသူ အချင်းချင်း Q53/Q54 အမှတ်ကောင်းထားတဲ့ စာမူတွေကို ကြည့်ရှုပြီး ကိုယ့်ရဲ့ ရေးလက်စ စာမူတွေကို ဝေမျှလိုက်ပါ။
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
