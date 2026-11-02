@@ -167,7 +167,7 @@ export default function LearnScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title & Segmented Control */}
       <View style={styles.header}>
         <Text style={[styles.pageTitle, { color: colors.text }]}>Learning Lab</Text>

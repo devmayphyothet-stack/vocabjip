@@ -37,7 +37,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
@@ -84,23 +84,21 @@ export default function ProfileScreen() {
                 Create an account using a 6-digit OTP to backup your streak and drafts.
               </Text>
               <View style={styles.authBtnRow}>
-                <Link href="/(auth)/sign-up" asChild>
-                  <TouchableOpacity
-                    style={[styles.authBtn, { backgroundColor: colors.primary }]}>
-                    <Text
-                      style={[styles.authBtnText, { color: colors.primaryContrast }]}>
-                      Sign Up with OTP
-                    </Text>
-                  </TouchableOpacity>
-                </Link>
-                <Link href="/(auth)/sign-in" asChild>
-                  <TouchableOpacity
-                    style={[styles.authBtnSecondary, { borderColor: colors.border }]}>
-                    <Text style={[styles.authBtnSecondaryText, { color: colors.text }]}>
-                      Sign In
-                    </Text>
-                  </TouchableOpacity>
-                </Link>
+                <TouchableOpacity
+                  onPress={() => router.push('/(auth)/sign-up')}
+                  style={[styles.authBtn, { backgroundColor: colors.primary }]}>
+                  <Text
+                    style={[styles.authBtnText, { color: colors.primaryContrast }]}>
+                    Sign Up with OTP
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/(auth)/sign-in')}
+                  style={[styles.authBtnSecondary, { borderColor: colors.border }]}>
+                  <Text style={[styles.authBtnSecondaryText, { color: colors.text }]}>
+                    Sign In
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}

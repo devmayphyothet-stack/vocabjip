@@ -124,13 +124,11 @@ export default function SignInScreen() {
             <View style={styles.inputGroup}>
               <View style={styles.passwordLabelRow}>
                 <Text style={[styles.label, { color: colors.text }]}>Password</Text>
-                <Link href="/(auth)/forgot-password" asChild>
-                  <TouchableOpacity>
-                    <Text style={[styles.forgotText, { color: colors.accent }]}>
-                      Forgot password?
-                    </Text>
-                  </TouchableOpacity>
-                </Link>
+                <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
+                  <Text style={[styles.forgotText, { color: colors.accent }]}>
+                    Forgot password?
+                  </Text>
+                </TouchableOpacity>
               </View>
               <View
                 style={[
@@ -184,11 +182,9 @@ export default function SignInScreen() {
             <Text style={[styles.footerText, { color: colors.textSecondary }]}>
               Don't have an account yet?{' '}
             </Text>
-            <Link href="/(auth)/sign-up" asChild>
-              <TouchableOpacity>
-                <Text style={[styles.linkText, { color: colors.accent }]}>Sign up</Text>
-              </TouchableOpacity>
-            </Link>
+            <TouchableOpacity onPress={() => router.push('/(auth)/sign-up')}>
+              <Text style={[styles.linkText, { color: colors.accent }]}>Sign up</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

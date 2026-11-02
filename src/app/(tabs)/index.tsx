@@ -30,7 +30,7 @@ export default function HomeScreen() {
   });
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
@@ -42,12 +42,11 @@ export default function HomeScreen() {
             </Text>
             <Text style={[styles.brandTitle, { color: colors.text }]}>VocabJip</Text>
           </View>
-          <Link href="/(tabs)/profile" asChild>
-            <TouchableOpacity
-              style={[styles.profileAvatar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Ionicons name="person" size={18} color={colors.accent} />
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/profile')}
+            style={[styles.profileAvatar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Ionicons name="person" size={18} color={colors.accent} />
+          </TouchableOpacity>
         </View>
 
         {/* Guest Reminder Banner */}
@@ -61,12 +60,11 @@ export default function HomeScreen() {
                 Sign up with 6-digit OTP to sync your drafts and streak.
               </Text>
             </View>
-            <Link href="/(auth)/sign-up" asChild>
-              <TouchableOpacity
-                style={[styles.guestBannerBtn, { backgroundColor: colors.accent }]}>
-                <Text style={styles.guestBannerBtnText}>Sign Up</Text>
-              </TouchableOpacity>
-            </Link>
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/sign-up')}
+              style={[styles.guestBannerBtn, { backgroundColor: colors.accent }]}>
+              <Text style={styles.guestBannerBtnText}>Sign Up</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -212,11 +210,9 @@ export default function HomeScreen() {
           <Text style={[styles.sectionHeading, { color: colors.text }]}>
             High-Yield Academic Words
           </Text>
-          <Link href="/(tabs)/learn" asChild>
-            <TouchableOpacity>
-              <Text style={[styles.seeAllText, { color: colors.accent }]}>See all</Text>
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/learn')}>
+            <Text style={[styles.seeAllText, { color: colors.accent }]}>See all</Text>
+          </TouchableOpacity>
         </View>
 
         {VOCAB_DATA.slice(0, 3).map((item) => (

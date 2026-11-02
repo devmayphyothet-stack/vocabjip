@@ -44,7 +44,7 @@ export default function SavedScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Your Collection</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
