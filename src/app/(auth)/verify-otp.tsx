@@ -17,6 +17,7 @@ import { useAuth } from '@/context/auth-context';
 import { OtpInput } from '@/components/auth/otp-input';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function VerifyOtpScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -126,10 +127,8 @@ export default function VerifyOtpScreen() {
       </View>
 
       <View style={styles.content}>
-        {/* Mail Icon & Title */}
-        <View style={[styles.iconCircle, { backgroundColor: colors.accentLight }]}>
-          <Ionicons name="mail-open-outline" size={32} color={colors.accent} />
-        </View>
+        {/* Brand Logo & Title */}
+        <BrandLogo size={64} containerStyle={{ marginBottom: 16 }} />
 
         <Text style={[styles.title, { color: colors.text }]}>Check your inbox</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>

@@ -14,6 +14,7 @@ import { useAuth } from '@/context/auth-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { VOCAB_DATA } from '@/data/vocab-data';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -36,11 +37,14 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}>
         {/* Top Header */}
         <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.dateText, { color: colors.textSecondary }]}>
-              {today} • Today
-            </Text>
-            <Text style={[styles.brandTitle, { color: colors.text }]}>VocabJip</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <BrandLogo size={40} />
+            <View>
+              <Text style={[styles.dateText, { color: colors.textSecondary }]}>
+                {today} • Today
+              </Text>
+              <Text style={[styles.brandTitle, { color: colors.text }]}>VocabJip</Text>
+            </View>
           </View>
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/profile')}

@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/auth-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function SignInScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -82,6 +83,7 @@ export default function SignInScreen() {
           </View>
 
           <View style={styles.header}>
+            <BrandLogo size={64} containerStyle={{ marginBottom: 12, alignSelf: 'flex-start' }} />
             <Text style={[styles.badge, { color: colors.accent, backgroundColor: colors.accentLight }]}>
               다시 오신 것을 환영합니다
             </Text>

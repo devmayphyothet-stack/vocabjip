@@ -15,6 +15,7 @@ import { useAuth } from '@/context/auth-context';
 import { useAi } from '@/context/ai-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -199,10 +200,13 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Version info */}
-        <Text style={[styles.versionText, { color: colors.textMuted }]}>
-          VocabJip v1.0.0 • Offline-First TOPIK Companion
-        </Text>
+        {/* Version & Brand info */}
+        <View style={styles.brandingFooter}>
+          <BrandLogo size={46} containerStyle={{ marginBottom: 6 }} />
+          <Text style={[styles.versionText, { color: colors.textMuted }]}>
+            VocabJip v1.0.0 • Offline-First TOPIK Companion
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -359,8 +363,13 @@ const styles = StyleSheet.create({
   versionText: {
     textAlign: 'center',
     fontSize: 12,
+  },
+  brandingFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: Spacing.four,
-    marginBottom: Spacing.two,
+    marginBottom: Spacing.four,
+    gap: 4,
   },
 });
 

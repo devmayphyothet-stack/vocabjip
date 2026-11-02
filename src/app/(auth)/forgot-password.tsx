@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/auth-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function ForgotPasswordScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -70,9 +71,7 @@ export default function ForgotPasswordScreen() {
           </View>
 
           <View style={styles.header}>
-            <View style={[styles.iconBox, { backgroundColor: colors.accentLight }]}>
-              <Ionicons name="key-outline" size={28} color={colors.accent} />
-            </View>
+            <BrandLogo size={64} containerStyle={{ marginBottom: 16, alignSelf: 'flex-start' }} />
             <Text style={[styles.title, { color: colors.text }]}>Reset your password</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Enter your email and we'll send you a 6-digit verification code to set a new password.

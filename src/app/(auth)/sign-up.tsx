@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/auth-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function SignUpScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -91,6 +92,7 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.header}>
+            <BrandLogo size={64} containerStyle={{ marginBottom: 12, alignSelf: 'flex-start' }} />
             <Text style={[styles.koreanBadge, { color: colors.accent, backgroundColor: colors.accentLight }]}>
               한국어 글쓰기 • VocabJip
             </Text>
