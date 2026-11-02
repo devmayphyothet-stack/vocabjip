@@ -370,10 +370,14 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 18,
     fontWeight: '700',
+    lineHeight: 26,
+    marginTop: 2,
   },
   tipDesc: {
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 22,
+    marginTop: 6,
+    paddingTop: 2,
   },
   tipActionRow: {
     flexDirection: 'row',
@@ -449,6 +453,9 @@ const styles = StyleSheet.create({
   },
   vocabMeaning: {
     fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+    paddingTop: 1,
   },
   communityCard: {
     flexDirection: 'row',
@@ -480,7 +487,9 @@ const styles = StyleSheet.create({
   },
   communityDesc: {
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 21,
+    marginTop: 5,
+    paddingTop: 2,
   },
 });
 

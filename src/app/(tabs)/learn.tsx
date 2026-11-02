@@ -481,6 +481,9 @@ const styles = StyleSheet.create({
   },
   myanmarMeaning: {
     fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+    paddingTop: 1,
   },
   qBadge: {
     paddingHorizontal: 8,
@@ -494,9 +497,14 @@ const styles = StyleSheet.create({
   patternTitle: {
     fontSize: 16,
     fontWeight: '700',
+    lineHeight: 24,
+    marginTop: 2,
   },
   patternMyanmar: {
     fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+    paddingTop: 1,
   },
   formulaBox: {
     padding: 10,

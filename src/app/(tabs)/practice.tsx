@@ -262,9 +262,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   focusCardDesc: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 22,
+    marginTop: 6,
+    paddingTop: 2,
   },
   focusStartBtn: {
     flexDirection: 'row',
@@ -310,7 +312,9 @@ const styles = StyleSheet.create({
   },
   scanCardDesc: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 21,
+    marginTop: 4,
+    paddingTop: 2,
   },
   sectionTitle: {
     fontSize: 17,
@@ -345,10 +349,14 @@ const styles = StyleSheet.create({
   topicTitle: {
     fontSize: 17,
     fontWeight: '700',
+    lineHeight: 25,
+    marginTop: 2,
   },
   topicDesc: {
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 22,
+    marginTop: 4,
+    paddingTop: 2,
   },
   topicButtonsRow: {
     flexDirection: 'row',
