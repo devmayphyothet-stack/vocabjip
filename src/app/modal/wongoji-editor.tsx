@@ -1,0 +1,446 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+import { Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useSaved } from '@/context/saved-context';
+
+type ViewMode = 'text' | 'grid';
+
+export default function WongojiEditorModal() {
+  const scheme = useColorScheme() ?? 'light';
+  const colors = Colors[scheme];
+  const { saveDraft } = useSaved();
+  const params = useLocalSearchParams<{
+    type?: string;
+    promptTitle?: string;
+    charTarget?: string;
+    initialContent?: string;
+  }>();
+
+  const type = (params.type as 'Q53' | 'Q54') || 'Q53';
+  const promptTitle = params.promptTitle || (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
+  const charTarget = params.charTarget || (type === 'Q53' ? '200 – 300' : '600 – 700');
+
+  const [viewMode, setViewMode] = useState<ViewMode>('text');
+  const [content, setContent] = useState(
+    params.initialContent ||
+      (type === 'Q53'
+        ? '인터넷 사용 통계에 따르면 2020년 65%에서 2024년 85%로 크게 증가하였다. 이러한 변화의 원인으로는 스마트폰 보급 확대를 들 수 있다.'
+        : '')
+  );
+
+  // Timer State (20 minutes = 1200 seconds)
+  const [secondsLeft, setSecondsLeft] = useState(1200);
+  const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [isSavedFeedback, setIsSavedFeedback] = useState(false);
+
+  useEffect(() => {
+    let interval: any = null;
+    if (isTimerRunning && secondsLeft > 0) {
+      interval = setInterval(() => {
+        setSecondsLeft((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, secondsLeft]);
+
+  // Format timer MM:SS
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainder = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
+  };
+
+  const handleManualSave = async () => {
+    await saveDraft({
+      id: `draft-${Date.now()}`,
+      type,
+      title: promptTitle,
+      content,
+      charCount: content.length,
+    });
+    setIsSavedFeedback(true);
+    setTimeout(() => setIsSavedFeedback(false), 2000);
+  };
+
+  const handleClose = () => {
+    if (content.trim()) {
+      // Auto save on close
+      saveDraft({
+        id: `draft-${Date.now()}`,
+        type,
+        title: promptTitle,
+        content,
+        charCount: content.length,
+      });
+    }
+    router.back();
+  };
+
+  // Convert text into Wongoji Grid cells (20 characters per line)
+  const renderWongojiGrid = () => {
+    const chars = content.split('');
+    const cellsPerLine = 20;
+    const totalLines = Math.max(8, Math.ceil((chars.length + 10) / cellsPerLine));
+
+    const gridRows: string[][] = [];
+    for (let r = 0; r < totalLines; r++) {
+      const row: string[] = [];
+      for (let c = 0; c < cellsPerLine; c++) {
+        const charIndex = r * cellsPerLine + c;
+        row.push(chars[charIndex] || '');
+      }
+      gridRows.push(row);
+    }
+
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={[styles.wongojiSheet, { backgroundColor: '#FFFEFA', borderColor: '#E5DFD5' }]}>
+          {gridRows.map((row, rIndex) => (
+            <View key={rIndex} style={styles.gridLineRow}>
+              <Text style={styles.lineNumberText}>{(rIndex + 1) * 20}</Text>
+              <View style={styles.cellsRow}>
+                {row.map((cellChar, cIndex) => {
+                  const isFilled = cellChar !== '';
+                  return (
+                    <View
+                      key={cIndex}
+                      style={[
+                        styles.gridCell,
+                        { borderColor: '#E8E2D8' },
+                        isFilled && { backgroundColor: '#FDFCF7' },
+                      ]}>
+                      <Text style={styles.gridCellText}>{cellChar}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    );
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Top Header */}
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+          <Ionicons name="close" size={22} color={colors.text} />
+        </TouchableOpacity>
+
+        {/* Timer Pill */}
+        <TouchableOpacity
+          onPress={() => setIsTimerRunning(!isTimerRunning)}
+          style={[styles.timerPill, { backgroundColor: colors.cardMuted }]}>
+          <Ionicons
+            name={isTimerRunning ? 'pause' : 'play'}
+            size={14}
+            color={colors.accent}
+          />
+          <Text style={[styles.timerText, { color: colors.text }]}>
+            {formatTime(secondsLeft)}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          onPress={handleManualSave}
+          style={[
+            styles.saveBtn,
+            { backgroundColor: isSavedFeedback ? colors.successLight : colors.card },
+            { borderColor: isSavedFeedback ? colors.success : colors.border },
+          ]}>
+          <Ionicons
+            name={isSavedFeedback ? 'checkmark' : 'save-outline'}
+            size={16}
+            color={isSavedFeedback ? colors.success : colors.text}
+          />
+          <Text
+            style={[
+              styles.saveBtnText,
+              { color: isSavedFeedback ? colors.success : colors.text },
+            ]}>
+            {isSavedFeedback ? 'Saved' : 'Save'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Title & Target Bar */}
+      <View style={styles.metaBar}>
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={1} style={[styles.promptTitle, { color: colors.text }]}>
+            {promptTitle}
+          </Text>
+          <Text style={[styles.targetInfo, { color: colors.textSecondary }]}>
+            Target: {charTarget} characters • Autosaved locally
+          </Text>
+        </View>
+
+        {/* Character Count Badge */}
+        <View style={[styles.charCountPill, { backgroundColor: colors.cardMuted }]}>
+          <Text style={[styles.charCountText, { color: colors.accent }]}>
+            {content.length}
+          </Text>
+          <Text style={[styles.charCountTotal, { color: colors.textMuted }]}>
+            /{type === 'Q53' ? '300' : '700'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Segmented Switcher: Text Input vs Grid Preview */}
+      <View style={styles.segmentContainer}>
+        <View style={[styles.segmentTrack, { backgroundColor: colors.cardMuted }]}>
+          <TouchableOpacity
+            onPress={() => setViewMode('text')}
+            style={[
+              styles.segmentBtn,
+              viewMode === 'text' && [
+                styles.segmentBtnActive,
+                { backgroundColor: colors.card },
+              ],
+            ]}>
+            <Ionicons
+              name="create-outline"
+              size={15}
+              color={viewMode === 'text' ? colors.text : colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                { color: viewMode === 'text' ? colors.text : colors.textSecondary },
+              ]}>
+              Text Input
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setViewMode('grid')}
+            style={[
+              styles.segmentBtn,
+              viewMode === 'grid' && [
+                styles.segmentBtnActive,
+                { backgroundColor: colors.card },
+              ],
+            ]}>
+            <Ionicons
+              name="grid-outline"
+              size={15}
+              color={viewMode === 'grid' ? colors.text : colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                { color: viewMode === 'grid' ? colors.text : colors.textSecondary },
+              ]}>
+              Grid Preview (원고지)
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Workspace Area */}
+      <View style={styles.workspace}>
+        {viewMode === 'text' ? (
+          <TextInput
+            style={[
+              styles.textInputArea,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            placeholder="원고지 형식에 맞추어 글을 작성해 보세요..."
+            placeholderTextColor={colors.textMuted}
+            value={content}
+            onChangeText={setContent}
+            multiline
+            textAlignVertical="top"
+            autoFocus
+          />
+        ) : (
+          <View style={styles.gridContainer}>
+            <Text style={[styles.wongojiNotice, { color: colors.textSecondary }]}>
+              20 columns per line • Standard Korean TOPIK Wongoji simulation
+            </Text>
+            {renderWongojiGrid()}
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+  },
+  closeBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  timerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  saveBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  metaBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+  },
+  promptTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  targetInfo: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  charCountPill: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  charCountText: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  charCountTotal: {
+    fontSize: 11,
+  },
+  segmentContainer: {
+    paddingHorizontal: Spacing.four,
+    marginBottom: Spacing.two,
+  },
+  segmentTrack: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 3,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    borderRadius: 9,
+    gap: 6,
+  },
+  segmentBtnActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  segmentText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  workspace: {
+    flex: 1,
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.four,
+  },
+  textInputArea: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 16,
+    lineHeight: 26,
+  },
+  gridContainer: {
+    flex: 1,
+    gap: 8,
+  },
+  wongojiNotice: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  wongojiSheet: {
+    borderWidth: 1.5,
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
+  },
+  gridLineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  lineNumberText: {
+    fontSize: 9,
+    color: '#A8A29E',
+    width: 22,
+    textAlign: 'right',
+    fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
+  },
+  cellsRow: {
+    flexDirection: 'row',
+  },
+  gridCell: {
+    width: 28,
+    height: 28,
+    borderWidth: 0.8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridCellText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#292524',
+  },
+});
+

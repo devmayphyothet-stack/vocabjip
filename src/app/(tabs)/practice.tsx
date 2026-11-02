@@ -1,0 +1,295 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+import { Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+
+export default function PracticeScreen() {
+  const scheme = useColorScheme() ?? 'light';
+  const colors = Colors[scheme];
+
+  const handleStartPractice = (type: 'Q53' | 'Q54', promptTitle: string, charTarget: string) => {
+    router.push({
+      pathname: '/modal/wongoji-editor',
+      params: { type, promptTitle, charTarget },
+    });
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Practice Room</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Small steps. Exam-ready Korean manuscript writing.
+          </Text>
+        </View>
+
+        {/* Focus Mode Banner */}
+        <TouchableOpacity
+          onPress={() => handleStartPractice('Q53', '인터넷 사용 통계 (Internet Usage)', '200-300')}
+          style={[styles.focusCard, { backgroundColor: colors.primary }]}>
+          <View style={styles.focusCardTop}>
+            <View style={[styles.focusIconPill, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <Ionicons name="timer-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.focusBadgeText}>TIMED FOCUS MODE</Text>
+          </View>
+          <Text style={styles.focusCardTitle}>Timed TOPIK Simulation</Text>
+          <Text style={styles.focusCardDesc}>
+            Practice writing within 20 minutes on realistic Wongoji grid with auto-save.
+          </Text>
+          <View style={styles.focusStartBtn}>
+            <Text style={styles.focusStartText}>Start 20-min Session</Text>
+            <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
+
+        {/* Practice Topics Section */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Choose Question Type
+        </Text>
+
+        {/* Q53 Card */}
+        <View
+          style={[
+            styles.topicCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={styles.topicHeader}>
+            <View style={[styles.qTag, { backgroundColor: colors.accentLight }]}>
+              <Text style={[styles.qTagText, { color: colors.accent }]}>QUESTION 53</Text>
+            </View>
+            <Text style={[styles.charTarget, { color: colors.textSecondary }]}>
+              200 – 300 CHARACTERS
+            </Text>
+          </View>
+
+          <Text style={[styles.topicTitle, { color: colors.text }]}>
+            Graph Writing: 인터넷 이용 현황
+          </Text>
+          <Text style={[styles.topicDesc, { color: colors.textSecondary }]}>
+            Write a structured 200-300 character summary based on internet usage percentage changes and underlying causes.
+          </Text>
+
+          <View style={styles.topicButtonsRow}>
+            <TouchableOpacity
+              onPress={() =>
+                handleStartPractice('Q53', '인터넷 이용 현황 (Internet Usage)', '200-300')
+              }
+              style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}>
+              <Ionicons name="create-outline" size={16} color={colors.text} />
+              <Text style={[styles.openEditorText, { color: colors.text }]}>
+                Wongoji Editor
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() =>
+                handleStartPractice('Q53', '인터넷 이용 현황 (Internet Usage)', '200-300')
+              }
+              style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}>
+              <Ionicons name="play" size={14} color="#FFFFFF" />
+              <Text style={styles.startTimedText}>Start Timed</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Q54 Card */}
+        <View
+          style={[
+            styles.topicCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={styles.topicHeader}>
+            <View style={[styles.qTag, { backgroundColor: colors.streakLight }]}>
+              <Text style={[styles.qTagText, { color: colors.streak }]}>QUESTION 54</Text>
+            </View>
+            <Text style={[styles.charTarget, { color: colors.textSecondary }]}>
+              600 – 700 CHARACTERS
+            </Text>
+          </View>
+
+          <Text style={[styles.topicTitle, { color: colors.text }]}>
+            Long Essay: 평생 교육의 필요성
+          </Text>
+          <Text style={[styles.topicDesc, { color: colors.textSecondary }]}>
+            Build your three-part argument: Introduction → Two supporting arguments with examples → Conclusion and social proposals.
+          </Text>
+
+          <View style={styles.topicButtonsRow}>
+            <TouchableOpacity
+              onPress={() =>
+                handleStartPractice('Q54', '평생 교육의 필요성 (Lifelong Learning)', '600-700')
+              }
+              style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}>
+              <Ionicons name="create-outline" size={16} color={colors.text} />
+              <Text style={[styles.openEditorText, { color: colors.text }]}>
+                Wongoji Editor
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() =>
+                handleStartPractice('Q54', '평생 교육의 필요성 (Lifelong Learning)', '600-700')
+              }
+              style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}>
+              <Ionicons name="play" size={14} color="#FFFFFF" />
+              <Text style={styles.startTimedText}>Start Timed</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  header: {
+    marginBottom: Spacing.one,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  focusCard: {
+    borderRadius: 18,
+    padding: 20,
+    gap: 8,
+  },
+  focusCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  focusIconPill: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  focusBadgeText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  focusCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  focusCardDesc: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  focusStartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  focusStartText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginTop: Spacing.two,
+  },
+  topicCard: {
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+  },
+  topicHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  qTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  qTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  charTarget: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  topicTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  topicDesc: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  topicButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  openEditorBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderRadius: 10,
+    gap: 6,
+  },
+  openEditorText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  startTimedBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderRadius: 10,
+    gap: 6,
+  },
+  startTimedText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+});
+
