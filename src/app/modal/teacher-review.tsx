@@ -401,36 +401,7 @@ export default function TeacherReviewModal() {
                                 borderColor: colors.accent,
                               },
                             ]}>
-                            <View>
-                              <Text
-                                style={[
-                                  styles.scoreBannerLabel,
-                                  { color: colors.accent },
-                                ]}>
-                                TEACHER EVALUATION SCORE
-                              </Text>
-                              <View style={styles.reviewerAttributionLine}>
-                                <Ionicons
-                                  name="ribbon"
-                                  size={14}
-                                  color="#B45309"
-                                />
-                                <Text
-                                  style={[
-                                    styles.reviewerFullTitle,
-                                    { color: colors.text },
-                                  ]}>
-                                  Reviewed by {item.reviewer_name || 'TOPIK Mentor'}
-                                </Text>
-                                {/* {item.reviewer_rank && (
-                                  <View style={styles.rankHighlightBadge}>
-                                    <Text style={styles.rankHighlightText}>
-                                      {item.reviewer_rank}
-                                    </Text>
-                                  </View>
-                                )} */}
-                              </View>
-                            </View>
+
 
                             <View style={styles.scoreCircle}>
                               <Text
@@ -537,7 +508,7 @@ export default function TeacherReviewModal() {
                                   styles.feedbackBlockTitle,
                                   { color: colors.text },
                                 ]}>
-                                💬 Contributor ၏ အထွေထွေ သုံးသပ်ချက်
+                                💬 Contributor ၏ အထွေထွေ သုံးသပ်ချက် (Notes)
                               </Text>
                               <Text
                                 style={[
