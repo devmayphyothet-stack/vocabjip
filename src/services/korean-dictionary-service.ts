@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PATTERNS_DATA } from '@/data/patterns-data';
 import { VOCAB_DATA } from '@/data/vocab-data';
 import { supabase } from '@/lib/supabase';
+import { callGeminiGenerateContent } from '@/services/gemini-service';
 
 export interface WordDefinition {
   korean: string;
@@ -701,25 +702,24 @@ Return ONLY a valid JSON object matching this exact schema:
   "category": "<one of: Society, Economy, Education, Technology, Contrast, Cause & Effect, General>"
 }`;
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const attempt = await callGeminiGenerateContent(
+        apiKey,
+        {
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.1,
             responseMimeType: 'application/json',
           },
-        }),
-      });
+        },
+        model
+      );
 
-      if (!res.ok) {
+      if (!attempt.ok) {
         // If 429 or 400/403, return null so loop automatically tries Backup Key!
         return null;
       }
 
-      const data = await res.json();
+      const data = attempt.data;
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) return null;
 

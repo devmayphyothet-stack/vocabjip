@@ -1,6 +1,5 @@
 import { StatementAiFeedback } from '@/types/statement';
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+import { callGeminiGenerateContent } from '@/services/gemini-service';
 
 export async function evaluatePersonalStatement(
   apiKey: string,
@@ -57,27 +56,22 @@ ${koreanText}
 Please evaluate this personal statement and return JSON only.`;
 
   try {
-    const url = `${GEMINI_API_URL}/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        },
-      }),
+    const attempt = await callGeminiGenerateContent(apiKey, {
+      contents: [
+        { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+      },
     });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      return { success: false, error: err.error?.message || 'Failed to review statement.' };
+    if (!attempt.ok) {
+      const err = attempt.data;
+      return { success: false, error: err?.error?.message || 'Failed to review statement.' };
     }
 
-    const data = await response.json();
+    const data = attempt.data;
     const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!rawJson) {

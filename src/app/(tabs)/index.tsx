@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandLogo } from '@/components/BrandLogo';
 import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
-import { VOCAB_DATA } from '@/data/vocab-data';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCurriculum } from '@/hooks/use-curriculum';
 import { useDailyStreak } from '@/hooks/use-daily-streak';
@@ -22,7 +21,7 @@ export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest } = useAuth();
-  const { vocabularies } = useCurriculum();
+  const { vocabularies, syncNow } = useCurriculum();
   const { streakDays, dailyGoal, dailyCompleted, isGoalAchieved } = useDailyStreak();
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -30,16 +29,18 @@ export default function HomeScreen() {
     day: 'numeric',
   });
 
-  // Pool of Admin-approved vocab tips (from Cloud + fallback)
+  // Pool of Admin-approved vocab tips from Cloud Contributors
   const tipPool = useMemo(() => {
-    const source = vocabularies.length > 0 ? vocabularies : VOCAB_DATA;
-    const withTips = source.filter((v) => v.spoken && v.written && (v.usageTip || v.myanmarMeaning));
-    return withTips.length > 0 ? withTips : VOCAB_DATA;
+    const withTips = vocabularies.filter(
+      (v) => v.spoken && v.written && (v.usageTip || v.myanmarMeaning)
+    );
+    return withTips.length > 0 ? withTips : vocabularies;
   }, [vocabularies]);
 
   // Deterministic daily random index based on YYYY-MM-DD date seed (+ optional manual shuffle offset)
   const [tipOffset, setTipOffset] = useState(0);
   const todayTip = useMemo(() => {
+    if (tipPool.length === 0) return null;
     const now = new Date();
     const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
     let hash = 0;
@@ -47,7 +48,7 @@ export default function HomeScreen() {
       hash = (hash * 31 + dateKey.charCodeAt(i)) >>> 0;
     }
     const index = (hash + tipOffset) % tipPool.length;
-    return tipPool[index] || VOCAB_DATA[0];
+    return tipPool[index] || null;
   }, [tipPool, tipOffset]);
 
   return (
@@ -143,55 +144,76 @@ export default function HomeScreen() {
         </View>
 
         {/* Today's High-Yield Tip (Dynamic Daily Rotation from Approved Contributor Content) */}
-        <View
-          style={[
-            styles.tipCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
-          <View style={styles.tipHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
-              <Text style={[styles.tipBadge, { backgroundColor: colors.streakLight, color: colors.streak }]}>
-                TODAY'S TOPIK TIP
-              </Text>
-              {todayTip.authorName && (
-                <View style={styles.tipAuthorPill}>
-                  <Ionicons name="ribbon" size={11} color="#B45309" />
-                  <Text style={styles.tipAuthorText}>
-                    {todayTip.authorName}
-                    {todayTip.authorRank ? ` • ${todayTip.authorRank}` : ''}
-                  </Text>
-                </View>
-              )}
+        {todayTip ? (
+          <View
+            style={[
+              styles.tipCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}>
+            <View style={styles.tipHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+                <Text style={[styles.tipBadge, { backgroundColor: colors.streakLight, color: colors.streak }]}>
+                  TODAY'S TOPIK TIP
+                </Text>
+                {todayTip.authorName && (
+                  <View style={styles.tipAuthorPill}>
+                    <Ionicons name="ribbon" size={11} color="#B45309" />
+                    <Text style={styles.tipAuthorText}>
+                      {todayTip.authorName}
+                      {todayTip.authorRank ? ` • ${todayTip.authorRank}` : ''}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setTipOffset((prev) => prev + 1)}
+                style={[styles.shuffleTipBtn, { backgroundColor: colors.cardMuted }]}
+                accessibilityLabel="Shuffle another tip">
+                <Ionicons name="shuffle" size={14} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
 
+            <Text style={[styles.tipTitle, { color: colors.text }]}>
+              {todayTip.spoken} အစား <Text style={{ color: colors.accent }}>{todayTip.written}</Text> ကို သုံးပါ
+            </Text>
+            <Text style={[styles.tipDesc, { color: colors.textSecondary }]}>
+              {todayTip.usageTip || todayTip.myanmarMeaning}
+            </Text>
             <TouchableOpacity
-              onPress={() => setTipOffset((prev) => prev + 1)}
-              style={[styles.shuffleTipBtn, { backgroundColor: colors.cardMuted }]}
-              accessibilityLabel="Shuffle another tip">
-              <Ionicons name="shuffle" size={14} color={colors.textSecondary} />
+              onPress={() => {
+                router.push({
+                  pathname: '/modal/vocab-detail',
+                  params: { id: todayTip.id },
+                });
+              }}
+              style={styles.tipActionRow}>
+              <Text style={[styles.tipActionText, { color: colors.accent }]}>
+                View Spoken → Academic breakdown
+              </Text>
+              <Ionicons name="arrow-forward" size={14} color={colors.accent} />
             </TouchableOpacity>
           </View>
-
-          <Text style={[styles.tipTitle, { color: colors.text }]}>
-            {todayTip.spoken} အစား <Text style={{ color: colors.accent }}>{todayTip.written}</Text> ကို သုံးပါ
-          </Text>
-          <Text style={[styles.tipDesc, { color: colors.textSecondary }]}>
-            {todayTip.usageTip || todayTip.myanmarMeaning}
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              router.push({
-                pathname: '/modal/vocab-detail',
-                params: { id: todayTip.id },
-              });
-            }}
-            style={styles.tipActionRow}>
-            <Text style={[styles.tipActionText, { color: colors.accent }]}>
-              View Spoken → Academic breakdown
+        ) : (
+          <View
+            style={[
+              styles.tipCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}>
+            <Text style={[styles.tipBadge, { backgroundColor: colors.streakLight, color: colors.streak, alignSelf: 'flex-start' }]}>
+              TODAY'S TOPIK TIP
             </Text>
-            <Ionicons name="arrow-forward" size={14} color={colors.accent} />
-          </TouchableOpacity>
-        </View>
+            <Text style={[styles.tipDesc, { color: colors.textSecondary }]}>
+              Contributor များ၏ အတည်ပြုပြီး TOPIK ဝေါဟာရများကို Cloud မှ ချိတ်ဆက်ရယူနိုင်ပါသည်။
+            </Text>
+            <TouchableOpacity onPress={syncNow} style={styles.tipActionRow}>
+              <Text style={[styles.tipActionText, { color: colors.accent }]}>
+                Sync Dynamic Curriculum Now
+              </Text>
+              <Ionicons name="sync-outline" size={14} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Quick Actions Grid */}
         <Text style={[styles.sectionHeading, { color: colors.text }]}>
@@ -273,7 +295,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {(vocabularies.length > 0 ? vocabularies : VOCAB_DATA).slice(0, 3).map((item) => (
+        {vocabularies.slice(0, 3).map((item) => (
           <TouchableOpacity
             key={item.id}
             onPress={() =>

@@ -11,10 +11,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function PracticeScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const { essayPrompts } = useCurriculum();
+  const q53Prompts = essayPrompts.filter((p) => p.type === 'Q53');
+  const q54Prompts = essayPrompts.filter((p) => p.type === 'Q54');
+  const activeQ53 = q53Prompts[0];
+  const activeQ54 = q54Prompts[0];
 
   const handleStartPractice = (type: 'Q53' | 'Q54', promptTitle: string, charTarget: string) => {
     router.push({
@@ -133,16 +139,22 @@ export default function PracticeScreen() {
           </View>
 
           <Text style={[styles.topicTitle, { color: colors.text }]}>
-            Graph Writing: 인터넷 이용 현황
+            {activeQ53 ? `Graph Writing: ${activeQ53.title}` : 'Graph Writing: 인터넷 이용 현황'}
           </Text>
           <Text style={[styles.topicDesc, { color: colors.textSecondary }]}>
-            Write a structured 200-300 character summary based on internet usage percentage changes and underlying causes.
+            {activeQ53
+              ? activeQ53.promptText
+              : 'Write a structured 200-300 character summary based on internet usage percentage changes and underlying causes.'}
           </Text>
 
           <View style={styles.topicButtonsRow}>
             <TouchableOpacity
               onPress={() =>
-                handleStartPractice('Q53', '인터넷 이용 현황 (Internet Usage)', '200-300')
+                handleStartPractice(
+                  'Q53',
+                  activeQ53 ? activeQ53.title : '인터넷 이용 현황 (Internet Usage)',
+                  '200-300'
+                )
               }
               style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}>
               <Ionicons name="create-outline" size={16} color={colors.text} />
@@ -153,7 +165,11 @@ export default function PracticeScreen() {
 
             <TouchableOpacity
               onPress={() =>
-                handleStartPractice('Q53', '인터넷 이용 현황 (Internet Usage)', '200-300')
+                handleStartPractice(
+                  'Q53',
+                  activeQ53 ? activeQ53.title : '인터넷 이용 현황 (Internet Usage)',
+                  '200-300'
+                )
               }
               style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}>
               <Ionicons name="play" size={14} color="#FFFFFF" />
@@ -178,16 +194,22 @@ export default function PracticeScreen() {
           </View>
 
           <Text style={[styles.topicTitle, { color: colors.text }]}>
-            Long Essay: 평생 교육의 필요성
+            {activeQ54 ? `Long Essay: ${activeQ54.title}` : 'Long Essay: 평생 교육의 필요성'}
           </Text>
           <Text style={[styles.topicDesc, { color: colors.textSecondary }]}>
-            Build your three-part argument: Introduction → Two supporting arguments with examples → Conclusion and social proposals.
+            {activeQ54
+              ? activeQ54.promptText
+              : 'Build your three-part argument: Introduction → Two supporting arguments with examples → Conclusion and social proposals.'}
           </Text>
 
           <View style={styles.topicButtonsRow}>
             <TouchableOpacity
               onPress={() =>
-                handleStartPractice('Q54', '평생 교육의 필요성 (Lifelong Learning)', '600-700')
+                handleStartPractice(
+                  'Q54',
+                  activeQ54 ? activeQ54.title : '평생 교육의 필요성 (Lifelong Learning)',
+                  '600-700'
+                )
               }
               style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}>
               <Ionicons name="create-outline" size={16} color={colors.text} />
@@ -198,7 +220,11 @@ export default function PracticeScreen() {
 
             <TouchableOpacity
               onPress={() =>
-                handleStartPractice('Q54', '평생 교육의 필요성 (Lifelong Learning)', '600-700')
+                handleStartPractice(
+                  'Q54',
+                  activeQ54 ? activeQ54.title : '평생 교육의 필요성 (Lifelong Learning)',
+                  '600-700'
+                )
               }
               style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}>
               <Ionicons name="play" size={14} color="#FFFFFF" />

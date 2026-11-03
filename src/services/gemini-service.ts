@@ -1,28 +1,116 @@
-import { AiEvaluationResult, AiEvaluationResponse, AiErrorType } from '@/types/ai';
+import { AiEvaluationResult, AiEvaluationResponse } from '@/types/ai';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+let cachedWorkingModel = 'gemini-2.5-flash';
 
-export async function validateGeminiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
-  try {
-    const url = `${GEMINI_API_URL}/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`;
+export async function callGeminiGenerateContent(
+  apiKey: string,
+  bodyPayload: Record<string, any>,
+  preferredModel?: string
+): Promise<{ ok: boolean; status: number; data: any; modelUsed: string }> {
+  const cleanKey = apiKey.trim();
+  const initialModel = (preferredModel || cachedWorkingModel || 'gemini-2.5-flash').replace(
+    /^models\//,
+    ''
+  );
+
+  const tryModel = async (targetModel: string) => {
+    const cleanModel = targetModel.replace(/^models\//, '');
+    const url = `${GEMINI_API_URL}/${cleanModel}:generateContent?key=${cleanKey}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: 'Hello' }] }],
-      }),
+      body: JSON.stringify(bodyPayload),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data, modelUsed: cleanModel };
+  };
+
+  let attempt = await tryModel(initialModel);
+  if (attempt.ok) {
+    cachedWorkingModel = attempt.modelUsed;
+    return attempt;
+  }
+
+  // If 400/404 due to model deprecation for new users ("no longer available to new users" / "not found"), auto-fallback
+  const errMsg: string = attempt.data?.error?.message || '';
+  const isModelError =
+    attempt.status === 404 ||
+    (attempt.status === 400 &&
+      (errMsg.toLowerCase().includes('model') ||
+        errMsg.toLowerCase().includes('no longer available') ||
+        errMsg.toLowerCase().includes('not found') ||
+        errMsg.toLowerCase().includes('not supported')));
+
+  if (isModelError) {
+    const candidates: string[] = [];
+    const matchRecommended = errMsg.match(/models\/(gemini-[a-zA-Z0-9.-]+)/);
+    if (matchRecommended?.[1]) {
+      candidates.push(matchRecommended[1]);
+    }
+
+    for (const fb of [
+      'gemini-2.5-flash',
+      'gemini-3.0-flash',
+      'gemini-3-flash-preview',
+      'gemini-2.5-flash-lite',
+      'gemini-flash-latest',
+    ]) {
+      if (!candidates.includes(fb) && fb !== initialModel) {
+        candidates.push(fb);
+      }
+    }
+
+    try {
+      const listRes = await fetch(`${GEMINI_API_URL}?key=${cleanKey}`);
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const available = (listData.models || [])
+          .filter(
+            (m: any) =>
+              Array.isArray(m.supportedGenerationMethods) &&
+              m.supportedGenerationMethods.includes('generateContent') &&
+              typeof m.name === 'string' &&
+              m.name.includes('gemini')
+          )
+          .map((m: any) => (m.name as string).replace(/^models\//, ''));
+
+        const flashFirst = available.filter((n: string) => n.includes('flash'));
+        for (const mName of [...flashFirst, ...available]) {
+          if (!candidates.includes(mName) && mName !== initialModel) {
+            candidates.push(mName);
+          }
+        }
+      }
+    } catch (_) {}
+
+    for (const candidate of candidates) {
+      const retry = await tryModel(candidate);
+      if (retry.ok || retry.status === 429) {
+        cachedWorkingModel = retry.modelUsed;
+        return retry;
+      }
+    }
+  }
+
+  return attempt;
+}
+
+export async function validateGeminiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const attempt = await callGeminiGenerateContent(apiKey, {
+      contents: [{ parts: [{ text: 'Hello' }] }],
     });
 
-    if (res.ok) {
+    if (attempt.ok) {
       return { valid: true };
     }
 
-    const data = await res.json().catch(() => ({}));
-    const message = data.error?.message || 'Invalid API key';
+    const message = attempt.data?.error?.message || 'Invalid API key';
 
-    if (res.status === 400) {
-      return { valid: false, error: 'API key not accepted. Please check and try again.' };
-    } else if (res.status === 429) {
+    if (attempt.status === 400) {
+      return { valid: false, error: message || 'API key not accepted. Please check and try again.' };
+    } else if (attempt.status === 429) {
       return { valid: false, error: 'Google project quota limit reached.' };
     }
     return { valid: false, error: message };
@@ -107,24 +195,19 @@ ${essayText}
 Please evaluate this essay according to the instructions and return only JSON.`;
 
   try {
-    const url = `${GEMINI_API_URL}/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        },
-      }),
+    const attempt = await callGeminiGenerateContent(apiKey, {
+      contents: [
+        { role: 'user', parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+      },
     });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      const status = response.status;
+    if (!attempt.ok) {
+      const errData = attempt.data;
+      const status = attempt.status;
       if (status === 429) {
         return {
           success: false,
@@ -136,7 +219,7 @@ Please evaluate this essay according to the instructions and return only JSON.`;
         return {
           success: false,
           errorType: 'INVALID_KEY',
-          error: 'Your Gemini key was not accepted. Please reconnect your key.',
+          error: errData.error?.message || 'Your Gemini key was not accepted. Please reconnect your key.',
         };
       }
       return {
@@ -146,7 +229,7 @@ Please evaluate this essay according to the instructions and return only JSON.`;
       };
     }
 
-    const data = await response.json();
+    const data = attempt.data;
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!rawText) {

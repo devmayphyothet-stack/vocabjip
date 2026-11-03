@@ -11,7 +11,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { PATTERNS_DATA } from '@/data/patterns-data';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
@@ -24,7 +23,20 @@ export default function PatternDetailModal() {
   const { isPatternSaved, toggleSavePattern } = useSaved();
   const { patterns } = useCurriculum();
 
-  const pattern = patterns.find((p) => p.id === id) || PATTERNS_DATA.find((p) => p.id === id) || PATTERNS_DATA[0];
+  const pattern = patterns.find((p) => p.id === id) || patterns[0];
+  if (!pattern) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.closeBtn, { borderColor: colors.border }]}>
+            <Ionicons name="close" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const saved = isPatternSaved(pattern.id);
 
   return (

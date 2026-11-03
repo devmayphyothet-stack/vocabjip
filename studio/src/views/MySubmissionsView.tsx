@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/auth-context';
 import { supabase } from '../lib/supabase';
+import { seedContributorDynamicData } from '../lib/contributor-seed-data';
 import { VocabRecord, PatternRecord, QuizStepRecord, ReviewStatus } from '../types';
 import { 
   Clock, 
@@ -24,6 +25,8 @@ export function MySubmissionsView() {
   const [patterns, setPatterns] = useState<PatternRecord[]>([]);
   const [quizSteps, setQuizSteps] = useState<QuizStepRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState<string | null>(null);
 
   // Edit/Resubmit modal state
   const [editingVocab, setEditingVocab] = useState<VocabRecord | null>(null);
@@ -171,9 +174,27 @@ export function MySubmissionsView() {
     }
   };
 
+  const handleSeedContributorData = async () => {
+    setSeeding(true);
+    setSeedMessage(null);
+    try {
+      const res = await seedContributorDynamicData(user?.id);
+      if (res.success) {
+        setSeedMessage(
+          `✅ Generated & seeded ${res.vocabsCount} Vocabularies, ${res.patternsCount} Patterns, ${res.quizStepsCount} Quiz Steps, and ${res.essaysCount} Community Essays!`
+        );
+        await fetchMySubmissions();
+      } else {
+        setSeedMessage(`⚠️ ${res.error}`);
+      }
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">My Submissions</h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -181,13 +202,30 @@ export function MySubmissionsView() {
           </p>
         </div>
 
-        <button
-          onClick={fetchMySubmissions}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-xs transition">
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSeedContributorData}
+            disabled={seeding}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition disabled:opacity-50">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{seeding ? 'Generating Data...' : 'Generate & Seed Dynamic Data'}</span>
+          </button>
+
+          <button
+            onClick={fetchMySubmissions}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-xs transition">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
+
+      {seedMessage && (
+        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-semibold flex items-center justify-between">
+          <span>{seedMessage}</span>
+          <button onClick={() => setSeedMessage(null)} className="text-indigo-500 hover:text-indigo-800 font-bold">✕</button>
+        </div>
+      )}
 
       {/* Tabs & Status Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">

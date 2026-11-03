@@ -613,8 +613,3 @@ drop policy if exists "Anyone can insert vocab lens cache" on public.vocab_lens_
 create policy "Anyone can insert vocab lens cache"
   on public.vocab_lens_cache for insert
   with check (true);
-
-
-
-
-

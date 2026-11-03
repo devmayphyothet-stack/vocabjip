@@ -10,7 +10,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { VOCAB_DATA } from '@/data/vocab-data';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
@@ -23,10 +22,24 @@ export default function VocabDetailModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isVocabSaved, toggleSaveVocab } = useSaved();
   const { vocabularies } = useCurriculum();
+  const [isPlaying, React_useState] = React.useState(false);
 
-  const item = vocabularies.find((v) => v.id === id) || VOCAB_DATA.find((v) => v.id === id) || VOCAB_DATA[0];
+  const item = vocabularies.find((v) => v.id === id) || vocabularies[0];
+  if (!item) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.closeBtn, { borderColor: colors.border }]}>
+            <Ionicons name="close" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const saved = isVocabSaved(item.id);
-  const [isPlaying, setIsPlaying] = React.useState(false);
+  const setIsPlaying = React_useState;
 
   const handlePronounce = async (text: string) => {
     setIsPlaying(true);

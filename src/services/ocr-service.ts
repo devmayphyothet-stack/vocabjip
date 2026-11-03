@@ -1,3 +1,5 @@
+import { callGeminiGenerateContent } from '@/services/gemini-service';
+
 export interface UncertainWord {
   id: string;
   word: string;
@@ -11,8 +13,6 @@ export interface OcrResult {
   detectedQuestionType: 'Q53' | 'Q54';
   uncertainWords: UncertainWord[];
 }
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export async function extractKoreanHandwriting(
   base64Image: string,
@@ -42,35 +42,28 @@ Return ONLY a valid JSON object matching this schema:
 
       const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
 
-      const response = await fetch(
-        `${GEMINI_API_URL}/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
+      const attempt = await callGeminiGenerateContent(apiKey, {
+        contents: [
+          {
+            parts: [
               {
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType: 'image/jpeg',
-                      data: cleanBase64,
-                    },
-                  },
-                  { text: prompt },
-                ],
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: cleanBase64,
+                },
               },
+              { text: prompt },
             ],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      );
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+        },
+      });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (attempt.ok) {
+        const data = attempt.data;
         const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawJson) {
           const parsed = JSON.parse(rawJson);

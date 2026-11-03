@@ -107,8 +107,10 @@ export function AdminAiSettingsView() {
 
     setTestingKey(which);
     setStatusMsg(null);
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keyToTest}`;
+
+    const tryGenerateWithModel = async (targetModel: string) => {
+      const cleanModel = targetModel.replace(/^models\//, '');
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${keyToTest}`;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,17 +118,88 @@ export function AdminAiSettingsView() {
           contents: [{ parts: [{ text: 'Reply OK' }] }],
         }),
       });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, statusText: res.statusText, data, modelUsed: cleanModel };
+    };
 
-      if (res.ok) {
+    try {
+      let attempt = await tryGenerateWithModel(model);
+
+      // If the selected model is deprecated/unavailable for new users (400/404), auto-discover a supported model for this key
+      if (!attempt.ok && (attempt.status === 400 || attempt.status === 404)) {
+        const errMessage: string = attempt.data?.error?.message || '';
+        const candidateModels: string[] = [];
+
+        // 1. Check if Google's error message explicitly recommends a model (e.g. "use models/gemini-2.5-flash" or "models/gemini-3.0-flash")
+        const matchRecommended = errMessage.match(/models\/(gemini-[a-zA-Z0-9.-]+)/);
+        if (matchRecommended?.[1]) {
+          candidateModels.push(matchRecommended[1]);
+        }
+
+        // 2. Standard fallback chain for new & existing Google AI Studio keys
+        for (const fallback of [
+          'gemini-2.5-flash',
+          'gemini-3.0-flash',
+          'gemini-3-flash-preview',
+          'gemini-2.5-flash-lite',
+          'gemini-flash-latest',
+        ]) {
+          if (!candidateModels.includes(fallback) && fallback !== model) {
+            candidateModels.push(fallback);
+          }
+        }
+
+        // 3. Query /v1beta/models for this key to discover any other flash generateContent model
+        try {
+          const listRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${keyToTest}`
+          );
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            const available = (listData.models || [])
+              .filter(
+                (m: any) =>
+                  Array.isArray(m.supportedGenerationMethods) &&
+                  m.supportedGenerationMethods.includes('generateContent') &&
+                  typeof m.name === 'string' &&
+                  m.name.includes('gemini')
+              )
+              .map((m: any) => (m.name as string).replace(/^models\//, ''));
+
+            // Prefer flash models first
+            const flashModels = available.filter((n: string) => n.includes('flash'));
+            for (const fm of [...flashModels, ...available]) {
+              if (!candidateModels.includes(fm) && fm !== model) {
+                candidateModels.push(fm);
+              }
+            }
+          }
+        } catch (_) {}
+
+        for (const candidate of candidateModels) {
+          const retry = await tryGenerateWithModel(candidate);
+          if (retry.ok) {
+            attempt = retry;
+            setModel(retry.modelUsed);
+            break;
+          }
+          if (retry.status === 429) {
+            attempt = retry;
+            setModel(retry.modelUsed);
+            break;
+          }
+        }
+      }
+
+      if (attempt.ok) {
         setStatusMsg({
           type: 'success',
           text: `✅ ${
             which === 'primary' ? 'Primary' : 'Backup'
-          } Gemini API Key အလုပ်လုပ်ပါသည်! Quota လည်း ကျန်ရှိနေပါသည်။`,
+          } Gemini API Key အလုပ်လုပ်ပါသည်! (Active Model: ${attempt.modelUsed}) — Save System Keys to Cloud ကိုနှိပ်၍ သိမ်းဆည်းပါ။`,
         });
       } else {
-        const errData = await res.json().catch(() => ({}));
-        if (res.status === 429) {
+        if (attempt.status === 429) {
           setStatusMsg({
             type: 'error',
             text: `⚠️ ${
@@ -137,7 +210,7 @@ export function AdminAiSettingsView() {
           setStatusMsg({
             type: 'error',
             text: `❌ API Key မမှန်ကန်ပါ (${
-              errData.error?.message || res.statusText
+              attempt.data?.error?.message || attempt.statusText
             })`,
           });
         }
@@ -300,11 +373,23 @@ export function AdminAiSettingsView() {
             <span className="text-xs font-bold text-slate-500">Gemini Model:</span>
             <select
               value={model}
-              onChange={(e) => setModel(e.target.value)}
+              onChange={(e) => {
+                setModel(e.target.value);
+                setStatusMsg(null);
+              }}
               className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50">
               <option value="gemini-2.5-flash">gemini-2.5-flash (Recommended)</option>
-              <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-              <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+              <option value="gemini-3.0-flash">gemini-3.0-flash (Latest)</option>
+              <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+              <option value="gemini-flash-latest">gemini-flash-latest (Auto Alias)</option>
+              {![
+                'gemini-2.5-flash',
+                'gemini-3.0-flash',
+                'gemini-3-flash-preview',
+                'gemini-2.5-flash-lite',
+                'gemini-flash-latest',
+              ].includes(model) && <option value={model}>{model}</option>}
             </select>
           </div>
         </div>
