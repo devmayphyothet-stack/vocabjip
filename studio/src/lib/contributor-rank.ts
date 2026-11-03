@@ -3,11 +3,12 @@ import { supabase } from './supabase';
 export async function fetchContributorRankLabel(userId?: string | null): Promise<string> {
   if (!userId) return 'Contributor';
   try {
-    const [{ data: vData }, { data: pData }, { data: sData }, { data: profData }] =
+    const [{ data: vData }, { data: pData }, { data: sData }, { data: eData }, { data: profData }] =
       await Promise.all([
         supabase.from('vocabularies').select('id, created_by, status'),
         supabase.from('sentence_patterns').select('id, created_by, status'),
         supabase.from('quiz_steps').select('id, created_by, status'),
+        supabase.from('essay_submissions').select('id, reviewed_by, status'),
         supabase.from('profiles').select('id, role'),
       ]);
 
@@ -36,6 +37,12 @@ export async function fetchContributorRankLabel(userId?: string | null): Promise
       if (s.created_by && scores[s.created_by]) {
         if (s.status === 'approved') scores[s.created_by].score += 25;
         if (s.status === 'pending_review') scores[s.created_by].score += 5;
+      }
+    });
+
+    (eData || []).forEach((e: any) => {
+      if (e.reviewed_by && scores[e.reviewed_by] && e.status === 'reviewed') {
+        scores[e.reviewed_by].score += 20;
       }
     });
 

@@ -149,6 +149,30 @@ export default function WongojiEditorModal() {
     }
   };
 
+  const handleTeacherReview = async () => {
+    if (!content.trim()) {
+      Alert.alert('Empty Draft', 'Please write some sentences before requesting a teacher review.');
+      return;
+    }
+    hasManuallySavedRef.current = true;
+    await saveDraft({
+      id: sessionDraftIdRef.current,
+      type,
+      title: promptTitle,
+      content,
+      charCount: content.length,
+    });
+
+    router.push({
+      pathname: '/modal/teacher-review' as any,
+      params: {
+        essayText: content,
+        questionType: type,
+        promptTopic: promptTitle,
+      },
+    });
+  };
+
   const handleClose = () => {
     const isModified = content !== initialContentRef.current;
     // Only auto-save on close if content is non-empty AND (user edited it OR it's a brand-new draft they saved)
@@ -256,6 +280,18 @@ export default function WongojiEditorModal() {
               size={17}
               color={isSavedFeedback ? colors.success : colors.text}
             />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleTeacherReview}
+            style={[
+              styles.aiReviewBtn,
+              { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' },
+            ]}>
+            <Ionicons name="school" size={14} color="#B45309" />
+            <Text style={[styles.aiReviewBtnText, { color: '#B45309' }]}>
+              Teacher
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity

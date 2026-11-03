@@ -87,6 +87,36 @@ export default function PracticeScreen() {
           Choose Question Type
         </Text>
 
+        {/* Teacher Essay Review Banner Card */}
+        <TouchableOpacity
+          onPress={() => router.push('/modal/teacher-review' as any)}
+          style={[
+            styles.scanCard,
+            { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
+          ]}>
+          <View style={[styles.scanIconBox, { backgroundColor: '#FEF3C7' }]}>
+            <Ionicons name="school" size={24} color="#B45309" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.scanBadgeRow}>
+              <Text
+                style={[
+                  styles.scanBadge,
+                  { backgroundColor: '#FEF3C7', color: '#B45309' },
+                ]}>
+                HUMAN TEACHER GRADING • Q53 & Q54
+              </Text>
+            </View>
+            <Text style={[styles.scanCardTitle, { color: '#78350F' }]}>
+              Teacher Essay Reviews (ဆရာ/ဆရာမ အမှတ်ပေးစစ်ဆေးချက်)
+            </Text>
+            <Text style={[styles.scanCardDesc, { color: '#92400E' }]}>
+              သင်ရေးထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများအတွက် Contributor ဆရာ/ဆရာမများ၏ အမှတ်ပေးစစ်ဆေးချက်များကို ကြည့်ပါ။
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#B45309" />
+        </TouchableOpacity>
+
         {/* Q53 Card */}
         <View
           style={[

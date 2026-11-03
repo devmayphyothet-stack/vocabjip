@@ -48,6 +48,12 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
       icon: FileText,
     },
     {
+      id: 'essay-reviews',
+      label: 'Student Essay Grading',
+      subtitle: 'Grade Q53 & Q54 student essays',
+      icon: CheckCircle2,
+    },
+    {
       id: 'bulk',
       label: 'Bulk Excel Import',
       subtitle: 'Paste from Sheets or CSV',
@@ -68,6 +74,12 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
       subtitle: 'Inspect & Approve to Mobile',
       icon: CheckCircle2,
       badge: pendingReviewCount,
+    },
+    {
+      id: 'essay-reviews',
+      label: 'Student Essay Grading',
+      subtitle: 'Q53 & Q54 Teacher Evaluations',
+      icon: FileText,
     },
     {
       id: 'invitations',

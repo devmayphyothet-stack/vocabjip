@@ -54,6 +54,10 @@ export default function RootLayout() {
                   options={{ presentation: 'fullScreenModal', headerShown: false }}
                 />
                 <Stack.Screen
+                  name="modal/teacher-review"
+                  options={{ presentation: 'modal', headerShown: false }}
+                />
+                <Stack.Screen
                   name="modal/scan-handwriting"
                   options={{ presentation: 'modal', headerShown: false }}
                 />

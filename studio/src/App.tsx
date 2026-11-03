@@ -7,6 +7,7 @@ import { VocabStudioView } from './views/VocabStudioView';
 import { PatternStudioView } from './views/PatternStudioView';
 import { QuizStudioView } from './views/QuizStudioView';
 import { EssayPromptStudioView } from './views/EssayPromptStudioView';
+import { StudentEssayReviewView } from './views/StudentEssayReviewView';
 import { BulkImportView } from './views/BulkImportView';
 import { MySubmissionsView } from './views/MySubmissionsView';
 import { AdminReviewView } from './views/AdminReviewView';
@@ -97,6 +98,7 @@ export function AppContent() {
           {activeView === 'patterns' && <PatternStudioView onSubmitted={fetchPendingCount} />}
           {activeView === 'quizzes' && <QuizStudioView onSubmitted={fetchPendingCount} />}
           {activeView === 'prompts' && <EssayPromptStudioView onSubmitted={fetchPendingCount} />}
+          {activeView === 'essay-reviews' && <StudentEssayReviewView onReviewCompleted={fetchPendingCount} />}
           {activeView === 'bulk' && <BulkImportView onSubmitted={fetchPendingCount} />}
           {activeView === 'submissions' && <MySubmissionsView />}
           {activeView === 'review' && <AdminReviewView onReviewDone={fetchPendingCount} />}

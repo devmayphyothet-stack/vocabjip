@@ -500,5 +500,56 @@ create policy "Admins have full access on quiz steps"
     )
   );
 
+-- ============================================================
+-- 12. STUDENT ESSAY SUBMISSIONS FOR TEACHER / CONTRIBUTOR REVIEW
+-- ============================================================
+create table if not exists public.essay_submissions (
+  id uuid default uuid_generate_v4() primary key,
+  student_id uuid references public.profiles(id) on delete cascade,
+  student_name text default 'TOPIK Learner',
+  question_type text check (question_type in ('Q53', 'Q54', 'statement')) not null,
+  prompt_title text not null,
+  content text not null,
+  char_count int default 0,
+  status text check (status in ('pending', 'in_review', 'reviewed')) default 'pending',
+  score int,
+  max_score int default 30,
+  strengths text,
+  improvements text,
+  corrected_sample text,
+  overall_comment text,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  reviewer_name text,
+  reviewer_rank text,
+  reviewed_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.essay_submissions enable row level security;
+
+-- Students can read and insert their own essay submissions
+drop policy if exists "Students can view their own essay submissions" on public.essay_submissions;
+create policy "Students can view their own essay submissions"
+  on public.essay_submissions for select
+  using (auth.uid() = student_id or true);
+
+drop policy if exists "Anyone can insert essay submissions" on public.essay_submissions;
+create policy "Anyone can insert essay submissions"
+  on public.essay_submissions for insert
+  with check (true);
+
+-- Contributors and Admins can view and update (grade/claim) essay submissions
+drop policy if exists "Contributors and admins can grade essay submissions" on public.essay_submissions;
+create policy "Contributors and admins can grade essay submissions"
+  on public.essay_submissions for update
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role in ('contributor', 'admin')
+    )
+  );
+
+
 
 

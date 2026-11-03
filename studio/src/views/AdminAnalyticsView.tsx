@@ -48,6 +48,11 @@ export function AdminAnalyticsView() {
         .from('quiz_steps')
         .select('*');
 
+      // 2c. Fetch reviewed student essays
+      const { data: essaySubs } = await supabase
+        .from('essay_submissions')
+        .select('*');
+
       // 3. Fetch profiles
       const { data: profiles } = await supabase
         .from('profiles')
@@ -56,6 +61,7 @@ export function AdminAnalyticsView() {
       const allVocabs = (vocabs || []) as VocabRecord[];
       const allPatterns = (patterns || []) as PatternRecord[];
       const allQuizSteps = (quizSteps || []) as any[];
+      const allEssaySubs = (essaySubs || []) as any[];
       const allProfiles = profiles || [];
 
       // Counts
@@ -124,6 +130,12 @@ export function AdminAnalyticsView() {
         }
       });
 
+      allEssaySubs.forEach(es => {
+        if (es.reviewed_by && statsMap[es.reviewed_by] && es.status === 'reviewed') {
+          statsMap[es.reviewed_by].reviewed_essays = (statsMap[es.reviewed_by].reviewed_essays || 0) + 1;
+        }
+      });
+
       // Filter OUT Admin so only actual teachers/contributors are scored and ranked
       const list = Object.values(statsMap)
         .filter(item => item.role === 'contributor')
@@ -133,6 +145,7 @@ export function AdminAnalyticsView() {
             (item.approved_vocabs * 10) +
             (item.approved_patterns * 15) +
             ((item.approved_quizzes || 0) * 25) +
+            ((item.reviewed_essays || 0) * 20) +
             (item.pending_items * 2),
         }));
 

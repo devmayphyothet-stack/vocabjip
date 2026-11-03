@@ -113,8 +113,32 @@ export interface ContributorLeaderboardItem {
   approved_vocabs: number;
   approved_patterns: number;
   approved_quizzes?: number;
+  reviewed_essays?: number;
   pending_items: number;
   total_score: number;
+}
+
+export interface StudentEssaySubmissionRecord {
+  id: string;
+  student_id?: string | null;
+  student_name: string;
+  question_type: 'Q53' | 'Q54' | 'statement';
+  prompt_title: string;
+  content: string;
+  char_count: number;
+  status: 'pending' | 'in_review' | 'reviewed';
+  score?: number | null;
+  max_score: number;
+  strengths?: string | null;
+  improvements?: string | null;
+  corrected_sample?: string | null;
+  overall_comment?: string | null;
+  reviewed_by?: string | null;
+  reviewer_name?: string | null;
+  reviewer_rank?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface QuizQuestionItem {
