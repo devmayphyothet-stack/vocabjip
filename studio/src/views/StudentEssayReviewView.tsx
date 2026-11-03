@@ -212,12 +212,12 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
             Student Essay Grading Queue
           </h1>
           <p className="text-slate-500 text-xs mt-1">
-            ကျောင်းသားများ ပေးပို့ထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများကို စစ်ဆေးအမှတ်ပေးနိုင်ပါသည်။ စာမူတစ်ပုဒ် စစ်ဆေးတိုင်း <strong>+20 pts</strong> ရရှိပြီး သင့်အမည်နှင့် Rank ကို ကျောင်းသားထံ ပြသပေးပါမည်။
+            ကျောင်းသားများ ပေးပို့ထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများကို စစ်ဆေးအမှတ်ပေးနိုင်ပါသည်။
           </p>
         </div>
 
         <div className="flex items-center gap-3 self-start md:self-auto">
-          <div className="px-3.5 py-2 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center gap-2">
+          {/* <div className="px-3.5 py-2 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center gap-2">
             <Award className="w-4 h-4 text-amber-600" />
             <div className="text-left">
               <div className="text-[10px] font-bold uppercase text-amber-700">Your Reviewer Badge</div>
@@ -225,7 +225,7 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
                 {reviewerDisplayName} • <span className="text-amber-700">{myRankLabel}</span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           <button
             onClick={fetchEssaysAndRank}
@@ -335,7 +335,8 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
                     <span>{item.char_count} chars</span>
                     {item.reviewer_name ? (
                       <span className="text-slate-600 font-semibold">
-                        👨‍🏫 {item.reviewer_name} ({item.reviewer_rank || 'Mentor'})
+                        👨‍🏫 {item.reviewer_name}
+                        {/* ({item.reviewer_rank || 'Mentor'}) */}
                       </span>
                     ) : (
                       <span>Unclaimed</span>
@@ -519,8 +520,8 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
                 <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
                   <div className="text-[11px] text-slate-500">
                     Signed by:{' '}
-                    <span className="font-bold text-slate-800">{reviewerDisplayName}</span> (
-                    <span className="text-amber-700 font-bold">{myRankLabel}</span>)
+                    <span className="font-bold text-slate-800">{reviewerDisplayName}</span>
+                    {/* (<span className="text-amber-700 font-bold">{myRankLabel}</span>) */}
                   </div>
 
                   <button

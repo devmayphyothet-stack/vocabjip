@@ -101,10 +101,10 @@ export function VocabStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
       <div className="mb-6">
         <div className="flex items-center gap-2.5">
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Academic Vocabulary Studio</h1>
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+          {/* <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
             <Trophy className="w-3.5 h-3.5 text-amber-600" />
             {myRankLabel}
-          </span>
+          </span> */}
         </div>
         <p className="text-sm text-slate-500 mt-1">
           TOPIK II စာစီစာကုံးသုံး အဆင့်မြင့် ဝေါဟာရများ (Spoken → Academic Upgrade) ရေးသားတင်သွင်းရန် • Admin Approve လုပ်ပြီးပါက သင့် Display Name & Rank နှင့်တကွ Mobile App တွင် ပေါ်လာပါမည်။

@@ -88,7 +88,7 @@ export function LoginView() {
         } else if (res.requiresOtp) {
           setMode('verify-otp');
           setSuccessMsg(
-            `အီးမေးလ် (${email.trim()}) သို့ အတည်ပြုကုဒ် (6-digit OTP / Confirmation Link) ပေးပို့ထားပါသည်။ ကုဒ်ရိုက်ထည့်၍ အတည်ပြုပေးပါ။`
+            `${email.trim()} သို့ အတည်ပြုကုဒ် ပေးပို့ထားပါသည်။ ကုဒ်ရိုက်ထည့်၍ အတည်ပြုပေးပါ။`
           );
         } else {
           setSuccessMsg('Account created successfully! Signing you in...');
@@ -216,8 +216,7 @@ export function LoginView() {
                   className="w-full px-3.5 py-3 rounded-xl border border-blue-300 bg-blue-50/30 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg font-mono tracking-[0.4em] font-extrabold text-slate-900"
                 />
                 <p className="text-[11px] text-slate-500 mt-1.5">
-                  သင့်အီးမေးလ် Inbox (သို့မဟုတ် Spam) ထဲသို့ ရောက်ရှိလာသော ဂဏန်း ၆ လုံးကို ရိုက်ထည့်ပါ (သို့မဟုတ် အီးမေးလ်ထဲမှ Confirm Link ကိုနှိပ်ပြီး Sign In ဝင်နိုင်ပါသည်)။
-                </p>
+                  Inbox သို့မဟုတ် Spam ထဲသို့ ရောက်ရှိလာသော ဂဏန်း ၆ လုံးကို ရိုက်ထည့်ပါ </p>
               </div>
 
               <button

@@ -96,14 +96,14 @@ export default function VocabDetailModal() {
                 </Text>
               </View>
             </View>
-            {item.authorRank ? (
+            {/* {item.authorRank ? (
               <View style={[styles.rankBadge, { backgroundColor: colors.streakLight }]}>
                 <Ionicons name="trophy" size={12} color={colors.streak} />
                 <Text style={[styles.rankBadgeText, { color: colors.streak }]}>
                   {item.authorRank}
                 </Text>
               </View>
-            ) : null}
+            ) : null} */}
           </View>
         ) : null}
 

@@ -87,14 +87,14 @@ export default function PatternDetailModal() {
                 </Text>
               </View>
             </View>
-            {pattern.authorRank ? (
+            {/* {pattern.authorRank ? (
               <View style={[styles.rankBadge, { backgroundColor: colors.streakLight }]}>
                 <Ionicons name="trophy" size={12} color={colors.streak} />
                 <Text style={[styles.rankBadgeText, { color: colors.streak }]}>
                   {pattern.authorRank}
                 </Text>
               </View>
-            ) : null}
+            ) : null} */}
           </View>
         ) : null}
 

@@ -333,13 +333,13 @@ export default function TeacherReviewModal() {
                         <Text style={styles.reviewerNameText}>
                           {item.reviewer_name}
                         </Text>
-                        {item.reviewer_rank ? (
+                        {/* {item.reviewer_rank ? (
                           <View style={styles.reviewerRankPill}>
                             <Text style={styles.reviewerRankText}>
                               {item.reviewer_rank}
                             </Text>
                           </View>
-                        ) : null}
+                        ) : null} */}
                       </View>
                     ) : (
                       <Text style={[styles.waitingMeta, { color: colors.textMuted }]}>
@@ -377,10 +377,9 @@ export default function TeacherReviewModal() {
                                 { color: colors.text },
                               ]}>
                               {item.status === 'in_review'
-                                ? `${item.reviewer_name || 'ဆရာ/ဆရာမ'} (${
-                                    item.reviewer_rank || 'Mentor'
-                                  }) မှ သင့်စာမူကို လက်ရှိ စစ်ဆေးပေးနေပါသည်`
+                                ? `${item.reviewer_name || 'ဆရာ/ဆရာမ'} မှ သင့်စာမူကို လက်ရှိ စစ်ဆေးပေးနေပါသည်`
                                 : 'ဆရာ/ဆရာမများ စစ်ဆေးရန် စောင့်ဆိုင်းနေပါသည်'}
+                              {/* (${item.reviewer_rank || 'Mentor'}) */}
                             </Text>
                             <Text
                               style={[
@@ -423,13 +422,13 @@ export default function TeacherReviewModal() {
                                   ]}>
                                   Reviewed by {item.reviewer_name || 'TOPIK Mentor'}
                                 </Text>
-                                {item.reviewer_rank && (
+                                {/* {item.reviewer_rank && (
                                   <View style={styles.rankHighlightBadge}>
                                     <Text style={styles.rankHighlightText}>
                                       {item.reviewer_rank}
                                     </Text>
                                   </View>
-                                )}
+                                )} */}
                               </View>
                             </View>
 

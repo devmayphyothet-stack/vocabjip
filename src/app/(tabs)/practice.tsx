@@ -110,11 +110,11 @@ export default function PracticeScreen() {
                   styles.scanBadge,
                   { backgroundColor: '#FEF3C7', color: '#B45309' },
                 ]}>
-                HUMAN TEACHER GRADING • Q53 & Q54
+                TEACHER GRADING • Q53 & Q54
               </Text>
             </View>
             <Text style={[styles.scanCardTitle, { color: '#78350F' }]}>
-              Teacher Essay Reviews (ဆရာ/ဆရာမ အမှတ်ပေးစစ်ဆေးချက်)
+              Teacher Essay Reviews
             </Text>
             <Text style={[styles.scanCardDesc, { color: '#92400E' }]}>
               သင်ရေးထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများအတွက် Contributor ဆရာ/ဆရာမများ၏ အမှတ်ပေးစစ်ဆေးချက်များကို ကြည့်ပါ။

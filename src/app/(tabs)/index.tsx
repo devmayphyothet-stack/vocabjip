@@ -160,7 +160,7 @@ export default function HomeScreen() {
                     <Ionicons name="ribbon" size={11} color="#B45309" />
                     <Text style={styles.tipAuthorText}>
                       {todayTip.authorName}
-                      {todayTip.authorRank ? ` • ${todayTip.authorRank}` : ''}
+                      {/* {todayTip.authorRank ? ` • ${todayTip.authorRank}` : ''} */}
                     </Text>
                   </View>
                 )}

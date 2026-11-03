@@ -411,10 +411,10 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
               Dynamic Quiz & Topic Studio
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            {/* <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
               <Trophy className="w-3.5 h-3.5 text-amber-600" />
               {myRankLabel}
-            </span>
+            </span> */}
           </div>
           <p className="text-sm text-slate-500 mt-1">
             Contributor များ စိတ်ကြိုက် Topic အသစ်ဖန်တီးနိုင်ပြီး တစ်ဦးရေးသားနေသော Topic/Step ကို အခြားသူများ တိုက်ရိုက်မြင်တွေ့နိုင်ပါသည်။ (၁ Step = မေးခွန်း ၅ ပုဒ် • အောင်မှတ် ၃/၅)
@@ -483,7 +483,8 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
               <p className="text-xs text-slate-500">
                 Author Attribution on App:{' '}
                 <strong className="text-slate-800">
-                  {user?.display_name || 'Contributor'} ({myRankLabel})
+                  {user?.display_name || 'Contributor'}
+                  {/* ({myRankLabel}) */}
                 </strong>
               </p>
             </div>
@@ -726,10 +727,10 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
                       <div className="text-[11px] font-extrabold text-slate-900 leading-tight">
                         {user?.display_name || 'Contributor'}
                       </div>
-                      <div className="text-[10px] font-bold text-amber-700 flex items-center gap-1">
+                      {/* <div className="text-[10px] font-bold text-amber-700 flex items-center gap-1">
                         <Award className="w-3 h-3" />
                         <span>{myRankLabel}</span>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
@@ -840,9 +841,9 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
                           <div className="text-xs font-bold text-slate-800">
                             {topic.author_name}
                           </div>
-                          <div className="text-[10px] font-semibold text-amber-700">
+                          {/* <div className="text-[10px] font-semibold text-amber-700">
                             {topic.author_rank}
-                          </div>
+                          </div> */}
                         </div>
                       </div>
 
@@ -907,8 +908,8 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
                                       <UserCheck className="w-3 h-3 text-slate-400" />
                                       <span>
                                         Claimed by:{' '}
-                                        <strong className="text-slate-700">{st.author_name}</strong>{' '}
-                                        ({st.author_rank})
+                                        <strong className="text-slate-700">{st.author_name}</strong>
+                                        {/* ({st.author_rank}) */}
                                       </span>
                                     </div>
 

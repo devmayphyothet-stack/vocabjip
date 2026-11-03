@@ -125,8 +125,14 @@ export function AdminAiSettingsView() {
     try {
       let attempt = await tryGenerateWithModel(model);
 
-      // If the selected model is deprecated/unavailable for new users (400/404), auto-discover a supported model for this key
-      if (!attempt.ok && (attempt.status === 400 || attempt.status === 404)) {
+      // If the selected model is deprecated/unavailable for new users (400/404) or overloaded (503/500), auto-discover a supported model for this key
+      if (
+        !attempt.ok &&
+        (attempt.status === 400 ||
+          attempt.status === 404 ||
+          attempt.status === 503 ||
+          attempt.status === 500)
+      ) {
         const errMessage: string = attempt.data?.error?.message || '';
         const candidateModels: string[] = [];
 
@@ -138,11 +144,11 @@ export function AdminAiSettingsView() {
 
         // 2. Standard fallback chain for new & existing Google AI Studio keys
         for (const fallback of [
-          'gemini-2.5-flash',
-          'gemini-3.0-flash',
-          'gemini-3-flash-preview',
-          'gemini-2.5-flash-lite',
+          'gemini-flash-lite-latest',
           'gemini-flash-latest',
+          'gemini-3-flash-preview',
+          'gemini-2.5-flash',
+          'gemini-2.5-flash-lite',
         ]) {
           if (!candidateModels.includes(fallback) && fallback !== model) {
             candidateModels.push(fallback);
@@ -378,12 +384,14 @@ export function AdminAiSettingsView() {
                 setStatusMsg(null);
               }}
               className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50">
+              <option value="gemini-flash-lite-latest">gemini-flash-lite-latest (Fastest / High Availability)</option>
               <option value="gemini-2.5-flash">gemini-2.5-flash (Recommended)</option>
               <option value="gemini-3.0-flash">gemini-3.0-flash (Latest)</option>
               <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
               <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
               <option value="gemini-flash-latest">gemini-flash-latest (Auto Alias)</option>
               {![
+                'gemini-flash-lite-latest',
                 'gemini-2.5-flash',
                 'gemini-3.0-flash',
                 'gemini-3-flash-preview',

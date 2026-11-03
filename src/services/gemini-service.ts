@@ -32,10 +32,13 @@ export async function callGeminiGenerateContent(
     return attempt;
   }
 
-  // If 400/404 due to model deprecation for new users ("no longer available to new users" / "not found"), auto-fallback
+  // If 400/404 due to model deprecation OR 503/500/429 due to temporary model overload, auto-fallback
   const errMsg: string = attempt.data?.error?.message || '';
   const isModelError =
     attempt.status === 404 ||
+    attempt.status === 503 ||
+    attempt.status === 500 ||
+    attempt.status === 429 ||
     (attempt.status === 400 &&
       (errMsg.toLowerCase().includes('model') ||
         errMsg.toLowerCase().includes('no longer available') ||
@@ -50,11 +53,11 @@ export async function callGeminiGenerateContent(
     }
 
     for (const fb of [
-      'gemini-2.5-flash',
-      'gemini-3.0-flash',
-      'gemini-3-flash-preview',
-      'gemini-2.5-flash-lite',
+      'gemini-flash-lite-latest',
       'gemini-flash-latest',
+      'gemini-3-flash-preview',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
     ]) {
       if (!candidates.includes(fb) && fb !== initialModel) {
         candidates.push(fb);

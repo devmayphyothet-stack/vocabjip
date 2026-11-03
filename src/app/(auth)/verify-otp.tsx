@@ -165,7 +165,7 @@ export default function VerifyOtpScreen() {
           </View>
         )}
 
-        {/* Action: Open Gmail / Mail app button */}
+        {/* Action: Open Gmail / Mail app button (Removed per user request)
         <TouchableOpacity
           onPress={handleOpenMailApp}
           style={[styles.openMailButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -174,6 +174,7 @@ export default function VerifyOtpScreen() {
             Open Email App
           </Text>
         </TouchableOpacity>
+        */}
 
         {/* Resend Code Section */}
         <View style={styles.resendSection}>

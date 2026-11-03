@@ -261,12 +261,12 @@ export default function QuizModal() {
                       <Text style={[styles.contributorName, { color: colors.text }]}>
                         {topic.authorName}
                       </Text>
-                      <View style={styles.rankBadgeRow}>
+                      {/* <View style={styles.rankBadgeRow}>
                         <Ionicons name="ribbon" size={12} color={colors.streak} />
                         <Text style={[styles.contributorRank, { color: colors.streak }]}>
                           {topic.authorRank}
                         </Text>
-                      </View>
+                      </View> */}
                     </View>
                   </View>
 
@@ -390,7 +390,7 @@ export default function QuizModal() {
                       <Text style={[styles.stepContributorName, { color: colors.text }]}>
                         {step.authorName}
                       </Text>
-                      <View
+                      {/* <View
                         style={[
                           styles.rankMiniPill,
                           { backgroundColor: colors.streakLight },
@@ -399,7 +399,7 @@ export default function QuizModal() {
                         <Text style={[styles.rankMiniText, { color: colors.streak }]}>
                           {step.authorRank}
                         </Text>
-                      </View>
+                      </View> */}
                     </View>
 
                     {bestScore !== null ? (
@@ -509,7 +509,8 @@ export default function QuizModal() {
               {score} / {qTotal}
             </Text>
             <Text style={[styles.scoreNotice, { color: colors.textSecondary }]}>
-              Quiz Created by {selectedStep.authorName} ({selectedStep.authorRank})
+              Quiz Created by {selectedStep.authorName}
+              {/* ({selectedStep.authorRank}) */}
             </Text>
           </View>
 
@@ -608,9 +609,9 @@ export default function QuizModal() {
               <Text style={[styles.chipAuthorName, { color: colors.text }]}>
                 Contributed by {selectedStep.authorName}
               </Text>
-              <Text style={[styles.chipAuthorRank, { color: colors.streak }]}>
+              {/* <Text style={[styles.chipAuthorRank, { color: colors.streak }]}>
                 🏆 {selectedStep.authorRank}
-              </Text>
+              </Text> */}
             </View>
           </View>
         </View>

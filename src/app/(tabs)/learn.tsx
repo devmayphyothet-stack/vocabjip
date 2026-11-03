@@ -132,14 +132,14 @@ export default function LearnScreen() {
                 {item.authorName}
               </Text>
             </View>
-            {item.authorRank ? (
+            {/* {item.authorRank ? (
               <View style={[styles.rankPill, { backgroundColor: colors.streakLight }]}>
                 <Ionicons name="trophy" size={10} color={colors.streak} />
                 <Text style={[styles.rankPillText, { color: colors.streak }]}>
                   {item.authorRank}
                 </Text>
               </View>
-            ) : null}
+            ) : null} */}
           </View>
         ) : null}
       </TouchableOpacity>
@@ -203,14 +203,14 @@ export default function LearnScreen() {
                 {item.authorName}
               </Text>
             </View>
-            {item.authorRank ? (
+            {/* {item.authorRank ? (
               <View style={[styles.rankPill, { backgroundColor: colors.streakLight }]}>
                 <Ionicons name="trophy" size={10} color={colors.streak} />
                 <Text style={[styles.rankPillText, { color: colors.streak }]}>
                   {item.authorRank}
                 </Text>
               </View>
-            ) : null}
+            ) : null} */}
           </View>
         ) : null}
       </TouchableOpacity>
