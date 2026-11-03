@@ -10,14 +10,22 @@ const rawUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || '').trim();
 const rawKey = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
 const supabaseUrl =
-  rawUrl && rawUrl !== 'https://placeholder.supabase.co' && !rawUrl.includes('your-project')
+  rawUrl &&
+  rawUrl !== 'https://placeholder.supabase.co' &&
+  !rawUrl.includes('your-project') &&
+  !rawUrl.includes('fbopsfqbepwrqoqriqlm')
     ? rawUrl
     : DEFAULT_SUPABASE_URL;
 
+// Always use the verified anon key for the fbopsfqbepwrqoqriqlm project so stale Vercel env vars cannot cause "Invalid API key"
 const supabaseAnonKey =
-  rawKey && rawKey !== 'placeholder-anon-key' && rawKey.startsWith('eyJ')
-    ? rawKey
-    : DEFAULT_SUPABASE_ANON_KEY;
+  supabaseUrl === DEFAULT_SUPABASE_URL ||
+  !rawKey ||
+  rawKey === 'placeholder-anon-key' ||
+  !rawKey.startsWith('eyJ') ||
+  rawKey.includes('G7N1W9L2W1f8b4o2UvhH57pQxL10qg')
+    ? DEFAULT_SUPABASE_ANON_KEY
+    : rawKey;
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
