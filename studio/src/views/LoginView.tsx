@@ -337,6 +337,7 @@ export function LoginView() {
                 </span>
               </button>
 
+              {/* Sign In with Email OTP button (Commented out until needed)
               {mode === 'signin' && (
                 <button
                   type="button"
@@ -347,6 +348,7 @@ export function LoginView() {
                   <span>Sign In with Email OTP (OTP ကုဒ်ဖြင့် ဝင်ရန်)</span>
                 </button>
               )}
+              */}
             </>
           )}
         </form>

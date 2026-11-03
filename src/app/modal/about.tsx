@@ -156,6 +156,28 @@ export default function AboutScreen() {
           </View>
         </View>
 
+        {/* Contributors Wall of Gratitude Banner */}
+        <TouchableOpacity
+          onPress={() => router.push('/modal/contributors' as any)}
+          activeOpacity={0.7}
+          style={[
+            styles.feedbackBanner,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={styles.feedbackBannerContent}>
+            <Ionicons name="heart" size={22} color={colors.streak} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[styles.feedbackBannerTitle, { color: colors.text }]}>
+                Our Contributors (ကျေးဇူးတင်မှတ်တမ်း)
+              </Text>
+              <Text style={[styles.feedbackBannerSubtitle, { color: colors.textSecondary }]}>
+                VocabJip ဖြစ်တည်လာအောင် ဝိုင်းဝန်းပံ့ပိုးပေးကြသော ဆရာ၊ ဆရာမများ စာရင်းကို ကြည့်ရှုရန်
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </View>
+        </TouchableOpacity>
+
         {/* Feedback Banner */}
         <TouchableOpacity
           onPress={() => {

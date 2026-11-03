@@ -278,6 +278,26 @@ export default function ProfileScreen() {
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
+          {/* Our Contributors & Gratitude */}
+          <TouchableOpacity
+            onPress={() => router.push('/modal/contributors' as any)}
+            style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.streakLight }]}>
+              <Ionicons name="heart-outline" size={18} color={colors.streak} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>
+                Our Contributors
+              </Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
+                Educators & mentors who make VocabJip possible
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
           {/* About VocabJip */}
           <TouchableOpacity
             onPress={() => router.push('/modal/about')}

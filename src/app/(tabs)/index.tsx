@@ -285,6 +285,34 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
 
+        {/* Contributors & Gratitude Card */}
+        <TouchableOpacity
+          onPress={() => router.push('/modal/contributors' as any)}
+          style={[
+            styles.communityCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}>
+          <View style={[styles.communityIconBox, { backgroundColor: colors.streakLight }]}>
+            <Ionicons name="heart" size={20} color={colors.streak} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.communityHeaderRow}>
+              <View style={[styles.communityBadgeBox, { backgroundColor: colors.accentLight }]}>
+                <Text style={[styles.communityBadge, { color: colors.accent }]}>
+                  GRATITUDE
+                </Text>
+              </View>
+              <Text style={[styles.communityTitle, { color: colors.text }]}>
+                Our Contributors & Mentors
+              </Text>
+            </View>
+            <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>
+              VocabJip ဖြစ်တည်လာစေရန် စေတနာဖြင့် သင်ခန်းစာများ ရေးသားမျှဝေပေးနေကြသော Contributor ဆရာ၊ ဆရာမများ စာရင်းနှင့် ကျေးဇူးတင်မှတ်တမ်း။
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Featured Vocab of the Day */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionHeading, { color: colors.text }]}>

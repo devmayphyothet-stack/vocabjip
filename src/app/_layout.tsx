@@ -102,6 +102,10 @@ export default function RootLayout() {
                   options={{ presentation: 'modal', headerShown: false }}
                 />
                 <Stack.Screen
+                  name="modal/contributors"
+                  options={{ presentation: 'modal', headerShown: false }}
+                />
+                <Stack.Screen
                   name="modal/feedback"
                   options={{ presentation: 'modal', headerShown: false }}
                 />
