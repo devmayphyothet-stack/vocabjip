@@ -15,6 +15,7 @@ import { AdminUsersView } from './views/AdminUsersView';
 import { AdminInvitationsView } from './views/AdminInvitationsView';
 import { AdminFeedbackView } from './views/AdminFeedbackView';
 import { AdminAnalyticsView } from './views/AdminAnalyticsView';
+import { AdminAiSettingsView } from './views/AdminAiSettingsView';
 import { LoginView } from './views/LoginView';
 import { Loader2 } from 'lucide-react';
 
@@ -33,7 +34,7 @@ export function AppContent() {
         }
       } else {
         // If current view is an admin view, switch to contributor default
-        const adminViews = ['review', 'invitations', 'feedback', 'analytics', 'users'];
+        const adminViews = ['review', 'invitations', 'feedback', 'analytics', 'users', 'ai-settings'];
         if (!activeView || adminViews.includes(activeView)) {
           setActiveView('vocab');
         }
@@ -106,6 +107,7 @@ export function AppContent() {
           {activeView === 'feedback' && <AdminFeedbackView />}
           {activeView === 'analytics' && <AdminAnalyticsView />}
           {activeView === 'users' && <AdminUsersView />}
+          {activeView === 'ai-settings' && <AdminAiSettingsView />}
         </main>
       </div>
     </div>

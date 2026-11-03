@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PATTERNS_DATA } from '@/data/patterns-data';
 import { VOCAB_DATA } from '@/data/vocab-data';
+import { supabase } from '@/lib/supabase';
 
 export interface WordDefinition {
   korean: string;
@@ -12,7 +14,12 @@ export interface WordDefinition {
   writtenEquivalent?: string;
   topikTip?: string;
   category?: string;
+  isAiGenerated?: boolean;
+  isUnindexed?: boolean;
 }
+
+const LOCAL_VOCAB_LENS_CACHE_KEY = '@vocabjip/vocab_lens_ai_cache_v1';
+const memoryLensCache: Record<string, WordDefinition> = {};
 
 // Built-in high-yield TOPIK II vocabulary dictionary
 const TOPIK_ESSAY_DICTIONARY: Record<string, Omit<WordDefinition, 'korean'>> = {
@@ -415,13 +422,21 @@ function cleanKoreanStem(rawWord: string): string {
 
 export class KoreanDictionaryService {
   /**
-   * Look up definition for any tapped word in an essay
+   * Synchronous instant lookup in static dictionaries & in-memory cache
    */
   static lookupWord(rawWord: string): WordDefinition | null {
     if (!rawWord || !rawWord.trim()) return null;
 
     const trimmed = rawWord.replace(/[.,!?'"~()·]/g, '').trim();
     const stem = cleanKoreanStem(trimmed);
+
+    // 0. Check in-memory AI/cloud cache first
+    if (memoryLensCache[trimmed]) {
+      return { ...memoryLensCache[trimmed], korean: trimmed };
+    }
+    if (stem && memoryLensCache[stem]) {
+      return { ...memoryLensCache[stem], korean: trimmed };
+    }
 
     // 1. Direct dictionary match
     if (TOPIK_ESSAY_DICTIONARY[trimmed]) {
@@ -483,15 +498,273 @@ export class KoreanDictionaryService {
       };
     }
 
-    // 5. General fallback definition (Coming soon for unindexed words)
+    // 5. General fallback definition (marked isUnindexed = true so Smart AI Lens can auto-translate it!)
     return {
       korean: trimmed,
       rootWord: stem || trimmed,
       romaja: 'Korean Expression',
-      myanmarMeaning: 'မကြာမီ ထပ်မံဖြည့်စွက်ပါမည်',
-      englishMeaning: 'Detailed explanation coming soon',
+      myanmarMeaning: 'AI ဖြင့် အဓိပ္ပာယ် ရှာဖွေပေးနေပါသည်...',
+      englishMeaning: 'Looking up meaning with Smart Vocab Lens AI...',
       topikTip: 'စကားလုံး၏ အသံထွက်ကို အောက်ပါ Listen ခလုတ်ဖြင့် နားဆင်နိုင်ပါသည်။',
       category: 'General',
+      isUnindexed: true,
     };
+  }
+
+  /**
+   * Smart Async Lookup:
+   * 1. Checks Local AsyncStorage Cache
+   * 2. Checks Supabase Shared `vocab_lens_cache` & Contributor `vocabularies`
+   * 3. Calls System Gemini API (Managed by Admin in `app_settings` with Primary -> Backup auto-failover)
+   * 4. Caches result globally so future students use 0 API quota
+   */
+  static async lookupWordSmart(
+    rawWord: string,
+    essayContext?: string,
+    userGeminiKey?: string | null
+  ): Promise<WordDefinition | null> {
+    const syncResult = this.lookupWord(rawWord);
+    if (!syncResult || !syncResult.isUnindexed) {
+      return syncResult;
+    }
+
+    const trimmed = syncResult.korean;
+    const stem = cleanKoreanStem(trimmed) || trimmed;
+
+    // 1. Check Local AsyncStorage Cache
+    try {
+      const rawCache = await AsyncStorage.getItem(LOCAL_VOCAB_LENS_CACHE_KEY);
+      if (rawCache) {
+        const parsedCache: Record<string, WordDefinition> = JSON.parse(rawCache);
+        const hit = parsedCache[trimmed] || parsedCache[stem];
+        if (hit && !hit.isUnindexed) {
+          memoryLensCache[trimmed] = hit;
+          memoryLensCache[stem] = hit;
+          return { ...hit, korean: trimmed };
+        }
+      }
+    } catch (_) {}
+
+    // 2. Check Supabase Global `vocab_lens_cache` and `vocabularies`
+    try {
+      const { data: cachedRow } = await supabase
+        .from('vocab_lens_cache')
+        .select('*')
+        .in('word_key', [trimmed, stem])
+        .limit(1)
+        .maybeSingle();
+
+      if (cachedRow) {
+        const resolved: WordDefinition = {
+          korean: trimmed,
+          rootWord: cachedRow.root_word || stem,
+          romaja: cachedRow.romaja || 'Korean Expression',
+          myanmarMeaning: cachedRow.myanmar_meaning,
+          englishMeaning: cachedRow.english_meaning || '',
+          spokenEquivalent: cachedRow.spoken_equivalent || undefined,
+          writtenEquivalent: cachedRow.written_equivalent || undefined,
+          topikTip: cachedRow.topik_tip || undefined,
+          category: cachedRow.category || 'General',
+          isAiGenerated: true,
+        };
+        await this.saveToLocalLensCache(trimmed, stem, resolved);
+        return resolved;
+      }
+
+      const { data: cloudVocab } = await supabase
+        .from('vocabularies')
+        .select('*')
+        .eq('status', 'approved')
+        .or(`written.ilike.%${stem}%,spoken.ilike.%${stem}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (cloudVocab) {
+        const resolved: WordDefinition = {
+          korean: trimmed,
+          vocabId: cloudVocab.id,
+          rootWord: cloudVocab.written,
+          romaja: cloudVocab.pronunciation || '',
+          myanmarMeaning: cloudVocab.myanmar_meaning,
+          englishMeaning: cloudVocab.english_meaning || '',
+          spokenEquivalent: cloudVocab.spoken || undefined,
+          writtenEquivalent: cloudVocab.written || undefined,
+          topikTip: cloudVocab.usage_tip || undefined,
+          category: cloudVocab.category || 'General',
+        };
+        await this.saveToLocalLensCache(trimmed, stem, resolved);
+        return resolved;
+      }
+    } catch (_) {}
+
+    // 3. Fetch System Gemini API Keys from Admin `app_settings` (plus .env / user fallback)
+    const candidateKeys: string[] = [];
+    let modelName = 'gemini-2.5-flash';
+
+    try {
+      const { data: settingRow } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'system_gemini_config')
+        .maybeSingle();
+
+      if (settingRow?.value) {
+        const cfg = settingRow.value as any;
+        if (cfg.enabled !== false) {
+          if (cfg.primary_key?.trim()) candidateKeys.push(cfg.primary_key.trim());
+          if (cfg.backup_key?.trim()) candidateKeys.push(cfg.backup_key.trim());
+        }
+        if (cfg.model) modelName = cfg.model;
+      }
+    } catch (_) {}
+
+    const envKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY?.trim();
+    if (envKey && !candidateKeys.includes(envKey)) {
+      candidateKeys.push(envKey);
+    }
+    if (userGeminiKey?.trim() && !candidateKeys.includes(userGeminiKey.trim())) {
+      candidateKeys.push(userGeminiKey.trim());
+    }
+
+    if (candidateKeys.length === 0) {
+      return {
+        ...syncResult,
+        myanmarMeaning: 'အဓိပ္ပာယ် အော်တိုဖော်ပြရန် System Gemini AI Key လိုအပ်ပါသည်',
+        englishMeaning: 'Admin can configure System Gemini Key in Studio -> System Gemini AI Keys',
+        isUnindexed: false,
+      };
+    }
+
+    // 4. Try candidate keys in order (Auto-failover from Primary -> Backup if 429 Quota reached)
+    for (const activeKey of candidateKeys) {
+      const aiDef = await this.generateWordDefinitionWithGemini(
+        activeKey,
+        modelName,
+        trimmed,
+        stem,
+        essayContext
+      );
+      if (aiDef) {
+        await this.saveToLocalLensCache(trimmed, stem, aiDef);
+        // Save to global Supabase cache in background so next learners get it for free
+        supabase
+          .from('vocab_lens_cache')
+          .upsert(
+            {
+              word_key: stem,
+              korean: trimmed,
+              root_word: aiDef.rootWord,
+              romaja: aiDef.romaja,
+              myanmar_meaning: aiDef.myanmarMeaning,
+              english_meaning: aiDef.englishMeaning,
+              spoken_equivalent: aiDef.spokenEquivalent || null,
+              written_equivalent: aiDef.writtenEquivalent || null,
+              topik_tip: aiDef.topikTip || null,
+              category: aiDef.category || 'General',
+            },
+            { onConflict: 'word_key' }
+          )
+          .then(() => {});
+        return aiDef;
+      }
+    }
+
+    return {
+      ...syncResult,
+      myanmarMeaning: 'လက်ရှိတွင် AI အဓိပ္ပာယ် ရှာဖွေ၍ မရနိုင်သေးပါ (Quota စစ်ဆေးပါ)',
+      englishMeaning: 'Could not reach Gemini AI at the moment.',
+      isUnindexed: false,
+    };
+  }
+
+  private static async generateWordDefinitionWithGemini(
+    apiKey: string,
+    model: string,
+    word: string,
+    stem: string,
+    contextText?: string
+  ): Promise<WordDefinition | null> {
+    try {
+      const prompt = `You are a Korean-Myanmar TOPIK II dictionary expert.
+Explain the Korean word "${word}" (stem: "${stem}")${
+        contextText ? ` as used in this context: "${contextText.slice(0, 220)}"` : ''
+      }.
+Return ONLY a valid JSON object matching this exact schema:
+{
+  "rootWord": "<Korean dictionary base form, e.g. 증가하다>",
+  "romaja": "<revised romanization pronunciation, e.g. jeung-ga-ha-da>",
+  "myanmarMeaning": "<clear, natural Myanmar meaning>",
+  "englishMeaning": "<concise English meaning>",
+  "spokenEquivalent": "<everyday spoken Korean equivalent if applicable, or empty string>",
+  "writtenEquivalent": "<academic written Korean equivalent if applicable, or empty string>",
+  "topikTip": "<1 short helpful tip in Myanmar for TOPIK II essay writing>",
+  "category": "<one of: Society, Economy, Education, Technology, Contrast, Cause & Effect, General>"
+}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        // If 429 or 400/403, return null so loop automatically tries Backup Key!
+        return null;
+      }
+
+      const data = await res.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) return null;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        const m = rawText.match(/```(?:json)?([\s\S]*?)```/);
+        if (m) parsed = JSON.parse(m[1].trim());
+        else return null;
+      }
+
+      if (!parsed.myanmarMeaning) return null;
+
+      return {
+        korean: word,
+        rootWord: parsed.rootWord || stem,
+        romaja: parsed.romaja || '',
+        myanmarMeaning: parsed.myanmarMeaning,
+        englishMeaning: parsed.englishMeaning || '',
+        spokenEquivalent: parsed.spokenEquivalent || undefined,
+        writtenEquivalent: parsed.writtenEquivalent || undefined,
+        topikTip: parsed.topikTip || undefined,
+        category: parsed.category || 'General',
+        isAiGenerated: true,
+        isUnindexed: false,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private static async saveToLocalLensCache(
+    word: string,
+    stem: string,
+    def: WordDefinition
+  ): Promise<void> {
+    memoryLensCache[word] = def;
+    memoryLensCache[stem] = def;
+    try {
+      const raw = await AsyncStorage.getItem(LOCAL_VOCAB_LENS_CACHE_KEY);
+      const map: Record<string, WordDefinition> = raw ? JSON.parse(raw) : {};
+      map[word] = def;
+      map[stem] = def;
+      await AsyncStorage.setItem(LOCAL_VOCAB_LENS_CACHE_KEY, JSON.stringify(map));
+    } catch (_) {}
   }
 }

@@ -105,6 +105,12 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
       subtitle: 'Review & manage contributors',
       icon: Users,
     },
+    {
+      id: 'ai-settings',
+      label: 'System Gemini AI Keys',
+      subtitle: 'Rotate Smart Lens API keys',
+      icon: KeyRound,
+    },
   ];
 
   return (

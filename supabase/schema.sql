@@ -550,6 +550,71 @@ create policy "Contributors and admins can grade essay submissions"
     )
   );
 
+-- ============================================================
+-- 13. SYSTEM APP SETTINGS (ADMIN GEMINI API KEY ROTATION)
+-- ============================================================
+create table if not exists public.app_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_by uuid references public.profiles(id) on delete set null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.app_settings enable row level security;
+
+-- Mobile/Web clients can read system settings (such as active Gemini key config for Smart Vocab Lens)
+drop policy if exists "Anyone can read app settings" on public.app_settings;
+create policy "Anyone can read app settings"
+  on public.app_settings for select
+  using (true);
+
+-- ONLY Admins can insert/update/delete app settings
+drop policy if exists "Only admins can modify app settings" on public.app_settings;
+create policy "Only admins can modify app settings"
+  on public.app_settings for all
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- ============================================================
+-- 14. GLOBAL AI VOCAB LENS CACHE (SHARED DICTIONARY CACHE)
+-- ============================================================
+create table if not exists public.vocab_lens_cache (
+  word_key text primary key,
+  korean text not null,
+  root_word text not null,
+  romaja text default '',
+  myanmar_meaning text not null,
+  english_meaning text default '',
+  spoken_equivalent text,
+  written_equivalent text,
+  topik_tip text,
+  category text default 'General',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.vocab_lens_cache enable row level security;
+
+drop policy if exists "Anyone can read vocab lens cache" on public.vocab_lens_cache;
+create policy "Anyone can read vocab lens cache"
+  on public.vocab_lens_cache for select
+  using (true);
+
+drop policy if exists "Anyone can insert vocab lens cache" on public.vocab_lens_cache;
+create policy "Anyone can insert vocab lens cache"
+  on public.vocab_lens_cache for insert
+  with check (true);
+
+
 
 
 

@@ -16,10 +16,12 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { InteractiveKoreanText } from '@/components/InteractiveKoreanText';
 import { VocabLensModal } from '@/components/VocabLensModal';
 import { KoreanDictionaryService, WordDefinition } from '@/services/korean-dictionary-service';
+import { useAi } from '@/context/ai-context';
 
 export default function EssayDetailModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const { apiKey } = useAi();
   const params = useLocalSearchParams<{
     essayId?: string;
     title?: string;
@@ -43,11 +45,23 @@ export default function EssayDetailModal() {
   const [selectedWord, setSelectedWord] = useState<WordDefinition | null>(null);
   const [lensVisible, setLensVisible] = useState(false);
 
-  const handlePressWord = (rawWord: string) => {
-    const definition = KoreanDictionaryService.lookupWord(rawWord);
-    if (definition) {
-      setSelectedWord(definition);
+  const handlePressWord = async (rawWord: string) => {
+    const syncDef = KoreanDictionaryService.lookupWord(rawWord);
+    if (syncDef) {
+      setSelectedWord(syncDef);
       setLensVisible(true);
+
+      // If word is not in the static dictionary, auto-translate with System Gemini AI + Cloud Cache
+      if (syncDef.isUnindexed) {
+        const smartDef = await KoreanDictionaryService.lookupWordSmart(
+          rawWord,
+          content,
+          apiKey
+        );
+        if (smartDef) {
+          setSelectedWord(smartDef);
+        }
+      }
     }
   };
 

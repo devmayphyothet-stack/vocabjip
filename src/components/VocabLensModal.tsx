@@ -84,7 +84,7 @@ export function VocabLensModal({ visible, word, onClose }: VocabLensModalProps) 
               <View style={[styles.lensTag, { backgroundColor: colors.accentLight }]}>
                 <Ionicons name="sparkles" size={13} color={colors.accent} />
                 <Text style={[styles.lensTagText, { color: colors.accent }]}>
-                  SMART VOCAB LENS
+                  {word.isAiGenerated ? 'SMART VOCAB LENS • AI' : 'SMART VOCAB LENS'}
                 </Text>
               </View>
               {word.category && (
