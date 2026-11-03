@@ -235,7 +235,7 @@ export function VocabLensModal({ visible, word, onClose }: VocabLensModalProps) 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.22)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {

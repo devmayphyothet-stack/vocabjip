@@ -139,6 +139,7 @@ export default function EssayDetailModal() {
           <InteractiveKoreanText
             content={content}
             onPressWord={handlePressWord}
+            activeWord={selectedWord?.korean || null}
           />
         </View>
 
