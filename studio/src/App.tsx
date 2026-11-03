@@ -5,6 +5,7 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { VocabStudioView } from './views/VocabStudioView';
 import { PatternStudioView } from './views/PatternStudioView';
+import { QuizStudioView } from './views/QuizStudioView';
 import { EssayPromptStudioView } from './views/EssayPromptStudioView';
 import { BulkImportView } from './views/BulkImportView';
 import { MySubmissionsView } from './views/MySubmissionsView';
@@ -25,7 +26,7 @@ export function AppContent() {
     if (user) {
       if (isAdmin) {
         // If current view is a contributor view, switch to admin default
-        const contributorViews = ['vocab', 'patterns', 'prompts', 'bulk', 'submissions'];
+        const contributorViews = ['vocab', 'patterns', 'quizzes', 'prompts', 'bulk', 'submissions'];
         if (!activeView || contributorViews.includes(activeView)) {
           setActiveView('review');
         }
@@ -42,11 +43,12 @@ export function AppContent() {
   const fetchPendingCount = async () => {
     if (!isAdmin) return;
     try {
-      const [{ count: vCount }, { count: pCount }] = await Promise.all([
+      const [{ count: vCount }, { count: pCount }, { count: qCount }] = await Promise.all([
         supabase.from('vocabularies').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
         supabase.from('sentence_patterns').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
+        supabase.from('quiz_steps').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
       ]);
-      setPendingCount((vCount || 0) + (pCount || 0));
+      setPendingCount((vCount || 0) + (pCount || 0) + (qCount || 0));
     } catch (e) {
       console.warn('Count fetch error:', e);
     }
@@ -93,6 +95,7 @@ export function AppContent() {
         <main className="flex-1 overflow-y-auto min-h-[calc(100vh-4rem)]">
           {activeView === 'vocab' && <VocabStudioView onSubmitted={fetchPendingCount} />}
           {activeView === 'patterns' && <PatternStudioView onSubmitted={fetchPendingCount} />}
+          {activeView === 'quizzes' && <QuizStudioView onSubmitted={fetchPendingCount} />}
           {activeView === 'prompts' && <EssayPromptStudioView onSubmitted={fetchPendingCount} />}
           {activeView === 'bulk' && <BulkImportView onSubmitted={fetchPendingCount} />}
           {activeView === 'submissions' && <MySubmissionsView />}

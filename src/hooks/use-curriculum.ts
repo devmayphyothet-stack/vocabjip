@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { VocabItem, VOCAB_DATA } from '@/data/vocab-data';
 import { PatternItem, PATTERNS_DATA } from '@/data/patterns-data';
+import { QuizTopicItem, QUIZ_TOPICS_DATA } from '@/data/quiz-data';
 import {
   getCurriculumVocabs,
   getCurriculumPatterns,
+  getCurriculumQuizTopics,
   syncCurriculumFromCloud,
   subscribeCurriculumUpdates,
   getCurriculumLastSync,
@@ -12,19 +14,22 @@ import {
 export function useCurriculum() {
   const [vocabularies, setVocabularies] = useState<VocabItem[]>(VOCAB_DATA);
   const [patterns, setPatterns] = useState<PatternItem[]>(PATTERNS_DATA);
+  const [quizTopics, setQuizTopics] = useState<QuizTopicItem[]>(QUIZ_TOPICS_DATA);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   // Load from offline cache
   const loadCurriculum = useCallback(async () => {
     try {
-      const [vList, pList, lastSync] = await Promise.all([
+      const [vList, pList, qList, lastSync] = await Promise.all([
         getCurriculumVocabs(),
         getCurriculumPatterns(),
+        getCurriculumQuizTopics(),
         getCurriculumLastSync(),
       ]);
       setVocabularies(vList);
       setPatterns(pList);
+      setQuizTopics(qList);
       setLastSyncTime(lastSync);
     } catch (e) {
       console.warn('Error loading cached curriculum:', e);
@@ -60,11 +65,13 @@ export function useCurriculum() {
   return {
     vocabularies,
     patterns,
+    quizTopics,
     isSyncing,
     lastSyncTime,
     syncNow,
     vocabCount: vocabularies.length,
     patternCount: patterns.length,
+    quizTopicCount: quizTopics.length,
   };
 }
 

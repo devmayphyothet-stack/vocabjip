@@ -108,8 +108,59 @@ export interface ContributorLeaderboardItem {
   role: UserRole;
   approved_vocabs: number;
   approved_patterns: number;
+  approved_quizzes?: number;
   pending_items: number;
   total_score: number;
 }
+
+export interface QuizQuestionItem {
+  id: number;
+  spokenWord: string;
+  questionText: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  exampleSentence: string;
+}
+
+export interface QuizTopicRecord {
+  id: string;
+  title: string;
+  myanmar_title: string;
+  category: string;
+  description: string;
+  created_by?: string | null;
+  author_name: string;
+  author_rank: string;
+  created_at: string;
+  updated_at: string;
+  profiles?: {
+    display_name: string;
+    email: string;
+  };
+}
+
+export interface QuizStepRecord {
+  id: string;
+  topic_id: string;
+  step_number: number;
+  title: string;
+  passing_score: number;
+  questions: QuizQuestionItem[];
+  status: ReviewStatus;
+  rejection_reason?: string | null;
+  created_by?: string | null;
+  author_name: string;
+  author_rank: string;
+  reviewed_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  quiz_topics?: QuizTopicRecord;
+  profiles?: {
+    display_name: string;
+    email: string;
+  };
+}
+
 
 

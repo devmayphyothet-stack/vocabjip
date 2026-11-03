@@ -1,38 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/auth-context';
 import { supabase } from '../lib/supabase';
-import { VocabRecord, PatternRecord } from '../types';
-import { CheckCircle2, XCircle, Clock, Check, AlertCircle, RefreshCw, MessageSquare } from 'lucide-react';
+import { VocabRecord, PatternRecord, QuizStepRecord } from '../types';
+import { CheckCircle2, XCircle, Clock, Check, AlertCircle, RefreshCw, MessageSquare, HelpCircle, Award } from 'lucide-react';
 
 export function AdminReviewView({ onReviewDone }: { onReviewDone?: () => void }) {
   const { user, isAdmin } = useAuth();
 
   const [pendingVocabs, setPendingVocabs] = useState<VocabRecord[]>([]);
   const [pendingPatterns, setPendingPatterns] = useState<PatternRecord[]>([]);
+  const [pendingQuizSteps, setPendingQuizSteps] = useState<QuizStepRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Revision modal state
-  const [feedbackItem, setFeedbackItem] = useState<{ table: 'vocabularies' | 'sentence_patterns'; id: string; title: string } | null>(null);
+  const [feedbackItem, setFeedbackItem] = useState<{
+    table: 'vocabularies' | 'sentence_patterns' | 'quiz_steps';
+    id: string;
+    title: string;
+  } | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchPending = async () => {
     setLoading(true);
     try {
-      const { data: vData } = await supabase
-        .from('vocabularies')
-        .select('*, profiles:created_by(display_name, email)')
-        .eq('status', 'pending_review')
-        .order('created_at', { ascending: true });
-
-      const { data: pData } = await supabase
-        .from('sentence_patterns')
-        .select('*, profiles:created_by(display_name, email)')
-        .eq('status', 'pending_review')
-        .order('created_at', { ascending: true });
+      const [{ data: vData }, { data: pData }, { data: qData }] = await Promise.all([
+        supabase
+          .from('vocabularies')
+          .select('*, profiles:created_by(display_name, email)')
+          .eq('status', 'pending_review')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('sentence_patterns')
+          .select('*, profiles:created_by(display_name, email)')
+          .eq('status', 'pending_review')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('quiz_steps')
+          .select('*, quiz_topics(*), profiles:created_by(display_name, email)')
+          .eq('status', 'pending_review')
+          .order('created_at', { ascending: true }),
+      ]);
 
       if (vData) setPendingVocabs(vData as VocabRecord[]);
       if (pData) setPendingPatterns(pData as PatternRecord[]);
+      if (qData) setPendingQuizSteps(qData as QuizStepRecord[]);
     } catch (e) {
       console.warn('Error fetching pending queue:', e);
     } finally {
@@ -44,7 +56,10 @@ export function AdminReviewView({ onReviewDone }: { onReviewDone?: () => void })
     fetchPending();
   }, []);
 
-  const handleApprove = async (table: 'vocabularies' | 'sentence_patterns', id: string) => {
+  const handleApprove = async (
+    table: 'vocabularies' | 'sentence_patterns' | 'quiz_steps',
+    id: string
+  ) => {
     setActionLoading(true);
     try {
       const { error } = await supabase
@@ -94,7 +109,7 @@ export function AdminReviewView({ onReviewDone }: { onReviewDone?: () => void })
     }
   };
 
-  const totalPending = pendingVocabs.length + pendingPatterns.length;
+  const totalPending = pendingVocabs.length + pendingPatterns.length + pendingQuizSteps.length;
 
   if (!isAdmin) {
     return (
@@ -286,6 +301,102 @@ export function AdminReviewView({ onReviewDone }: { onReviewDone?: () => void })
                     className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Approve & Publish to Mobile</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Quiz Steps Section */}
+      {pendingQuizSteps.length > 0 && (
+        <div className="space-y-4 pt-4 border-t border-slate-200">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-800 uppercase tracking-wide">
+            <Clock className="w-4 h-4 text-purple-600" />
+            <span>Pending Quiz Steps ({pendingQuizSteps.length})</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {pendingQuizSteps.map((step) => (
+              <div
+                key={step.id}
+                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 hover:border-slate-300 transition">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-extrabold px-2.5 py-0.5 rounded-md bg-purple-100 text-purple-800">
+                        {step.quiz_topics?.category || 'Quiz Topic'} • Step {step.step_number}
+                      </span>
+                      <span className="font-bold text-slate-700">
+                        {step.quiz_topics?.title} ({step.quiz_topics?.myanmar_title})
+                      </span>
+                    </div>
+                    <h4 className="text-base font-extrabold text-slate-900 mt-1">
+                      {step.title} (5 Questions • Pass Requirement: {step.passing_score}/5)
+                    </h4>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-slate-800">
+                      By: {step.author_name || step.profiles?.display_name || 'Contributor'}
+                    </div>
+                    <div className="text-[11px] font-semibold text-amber-700 flex items-center justify-end gap-1">
+                      <Award className="w-3.5 h-3.5" />
+                      <span>{step.author_rank || 'Contributor'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5 Questions List Preview */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  {(step.questions || []).map((q, qIdx) => (
+                    <div
+                      key={qIdx}
+                      className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-purple-700">Q{qIdx + 1}</span>
+                        <span className="font-bold text-blue-600">"{q.spokenWord}"</span>
+                      </div>
+                      <p className="font-semibold text-slate-800 line-clamp-2">{q.questionText}</p>
+                      <div className="space-y-1 pt-1">
+                        {(q.options || []).map((opt, oIdx) => (
+                          <div
+                            key={oIdx}
+                            className={`px-2 py-0.5 rounded text-[11px] truncate ${
+                              q.correctIndex === oIdx
+                                ? 'bg-emerald-100 text-emerald-900 font-bold'
+                                : 'bg-white text-slate-500'
+                            }`}>
+                            {String.fromCharCode(65 + oIdx)}. {opt}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <button
+                    disabled={actionLoading}
+                    onClick={() =>
+                      setFeedbackItem({
+                        table: 'quiz_steps',
+                        id: step.id,
+                        title: `${step.quiz_topics?.title || 'Quiz'} - Step ${step.step_number}: ${step.title}`,
+                      })
+                    }
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold transition">
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Request Revision</span>
+                  </button>
+
+                  <button
+                    disabled={actionLoading}
+                    onClick={() => handleApprove('quiz_steps', step.id)}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Approve & Publish Step to Mobile</span>
                   </button>
                 </div>
               </div>

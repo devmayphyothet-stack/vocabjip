@@ -169,10 +169,10 @@ export default function HomeScreen() {
               <Ionicons name="sparkles" size={22} color={colors.accent} />
             </View>
             <Text style={[styles.actionTitle, { color: colors.text }]}>
-              Vocab Quiz
+              Step-by-Step Quiz
             </Text>
             <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
-              5 questions • 2 mins
+              Topics • 5 Qs per step
             </Text>
           </TouchableOpacity>
 

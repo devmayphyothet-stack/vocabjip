@@ -385,4 +385,106 @@ create policy "Anyone can redeem invitation"
   on public.invitations for update
   using (not is_used);
 
+-- Allow public reading of contributor/admin display names and roles for attribution
+drop policy if exists "Anyone can view contributor and admin profiles" on public.profiles;
+create policy "Anyone can view contributor and admin profiles"
+  on public.profiles for select
+  using (role in ('contributor', 'admin'));
+
+-- ============================================================
+-- 11. DYNAMIC CURRICULUM: QUIZ TOPICS & STEPS (PHASE 4)
+-- ============================================================
+create table if not exists public.quiz_topics (
+  id text primary key,
+  title text not null,
+  myanmar_title text not null,
+  category text not null,
+  description text default '',
+  created_by uuid references public.profiles(id) on delete set null,
+  author_name text default 'VocabJip Educator',
+  author_rank text default 'Contributor',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.quiz_topics enable row level security;
+
+drop policy if exists "Anyone can read quiz topics" on public.quiz_topics;
+create policy "Anyone can read quiz topics"
+  on public.quiz_topics for select
+  using (true);
+
+drop policy if exists "Contributors and admins can insert quiz topics" on public.quiz_topics;
+create policy "Contributors and admins can insert quiz topics"
+  on public.quiz_topics for insert
+  with check (auth.uid() = created_by);
+
+drop policy if exists "Creator or admin can update quiz topics" on public.quiz_topics;
+create policy "Creator or admin can update quiz topics"
+  on public.quiz_topics for update
+  using (
+    auth.uid() = created_by or
+    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
+
+drop policy if exists "Admins can delete quiz topics" on public.quiz_topics;
+create policy "Admins can delete quiz topics"
+  on public.quiz_topics for delete
+  using (
+    auth.uid() = created_by or
+    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
+
+create table if not exists public.quiz_steps (
+  id text primary key,
+  topic_id text references public.quiz_topics(id) on delete cascade not null,
+  step_number int not null,
+  title text not null,
+  passing_score int default 3 not null,
+  questions jsonb not null default '[]'::jsonb,
+  status text check (status in ('draft', 'pending_review', 'approved', 'rejected')) default 'pending_review',
+  rejection_reason text,
+  created_by uuid references public.profiles(id) on delete set null,
+  author_name text default 'VocabJip Educator',
+  author_rank text default 'Contributor',
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(topic_id, step_number)
+);
+
+alter table public.quiz_steps enable row level security;
+
+-- Everyone can view quiz steps (Studio contributors see in-progress/claimed steps, Mobile filters approved)
+drop policy if exists "Anyone can read quiz steps" on public.quiz_steps;
+create policy "Anyone can read quiz steps"
+  on public.quiz_steps for select
+  using (true);
+
+drop policy if exists "Contributors can insert quiz steps" on public.quiz_steps;
+create policy "Contributors can insert quiz steps"
+  on public.quiz_steps for insert
+  with check (auth.uid() = created_by);
+
+drop policy if exists "Contributors can update their own quiz steps" on public.quiz_steps;
+create policy "Contributors can update their own quiz steps"
+  on public.quiz_steps for update
+  using (auth.uid() = created_by and status in ('draft', 'rejected', 'pending_review'));
+
+drop policy if exists "Contributors can delete their own draft quiz steps" on public.quiz_steps;
+create policy "Contributors can delete their own draft quiz steps"
+  on public.quiz_steps for delete
+  using (auth.uid() = created_by and status in ('draft', 'rejected'));
+
+drop policy if exists "Admins have full access on quiz steps" on public.quiz_steps;
+create policy "Admins have full access on quiz steps"
+  on public.quiz_steps for all
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+
 

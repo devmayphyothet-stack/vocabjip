@@ -2,10 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { VOCAB_DATA, VocabItem } from '@/data/vocab-data';
 import { PATTERNS_DATA, PatternItem } from '@/data/patterns-data';
+import { QUIZ_TOPICS_DATA, QuizTopicItem, QuizStepItem } from '@/data/quiz-data';
 
 const STORAGE_KEYS = {
   DYNAMIC_VOCABS: '@vocabjip_dynamic_vocabs',
   DYNAMIC_PATTERNS: '@vocabjip_dynamic_patterns',
+  DYNAMIC_QUIZ_TOPICS: '@vocabjip_dynamic_quiz_topics',
   LAST_SYNC: '@vocabjip_curriculum_last_sync',
 };
 
@@ -79,6 +81,36 @@ export async function getCurriculumPatterns(): Promise<PatternItem[]> {
     return Array.from(patternMap.values());
   } catch {
     return PATTERNS_DATA;
+  }
+}
+
+/**
+ * Get all quiz topics with their approved steps.
+ * Offline-first: merges built-in QUIZ_TOPICS_DATA with approved topics/steps from Supabase.
+ */
+export async function getCurriculumQuizTopics(): Promise<QuizTopicItem[]> {
+  try {
+    const cachedStr = await AsyncStorage.getItem(STORAGE_KEYS.DYNAMIC_QUIZ_TOPICS);
+    if (!cachedStr) {
+      return QUIZ_TOPICS_DATA;
+    }
+
+    const dynamicTopics: QuizTopicItem[] = JSON.parse(cachedStr);
+    const topicMap = new Map<string, QuizTopicItem>();
+
+    // 1. Base static topics
+    QUIZ_TOPICS_DATA.forEach((t) => topicMap.set(t.id, t));
+
+    // 2. Dynamic approved topics from cloud contributors
+    dynamicTopics.forEach((dt) => {
+      if (dt.steps && dt.steps.length > 0) {
+        topicMap.set(dt.id, dt);
+      }
+    });
+
+    return Array.from(topicMap.values());
+  } catch {
+    return QUIZ_TOPICS_DATA;
   }
 }
 
@@ -165,6 +197,61 @@ export async function syncCurriculumFromCloud(force: boolean = false): Promise<{
         JSON.stringify(mappedPatterns)
       );
       newPatternsCount = mappedPatterns.length;
+    }
+
+    // 3b. Fetch approved quiz steps and their parent quiz topics
+    const [{ data: cloudTopics, error: qtError }, { data: cloudSteps, error: qsError }] =
+      await Promise.all([
+        supabase.from('quiz_topics').select('*').order('created_at', { ascending: true }),
+        supabase
+          .from('quiz_steps')
+          .select('*')
+          .eq('status', 'approved')
+          .order('step_number', { ascending: true }),
+      ]);
+
+    if (!qtError && !qsError && cloudTopics && cloudSteps && cloudSteps.length > 0) {
+      const stepsByTopic = new Map<string, QuizStepItem[]>();
+
+      cloudSteps.forEach((row: any) => {
+        const list = stepsByTopic.get(row.topic_id) || [];
+        list.push({
+          id: row.id,
+          topicId: row.topic_id,
+          stepNumber: row.step_number,
+          title: row.title,
+          passingScore: row.passing_score || 3,
+          questions: Array.isArray(row.questions) ? row.questions : [],
+          authorName: row.author_name || 'VocabJip Educator',
+          authorRank: row.author_rank || 'Contributor',
+        });
+        stepsByTopic.set(row.topic_id, list);
+      });
+
+      const mappedTopics: QuizTopicItem[] = cloudTopics
+        .map((t: any) => {
+          const approvedSteps = (stepsByTopic.get(t.id) || []).sort(
+            (a, b) => a.stepNumber - b.stepNumber
+          );
+          return {
+            id: t.id,
+            title: t.title,
+            myanmarTitle: t.myanmar_title,
+            category: t.category,
+            description: t.description || '',
+            authorName: t.author_name || 'VocabJip Educator',
+            authorRank: t.author_rank || 'Contributor',
+            steps: approvedSteps,
+          };
+        })
+        .filter((t) => t.steps.length > 0);
+
+      if (mappedTopics.length > 0) {
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.DYNAMIC_QUIZ_TOPICS,
+          JSON.stringify(mappedTopics)
+        );
+      }
     }
 
     // 4. Update last sync time

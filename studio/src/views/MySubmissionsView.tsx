@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/auth-context';
 import { supabase } from '../lib/supabase';
-import { VocabRecord, PatternRecord, ReviewStatus } from '../types';
+import { VocabRecord, PatternRecord, QuizStepRecord, ReviewStatus } from '../types';
 import { 
   Clock, 
   CheckCircle2, 
@@ -18,10 +18,11 @@ import {
 export function MySubmissionsView() {
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'vocab' | 'patterns'>('vocab');
+  const [activeTab, setActiveTab] = useState<'vocab' | 'patterns' | 'quizzes'>('vocab');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [vocabs, setVocabs] = useState<VocabRecord[]>([]);
   const [patterns, setPatterns] = useState<PatternRecord[]>([]);
+  const [quizSteps, setQuizSteps] = useState<QuizStepRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Edit/Resubmit modal state
@@ -34,20 +35,27 @@ export function MySubmissionsView() {
     setLoading(true);
 
     try {
-      const { data: vData } = await supabase
-        .from('vocabularies')
-        .select('*')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false });
-
-      const { data: pData } = await supabase
-        .from('sentence_patterns')
-        .select('*')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false });
+      const [{ data: vData }, { data: pData }, { data: qData }] = await Promise.all([
+        supabase
+          .from('vocabularies')
+          .select('*')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('sentence_patterns')
+          .select('*')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('quiz_steps')
+          .select('*, quiz_topics(*)')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false }),
+      ]);
 
       if (vData) setVocabs(vData as VocabRecord[]);
       if (pData) setPatterns(pData as PatternRecord[]);
+      if (qData) setQuizSteps(qData as QuizStepRecord[]);
     } catch (e) {
       console.warn('Error fetching submissions:', e);
     } finally {
@@ -59,7 +67,7 @@ export function MySubmissionsView() {
     fetchMySubmissions();
   }, [user]);
 
-  const handleDelete = async (table: 'vocabularies' | 'sentence_patterns', id: string) => {
+  const handleDelete = async (table: 'vocabularies' | 'sentence_patterns' | 'quiz_steps', id: string) => {
     if (!window.confirm('ဖျက်ပစ်ရန် သေချာပါသလား?')) return;
     await supabase.from(table).delete().eq('id', id);
     fetchMySubmissions();
@@ -132,6 +140,7 @@ export function MySubmissionsView() {
 
   const filteredVocabs = vocabs.filter((v) => filterStatus === 'all' || v.status === filterStatus);
   const filteredPatterns = patterns.filter((p) => filterStatus === 'all' || p.status === filterStatus);
+  const filteredQuizzes = quizSteps.filter((q) => filterStatus === 'all' || q.status === filterStatus);
 
   const renderStatusBadge = (status: ReviewStatus) => {
     switch (status) {
@@ -202,6 +211,16 @@ export function MySubmissionsView() {
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}>
             Sentence Patterns ({patterns.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('quizzes')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              activeTab === 'quizzes'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}>
+            Quiz Steps ({quizSteps.length})
           </button>
         </div>
 
@@ -284,7 +303,7 @@ export function MySubmissionsView() {
               </table>
             </div>
           )
-        ) : (
+        ) : activeTab === 'patterns' ? (
           filteredPatterns.length === 0 ? (
             <div className="p-12 text-center text-slate-400 text-sm">တင်သွင်းထားသော Pattern မရှိသေးပါခင်ဗျာ။</div>
           ) : (
@@ -333,6 +352,60 @@ export function MySubmissionsView() {
                             onClick={() => handleDelete('sentence_patterns', pat.id)}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                             title="Delete draft">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          filteredQuizzes.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 text-sm">တင်သွင်းထားသော Quiz Step မရှိသေးပါခင်ဗျာ။</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Topic</th>
+                    <th className="py-3 px-4">Step</th>
+                    <th className="py-3 px-4">Step Title</th>
+                    <th className="py-3 px-4">Questions</th>
+                    <th className="py-3 px-4">Admin Review Notes</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-sans">
+                  {filteredQuizzes.map((qz) => (
+                    <tr key={qz.id} className="hover:bg-slate-50/70">
+                      <td className="py-3 px-4">{renderStatusBadge(qz.status)}</td>
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        {qz.quiz_topics?.title || 'Quiz Topic'}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-purple-700">Step {qz.step_number}</td>
+                      <td className="py-3 px-4 font-medium">{qz.title}</td>
+                      <td className="py-3 px-4 text-slate-600">
+                        {(qz.questions || []).length} Qs (Pass: {qz.passing_score}/5)
+                      </td>
+                      <td className="py-3 px-4 max-w-xs">
+                        {qz.rejection_reason ? (
+                          <div className="p-2 rounded-lg bg-red-50 text-red-800 text-[11px] font-medium border border-red-200">
+                            {qz.rejection_reason}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+                        {qz.status !== 'approved' && (
+                          <button
+                            onClick={() => handleDelete('quiz_steps', qz.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Delete step">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}

@@ -43,6 +43,11 @@ export function AdminAnalyticsView() {
         .from('sentence_patterns')
         .select('*');
 
+      // 2b. Fetch quiz steps
+      const { data: quizSteps } = await supabase
+        .from('quiz_steps')
+        .select('*');
+
       // 3. Fetch profiles
       const { data: profiles } = await supabase
         .from('profiles')
@@ -50,6 +55,7 @@ export function AdminAnalyticsView() {
 
       const allVocabs = (vocabs || []) as VocabRecord[];
       const allPatterns = (patterns || []) as PatternRecord[];
+      const allQuizSteps = (quizSteps || []) as any[];
       const allProfiles = profiles || [];
 
       // Counts
@@ -57,10 +63,11 @@ export function AdminAnalyticsView() {
       const approvedPatterns = allPatterns.filter(p => p.status === 'approved');
       const pendingVocabs = allVocabs.filter(v => v.status === 'pending_review');
       const pendingPatterns = allPatterns.filter(p => p.status === 'pending_review');
+      const pendingQuizzes = allQuizSteps.filter(q => q.status === 'pending_review');
 
       setTotalVocabs(approvedVocabs.length);
       setTotalPatterns(approvedPatterns.length);
-      setPendingReviews(pendingVocabs.length + pendingPatterns.length);
+      setPendingReviews(pendingVocabs.length + pendingPatterns.length + pendingQuizzes.length);
 
       // Question breakdown
       const qCounts = { Q51: 0, Q52: 0, Q53: 0, Q54: 0 };
@@ -90,6 +97,7 @@ export function AdminAnalyticsView() {
           role: prof.role || 'user',
           approved_vocabs: 0,
           approved_patterns: 0,
+          approved_quizzes: 0,
           pending_items: 0,
           total_score: 0,
         };
@@ -109,12 +117,23 @@ export function AdminAnalyticsView() {
         }
       });
 
+      allQuizSteps.forEach(q => {
+        if (q.created_by && statsMap[q.created_by]) {
+          if (q.status === 'approved') statsMap[q.created_by].approved_quizzes = (statsMap[q.created_by].approved_quizzes || 0) + 1;
+          if (q.status === 'pending_review') statsMap[q.created_by].pending_items++;
+        }
+      });
+
       // Filter OUT Admin so only actual teachers/contributors are scored and ranked
       const list = Object.values(statsMap)
         .filter(item => item.role === 'contributor')
         .map(item => ({
           ...item,
-          total_score: (item.approved_vocabs * 10) + (item.approved_patterns * 15) + (item.pending_items * 2),
+          total_score:
+            (item.approved_vocabs * 10) +
+            (item.approved_patterns * 15) +
+            ((item.approved_quizzes || 0) * 25) +
+            (item.pending_items * 2),
         }));
 
       // Sort by score descending
@@ -291,6 +310,7 @@ export function AdminAnalyticsView() {
                   <th className="py-3 px-4">Role</th>
                   <th className="py-3 px-4 text-center">Approved Vocabs</th>
                   <th className="py-3 px-4 text-center">Approved Patterns</th>
+                  <th className="py-3 px-4 text-center">Approved Quizzes</th>
                   <th className="py-3 px-4 text-center">In Review</th>
                   <th className="py-3 px-4 text-right">Contribution Points</th>
                 </tr>
@@ -341,6 +361,10 @@ export function AdminAnalyticsView() {
 
                       <td className="py-3.5 px-4 text-center font-bold text-slate-700">
                         {item.approved_patterns}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center font-bold text-purple-700">
+                        {item.approved_quizzes || 0}
                       </td>
 
                       <td className="py-3.5 px-4 text-center text-amber-600 font-bold">

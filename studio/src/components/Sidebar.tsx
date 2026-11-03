@@ -3,6 +3,7 @@ import {
   BookOpen,
   CheckCircle2,
   FileText,
+  HelpCircle,
   KeyRound,
   Layers,
   MessageSquare,
@@ -33,6 +34,12 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
       label: 'Pattern Studio',
       subtitle: 'TOPIK 51-54 Sentence Patterns',
       icon: PenTool,
+    },
+    {
+      id: 'quizzes',
+      label: 'Quiz & Topic Studio',
+      subtitle: 'Step-by-Step 5Q Topic Quizzes',
+      icon: HelpCircle,
     },
     {
       id: 'prompts',
