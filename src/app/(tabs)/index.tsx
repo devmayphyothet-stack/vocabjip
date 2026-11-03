@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -28,6 +29,26 @@ export default function HomeScreen() {
     month: 'short',
     day: 'numeric',
   });
+
+  // Pool of Admin-approved vocab tips (from Cloud + fallback)
+  const tipPool = useMemo(() => {
+    const source = vocabularies.length > 0 ? vocabularies : VOCAB_DATA;
+    const withTips = source.filter((v) => v.spoken && v.written && (v.usageTip || v.myanmarMeaning));
+    return withTips.length > 0 ? withTips : VOCAB_DATA;
+  }, [vocabularies]);
+
+  // Deterministic daily random index based on YYYY-MM-DD date seed (+ optional manual shuffle offset)
+  const [tipOffset, setTipOffset] = useState(0);
+  const todayTip = useMemo(() => {
+    const now = new Date();
+    const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    let hash = 0;
+    for (let i = 0; i < dateKey.length; i++) {
+      hash = (hash * 31 + dateKey.charCodeAt(i)) >>> 0;
+    }
+    const index = (hash + tipOffset) % tipPool.length;
+    return tipPool[index] || VOCAB_DATA[0];
+  }, [tipPool, tipOffset]);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
@@ -121,28 +142,47 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Today's High-Yield Tip */}
+        {/* Today's High-Yield Tip (Dynamic Daily Rotation from Approved Contributor Content) */}
         <View
           style={[
             styles.tipCard,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}>
           <View style={styles.tipHeader}>
-            <Text style={[styles.tipBadge, { backgroundColor: colors.streakLight, color: colors.streak }]}>
-              TODAY'S TOPIK TIP
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+              <Text style={[styles.tipBadge, { backgroundColor: colors.streakLight, color: colors.streak }]}>
+                TODAY'S TOPIK TIP
+              </Text>
+              {todayTip.authorName && (
+                <View style={styles.tipAuthorPill}>
+                  <Ionicons name="ribbon" size={11} color="#B45309" />
+                  <Text style={styles.tipAuthorText}>
+                    {todayTip.authorName}
+                    {todayTip.authorRank ? ` • ${todayTip.authorRank}` : ''}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setTipOffset((prev) => prev + 1)}
+              style={[styles.shuffleTipBtn, { backgroundColor: colors.cardMuted }]}
+              accessibilityLabel="Shuffle another tip">
+              <Ionicons name="shuffle" size={14} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
+
           <Text style={[styles.tipTitle, { color: colors.text }]}>
-            그래서 အစား <Text style={{ color: colors.accent }}>따라서</Text> ကို သုံးပါ
+            {todayTip.spoken} အစား <Text style={{ color: colors.accent }}>{todayTip.written}</Text> ကို သုံးပါ
           </Text>
           <Text style={[styles.tipDesc, { color: colors.textSecondary }]}>
-            TOPIK II စာစီစာကုံး (Q53/Q54) များတွင် စကားပြောအသုံးဖြစ်သော "그래서" အစား "따라서" သို့မဟုတ် "그러므로" ကို ရေးသားမှသာ အမှတ်ပြည့်ရရှိပါမည်။
+            {todayTip.usageTip || todayTip.myanmarMeaning}
           </Text>
           <TouchableOpacity
             onPress={() => {
               router.push({
                 pathname: '/modal/vocab-detail',
-                params: { id: 'v-1' },
+                params: { id: todayTip.id },
               });
             }}
             style={styles.tipActionRow}>
@@ -366,6 +406,32 @@ const styles = StyleSheet.create({
   },
   tipHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  tipAuthorPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  tipAuthorText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  shuffleTipBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tipBadge: {
     fontSize: 11,
