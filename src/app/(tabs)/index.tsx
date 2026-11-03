@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -119,18 +119,18 @@ export default function HomeScreen() {
           <View
             style={[
               styles.statCard,
-              { 
-                backgroundColor: colors.card, 
+              {
+                backgroundColor: colors.card,
                 borderColor: isGoalAchieved ? colors.streak : colors.border,
                 borderWidth: isGoalAchieved ? 1.5 : 1,
               },
             ]}>
             <View style={styles.statIconRow}>
               <View style={[styles.iconPill, { backgroundColor: isGoalAchieved ? colors.streakLight : colors.accentLight }]}>
-                <Ionicons 
-                  name={isGoalAchieved ? "trophy" : "checkmark-done"} 
-                  size={18} 
-                  color={isGoalAchieved ? colors.streak : colors.accent} 
+                <Ionicons
+                  name={isGoalAchieved ? "trophy" : "checkmark-done"}
+                  size={18}
+                  color={isGoalAchieved ? colors.streak : colors.accent}
                 />
               </View>
               <Text style={[styles.statValue, { color: isGoalAchieved ? colors.streak : colors.text }]}>
@@ -307,7 +307,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>
-              VocabJip ဖြစ်တည်လာစေရန် စေတနာဖြင့် သင်ခန်းစာများ ရေးသားမျှဝေပေးနေကြသော Contributor ဆရာ၊ ဆရာမများ စာရင်းနှင့် ကျေးဇူးတင်မှတ်တမ်း။
+              VocabJip ဖြစ်တည်လာစေရန် စေတနာဖြင့် သင်ခန်းစာများ ရေးသားမျှဝေပေးနေကြသော Contributors များ
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -10,8 +12,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { BrandLogo } from '@/components/BrandLogo';
 import { Colors, Spacing } from '@/constants/theme';
@@ -266,7 +266,7 @@ export default function ContributorsScreen() {
           <BrandLogo size={64} rounded={true} containerStyle={{ marginVertical: 8 }} />
 
           <Text style={[styles.heroTitle, { color: colors.text }]}>
-            Contributor ဆရာ၊ ဆရာမများကြောင့်သာ{'\n'}VocabJip ဖြစ်တည်နေရခြင်း ဖြစ်ပါသည်
+            VocabJip exists solely thanks to{'\n'}our contributing teachers.
           </Text>
 
           <Text style={[styles.koreanQuote, { color: colors.accent }]}>
@@ -280,11 +280,11 @@ export default function ContributorsScreen() {
             ]}>
             <Text style={[styles.gratitudeParagraph, { color: colors.text }]}>
               <Text style={{ fontWeight: '700' }}>VocabJip (보캡집)</Text> သည်
-              အခမဲ့ လေ့လာနိုင်သော TOPIK II အရေးအသား ပလက်ဖောင်းတစ်ခုအဖြစ်
-              ရပ်တည်နိုင်ခြင်းမှာ မိမိတို့၏ တန်ဖိုးရှိလှသော အချိန်၊ ပညာနှင့်
+              အခမဲ့ လေ့လာနိုင်သော TOPIK II အရေးအသား App အဖြစ်
+              ရပ်တည်နိုင်ခြင်းမှာ အချိန်၊ ပညာနှင့်
               အတွေ့အကြုံများကို စေတနာရှေ့ထား၍ မျှဝေပေးနေကြသော{' '}
               <Text style={{ fontWeight: '700', color: colors.accent }}>
-                Contributor ဆရာ၊ ဆရာမများနှင့် TOPIK ပညာရှင်များ
+                Contributors များ
               </Text>{' '}
               ရှိနေသောကြောင့်သာ ဖြစ်ပါသည်။
             </Text>
@@ -296,10 +296,9 @@ export default function ContributorsScreen() {
               ]}>
               App ထဲရှိ Academic ဝေါဟာရတစ်လုံးချင်းစီ၊ Q51–Q54 ဝါကျတည်ဆောက်ပုံ
               (Sentence Patterns)၊ လက်တွေ့ လေ့ကျင့်ခန်းမေးခွန်းများ (Quizzes) နှင့်
-              စာစီစာကုံး အမှတ်ပေးသုံးသပ်ချက်တိုင်းသည် ဆရာ၊ ဆရာမများ၏
+              စာစီစာကုံး အမှတ်ပေးသုံးသပ်ချက်တိုင်းသည် Contributors များ၏
               ကိုယ်တိုင်ရေးသားပြုစုပေးမှုများ ဖြစ်ကြပါသည်။ မြန်မာကျောင်းသား/သူများ
-              ကိုယ်စား လှိုက်လှဲစွာ ဂုဏ်ပြုကျေးဇူးတင်ရှိပါကြောင်း
-              မှတ်တမ်းတင်အပ်ပါသည်။ 🙏
+              ကိုယ်စား ကျေးဇူးတင်ပါသည်။
             </Text>
           </View>
 
@@ -351,7 +350,7 @@ export default function ContributorsScreen() {
           <View style={styles.sectionHeaderRow}>
             <Ionicons name="people" size={18} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              ဂုဏ်ပြုမှတ်တမ်းတင်အပ်သော Contributor များ
+              Featured Contributors
             </Text>
           </View>
 
@@ -377,7 +376,7 @@ export default function ContributorsScreen() {
                 Contributor စာရင်း မရှိသေးပါ
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                အင်တာနက်ချိတ်ဆက်ပြီး ဆွဲချ (Pull to refresh) ပြုလုပ်ပေးပါ။
+                Pull to refresh ပြုလုပ်ပေးပါ။
               </Text>
             </View>
           ) : (

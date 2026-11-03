@@ -1,10 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/auth-context';
-import { StudentEssaySubmissionRecord } from '../types';
-import { fetchContributorRankLabel } from '../lib/contributor-rank';
 import {
-  Award,
+  AlertCircle,
   CheckCircle2,
   Clock,
   FileEdit,
@@ -14,9 +9,13 @@ import {
   RefreshCw,
   Send,
   Sparkles,
-  UserCheck,
-  AlertCircle,
+  UserCheck
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/auth-context';
+import { fetchContributorRankLabel } from '../lib/contributor-rank';
+import { supabase } from '../lib/supabase';
+import { StudentEssaySubmissionRecord } from '../types';
 
 interface StudentEssayReviewViewProps {
   onReviewCompleted?: () => void;
@@ -247,11 +246,10 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
           <button
             key={tab.id}
             onClick={() => setFilterStatus(tab.id as any)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-              filterStatus === tab.id
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${filterStatus === tab.id
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}>
+              }`}>
             {tab.label}
           </button>
         ))}
@@ -286,19 +284,17 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
                 <div
                   key={item.id}
                   onClick={() => handleSelectEssay(item)}
-                  className={`p-4 rounded-2xl border transition cursor-pointer ${
-                    isSelected
+                  className={`p-4 rounded-2xl border transition cursor-pointer ${isSelected
                       ? 'bg-blue-50/60 border-blue-500 ring-2 ring-blue-500/20'
                       : 'bg-white border-slate-200/90 hover:border-slate-300'
-                  }`}>
+                    }`}>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
-                          item.question_type === 'Q53'
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${item.question_type === 'Q53'
                             ? 'bg-blue-100 text-blue-700'
                             : 'bg-purple-100 text-purple-700'
-                        }`}>
+                          }`}>
                         {item.question_type}
                       </span>
                       <span className="text-xs font-bold text-slate-700">
@@ -391,11 +387,10 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase ${
-                        selectedEssay.question_type === 'Q53'
+                      className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase ${selectedEssay.question_type === 'Q53'
                           ? 'bg-blue-600 text-white'
                           : 'bg-purple-600 text-white'
-                      }`}>
+                        }`}>
                       {selectedEssay.question_type}
                     </span>
                     <h2 className="text-base font-black text-slate-900">
@@ -426,11 +421,10 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
               <form onSubmit={handleSubmitReview} className="p-6 space-y-5">
                 {message && (
                   <div
-                    className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 ${
-                      message.type === 'success'
+                    className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 ${message.type === 'success'
                         ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                         : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}>
+                      }`}>
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{message.text}</span>
                   </div>
@@ -493,7 +487,7 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    ✨ ဆရာ/ဆရာမ ပြင်ဆင်ပေးထားသော အဆင့်မြင့်ဝါကျ (Corrected / Model Rewrite)
+                    ✨ Contributor ပြင်ဆင်ပေးထားသော အဆင့်မြင့်ဝါကျ (Corrected / Model Rewrite)
                   </label>
                   <textarea
                     rows={3}

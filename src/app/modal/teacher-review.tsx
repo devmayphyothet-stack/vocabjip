@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/context/auth-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   EssayReviewService,
   TeacherEssaySubmission,
@@ -85,7 +85,7 @@ export default function TeacherReviewModal() {
       setSubmissions((prev) => [created, ...prev.filter((i) => i.id !== created.id)]);
       setSelectedSubmission(created);
       setBannerMsg(
-        'သင့်စာမူကို ဆရာ/ဆရာမများ (Contributors) စစ်ဆေးပေးရန် ပေးပို့ပြီးပါပြီ! စစ်ဆေးပြီးပါက အမှတ်နှင့် အကြံပြုချက်များကို ဤနေရာတွင် ကြည့်ရှုနိုင်ပါသည်။'
+        'သင့်စာမူကို စစ်ဆေးပေးရန် ပေးပို့ပြီးပါပြီ! စစ်ဆေးပြီးပါက အမှတ်နှင့် အကြံပြုချက်များကို ဤနေရာတွင် ကြည့်ရှုနိုင်ပါသည်။'
       );
     } finally {
       setSubmitting(false);
@@ -114,7 +114,7 @@ export default function TeacherReviewModal() {
             Teacher Essay Review
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            ဆရာ/ဆရာမများ ကိုယ်တိုင် အမှတ်ပေးစစ်ဆေးမှု (Q53 & Q54)
+            Contributors ကိုယ်တိုင် အမှတ်ပေးစစ်ဆေးမှု (Q53 & Q54)
           </Text>
         </View>
 
@@ -166,7 +166,7 @@ export default function TeacherReviewModal() {
             </View>
 
             <Text style={[styles.submitHint, { color: colors.textSecondary }]}>
-              VocabJip မှ TOPIK ဆရာ/ဆရာမ (Contributors) များက သင့်စာမူကို ဖတ်ရှုပြီး အမှတ်ပေးခြင်း၊ အားသာချက်/အားနည်းချက်နှင့် အဆင့်မြင့်ဝါကျ ပြင်ဆင်ချက်များကို ပြန်လည်ပေးပို့ပေးပါမည်။
+              VocabJip မှ TOPIK Contributors များက သင့်စာမူကို ဖတ်ရှုပြီး အမှတ်ပေးခြင်း၊ အားသာချက်/အားနည်းချက်နှင့် အဆင့်မြင့်ဝါကျ ပြင်ဆင်ချက်များကို ပြန်လည်ပေးပို့ပေးပါမည်။
             </Text>
 
             <TouchableOpacity
@@ -179,7 +179,7 @@ export default function TeacherReviewModal() {
                 <>
                   <Ionicons name="paper-plane" size={16} color="#FFFFFF" />
                   <Text style={styles.submitBtnText}>
-                    Submit to Teacher for Grading (ဆရာ/ဆရာမထံ ပေးပို့မည်)
+                    Submit to Contributors for Grading
                   </Text>
                 </>
               )}
@@ -207,7 +207,7 @@ export default function TeacherReviewModal() {
             Your Essay Submissions ({submissions.length})
           </Text>
           <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-            စာမူတစ်ခုကိုနှိပ်၍ ဆရာ/ဆရာမ၏ သုံးသပ်ချက် အပြည့်အစုံကို ကြည့်ပါ
+            စာမူတစ်ခုကိုနှိပ်၍ Contributor ၏ သုံးသပ်ချက် အပြည့်အစုံကို ကြည့်ပါ
           </Text>
         </View>
 
@@ -377,8 +377,8 @@ export default function TeacherReviewModal() {
                                 { color: colors.text },
                               ]}>
                               {item.status === 'in_review'
-                                ? `${item.reviewer_name || 'ဆရာ/ဆရာမ'} မှ သင့်စာမူကို လက်ရှိ စစ်ဆေးပေးနေပါသည်`
-                                : 'ဆရာ/ဆရာမများ စစ်ဆေးရန် စောင့်ဆိုင်းနေပါသည်'}
+                                ? `${item.reviewer_name || 'Contributor'} မှ သင့်စာမူကို လက်ရှိ စစ်ဆေးပေးနေပါသည်`
+                                : 'Contributors များ စစ်ဆေးရန် စောင့်ဆိုင်းနေပါသည်'}
                               {/* (${item.reviewer_rank || 'Mentor'}) */}
                             </Text>
                             <Text
@@ -510,7 +510,7 @@ export default function TeacherReviewModal() {
                                   styles.feedbackBlockTitle,
                                   { color: '#3730A3' },
                                 ]}>
-                                ✨ ဆရာ/ဆရာမ ပြင်ဆင်ပေးထားသော အဆင့်မြင့်ဝါကျ (Model Rewrite)
+                                ✨ Contributor ပြင်ဆင်ပေးထားသော အဆင့်မြင့်ဝါကျ (Model Rewrite)
                               </Text>
                               <Text
                                 style={[
@@ -537,7 +537,7 @@ export default function TeacherReviewModal() {
                                   styles.feedbackBlockTitle,
                                   { color: colors.text },
                                 ]}>
-                                💬 ဆရာ/ဆရာမ၏ အထွေထွေ သုံးသပ်ချက် (Teacher's Note)
+                                💬 Contributor ၏ အထွေထွေ သုံးသပ်ချက်
                               </Text>
                               <Text
                                 style={[

@@ -117,7 +117,7 @@ export default function PracticeScreen() {
               Teacher Essay Reviews
             </Text>
             <Text style={[styles.scanCardDesc, { color: '#92400E' }]}>
-              သင်ရေးထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများအတွက် Contributor ဆရာ/ဆရာမများ၏ အမှတ်ပေးစစ်ဆေးချက်များကို ကြည့်ပါ။
+              သင်ရေးထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများအတွက် Contributors များ၏ အမှတ်ပေးစစ်ဆေးချက်များကို ကြည့်ပါ။
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color="#B45309" />
