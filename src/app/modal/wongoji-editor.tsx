@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -33,11 +33,22 @@ export default function WongojiEditorModal() {
   const { saveDraft } = useSaved();
   const { isConnected } = useAi();
   const params = useLocalSearchParams<{
+    draftId?: string;
     type?: string;
     promptTitle?: string;
     charTarget?: string;
     initialContent?: string;
   }>();
+
+  // Keep a stable draft ID for this editor session so saving/closing updates the same draft instead of duplicating
+  const sessionDraftIdRef = useRef<string>(params.draftId || `draft-${Date.now()}`);
+  const initialContentRef = useRef<string>(
+    params.initialContent ||
+      ((params.type || 'Q53') === 'Q53'
+        ? '인터넷 사용 통계에 따르면 2020년 65%에서 2024년 85%로 크게 증가하였다. 이러한 변화의 원인으로는 스마트폰 보급 확대를 들 수 있다.'
+        : '')
+  );
+  const hasManuallySavedRef = useRef<boolean>(false);
 
   const type = (params.type as 'Q53' | 'Q54') || 'Q53';
   const promptTitle =
@@ -94,8 +105,9 @@ export default function WongojiEditorModal() {
   };
 
   const handleManualSave = async () => {
+    hasManuallySavedRef.current = true;
     await saveDraft({
-      id: `draft-${Date.now()}`,
+      id: sessionDraftIdRef.current,
       type,
       title: promptTitle,
       content,
@@ -113,9 +125,10 @@ export default function WongojiEditorModal() {
       Alert.alert('Empty Draft', 'Please write some sentences before requesting an AI review.');
       return;
     }
-    // Auto save draft before navigating
+    hasManuallySavedRef.current = true;
+    // Auto save draft before navigating using the stable session draft ID
     await saveDraft({
-      id: `draft-${Date.now()}`,
+      id: sessionDraftIdRef.current,
       type,
       title: promptTitle,
       content,
@@ -137,9 +150,11 @@ export default function WongojiEditorModal() {
   };
 
   const handleClose = () => {
-    if (content.trim()) {
+    const isModified = content !== initialContentRef.current;
+    // Only auto-save on close if content is non-empty AND (user edited it OR it's a brand-new draft they saved)
+    if (content.trim() && (isModified || (params.draftId && hasManuallySavedRef.current))) {
       saveDraft({
-        id: `draft-${Date.now()}`,
+        id: sessionDraftIdRef.current,
         type,
         title: promptTitle,
         content,

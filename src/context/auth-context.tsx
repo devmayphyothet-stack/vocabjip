@@ -16,7 +16,7 @@ interface AuthContextType extends AuthState {
     email: string,
     password: string,
     displayName: string
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; autoConfirmed?: boolean; error?: string }>;
   verifyOtp: (token: string) => Promise<{ success: boolean; error?: string }>;
   requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     displayName: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; autoConfirmed?: boolean; error?: string }> => {
     const trimmedEmail = email.trim().toLowerCase();
     const now = Date.now();
     const session: PendingOtpSession = {
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
         options: {
@@ -190,10 +190,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         return { success: false, error: error.message };
       }
+
+      // If Supabase "Confirm email" is turned OFF, signUp immediately returns an active session
+      if (data?.session && data?.user) {
+        const profile = await fetchSupabaseProfile(data.user.id, trimmedEmail);
+        setUser(profile);
+        setIsGuest(false);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+        await AsyncStorage.removeItem(STORAGE_KEYS.IS_GUEST);
+        await clearPendingOtp();
+        return { success: true, autoConfirmed: true };
+      }
     }
 
     await savePendingOtp(session);
-    return { success: true };
+    return { success: true, autoConfirmed: false };
   };
 
   const verifyOtp = async (token: string): Promise<{ success: boolean; error?: string }> => {

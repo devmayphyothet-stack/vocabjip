@@ -9,7 +9,14 @@ interface AuthContextType {
   isAdmin: boolean;
   isContributor: boolean;
   signIn: (email: string, pass: string) => Promise<{ error?: string }>;
-  signUp: (email: string, pass: string, displayName: string, inviteCode?: string) => Promise<{ error?: string }>;
+  signUp: (
+    email: string,
+    pass: string,
+    displayName: string,
+    inviteCode?: string
+  ) => Promise<{ error?: string; requiresOtp?: boolean; email?: string }>;
+  verifySignupOtp: (email: string, token: string) => Promise<{ error?: string }>;
+  resendSignupOtp: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -125,20 +132,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: email.trim(),
       password: pass,
       options: {
-        data: { display_name: displayName.trim() },
+        data: {
+          display_name: displayName.trim(),
+          requested_role: targetRole,
+          invite_code: inviteCode?.trim().toUpperCase() || null,
+        },
       },
     });
     if (error) return { error: error.message };
 
     if (data.user) {
-      // If signed up with valid invite or for studio, update role to targetRole
-      try {
-        await supabase
-          .from('profiles')
-          .update({ role: targetRole, display_name: displayName.trim() })
-          .eq('id', data.user.id);
-
-        if (validInviteId) {
+      // Mark invitation used if possible (anyone can redeem unused invitation)
+      if (validInviteId) {
+        try {
           await supabase
             .from('invitations')
             .update({
@@ -147,13 +153,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               used_at: new Date().toISOString(),
             })
             .eq('id', validInviteId);
+        } catch (invErr) {
+          console.warn('Error marking invite used:', invErr);
         }
+      }
+
+      // If Email Confirmation is ON in Supabase, data.session will be null until OTP / Link is verified
+      if (!data.session) {
+        return {
+          requiresOtp: true,
+          email: email.trim(),
+        };
+      }
+
+      // If auto-confirmed, ensure role is updated and load profile immediately
+      try {
+        await supabase
+          .from('profiles')
+          .update({ role: targetRole, display_name: displayName.trim() })
+          .eq('id', data.user.id);
       } catch (profileErr) {
         console.warn('Error updating profile on signup:', profileErr);
       }
 
       await fetchProfile(data.user.id, data.user.email || email);
     }
+    return {};
+  };
+
+  const verifySignupOtp = async (email: string, token: string) => {
+    const trimmedEmail = email.trim();
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: trimmedEmail,
+      token: token.trim(),
+      type: 'signup',
+    });
+
+    if (error) return { error: error.message };
+
+    if (data.user) {
+      const metaRole = data.user.user_metadata?.requested_role as UserRole | undefined;
+      const metaName = data.user.user_metadata?.display_name as string | undefined;
+      if (metaRole || metaName) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              ...(metaRole ? { role: metaRole } : {}),
+              ...(metaName ? { display_name: metaName } : {}),
+            })
+            .eq('id', data.user.id);
+        } catch (_) {}
+      }
+      await fetchProfile(data.user.id, data.user.email || trimmedEmail);
+    }
+
+    return {};
+  };
+
+  const resendSignupOtp = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+    });
+    if (error) return { error: error.message };
     return {};
   };
 
@@ -182,6 +245,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isContributor,
         signIn,
         signUp,
+        verifySignupOtp,
+        resendSignupOtp,
         signOut,
         refreshProfile,
       }}>

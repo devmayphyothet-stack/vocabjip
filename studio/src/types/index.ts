@@ -24,6 +24,8 @@ export interface VocabRecord {
   status: ReviewStatus;
   rejection_reason?: string | null;
   created_by?: string | null;
+  author_name?: string | null;
+  author_rank?: string | null;
   reviewed_by?: string | null;
   created_at: string;
   updated_at: string;
@@ -47,6 +49,8 @@ export interface PatternRecord {
   status: ReviewStatus;
   rejection_reason?: string | null;
   created_by?: string | null;
+  author_name?: string | null;
+  author_rank?: string | null;
   reviewed_by?: string | null;
   created_at: string;
   updated_at: string;

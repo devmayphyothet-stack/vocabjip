@@ -53,6 +53,39 @@ export default function PatternDetailModal() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Contributor Attribution Banner */}
+        {pattern.authorName ? (
+          <View
+            style={[
+              styles.contributorBanner,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}>
+            <View style={styles.contributorLeft}>
+              <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
+                <Text style={[styles.avatarLetter, { color: colors.accent }]}>
+                  {(pattern.authorName || 'C')[0].toUpperCase()}
+                </Text>
+              </View>
+              <View>
+                <Text style={[styles.contributorLabel, { color: colors.textMuted }]}>
+                  CONTRIBUTED BY
+                </Text>
+                <Text style={[styles.contributorName, { color: colors.text }]}>
+                  {pattern.authorName}
+                </Text>
+              </View>
+            </View>
+            {pattern.authorRank ? (
+              <View style={[styles.rankBadge, { backgroundColor: colors.streakLight }]}>
+                <Ionicons name="trophy" size={12} color={colors.streak} />
+                <Text style={[styles.rankBadgeText, { color: colors.streak }]}>
+                  {pattern.authorRank}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Title & Myanmar Heading */}
         <View style={styles.headerSection}>
           <Text style={[styles.title, { color: colors.text }]}>{pattern.title}</Text>
@@ -250,6 +283,52 @@ const styles = StyleSheet.create({
   practiceBtnText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  contributorBanner: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  contributorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  avatarCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  contributorLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  contributorName: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  rankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  rankBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
 });
 

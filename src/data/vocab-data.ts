@@ -3,7 +3,16 @@ export interface VocabItem {
   spoken: string; // Everyday spoken Korean
   written: string; // Academic written Korean for TOPIK
   pronunciation: string;
-  category: 'Cause & Effect' | 'Contrast' | 'Society' | 'Education' | 'Economy' | 'General';
+  category:
+    | 'Cause & Effect'
+    | 'Contrast'
+    | 'Society'
+    | 'Education'
+    | 'Economy'
+    | 'Environment'
+    | 'Technology'
+    | 'General'
+    | string;
   myanmarMeaning: string; // Myanmar explanation
   englishMeaning: string;
   usageTip: string; // TOPIK writing rule/tip
@@ -11,6 +20,8 @@ export interface VocabItem {
     korean: string;
     myanmar: string;
   };
+  authorName?: string;
+  authorRank?: string;
   isSaved?: boolean;
 }
 
@@ -28,6 +39,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '인터넷 사용자가 급증했다. 따라서 정보 보안이 더욱 중요해졌다.',
       myanmar: 'အင်တာနက်အသုံးပြုသူ ရုတ်တရက်များပြားလာခဲ့သည်။ ထို့ကြောင့် အချက်အလက်လုံခြုံရေးသည် ပို၍အရေးပါလာခဲ့သည်။',
     },
+    authorName: 'Daw Su Su Kyi',
+    authorRank: 'Rank #1 • Top Educator',
   },
   {
     id: 'v-2',
@@ -42,6 +55,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '스마트폰은 편리하다. 그러나 과도한 사용은 건강을 해칠 수 있다.',
       myanmar: 'စမတ်ဖုန်းသည် အဆင်ပြေသည်။ သို့သော်လည်း အလွန်အကျွံသုံးစွဲခြင်းသည် ကျန်းမာရေးကို ထိခိုက်စေနိုင်သည်။',
     },
+    authorName: 'Daw Su Su Kyi',
+    authorRank: 'Rank #1 • Top Educator',
   },
   {
     id: 'v-3',
@@ -56,6 +71,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '이 문제는 사회적으로 매우 심각한 영향을 미친다.',
       myanmar: 'ဤပြဿနာသည် လူမှုရေးအရ အလွန်ဆိုးရွားသော သက်ရောက်မှုကို ဖြစ်စေသည်။',
     },
+    authorName: 'U Kyaw Min',
+    authorRank: 'Rank #2 • Senior Contributor',
   },
   {
     id: 'v-4',
@@ -70,6 +87,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '현대인들은 불규칙하게 식사를 하는 경향이 있다.',
       myanmar: 'ခေတ်သစ်လူသားများသည် အစားအသောက်ကို မမှန်မကန် စားသုံးသည့် အလေ့အထရှိသည်။',
     },
+    authorName: 'Tr. Hnin Wai',
+    authorRank: 'Rank #3 • Senior Contributor',
   },
   {
     id: 'v-5',
@@ -84,6 +103,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '조기 교육보다 인성 교육이 더 중요하다고 주장한다.',
       myanmar: 'အစောပိုင်းပညာရေးထက် စာရိတ္တပညာရေးက ပို၍အရေးကြီးသည်ဟု အခိုင်အမာဆိုလိုသည်။',
     },
+    authorName: 'Daw Su Su Kyi',
+    authorRank: 'Rank #1 • Top Educator',
   },
   {
     id: 'v-6',
@@ -98,6 +119,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '1인 가구의 비율이 지난 10년간 크게 증가하였다.',
       myanmar: 'တစ်ဦးတည်းနေထိုင်သော အိမ်ထောင်စုအချိုးအစားသည် လွန်ခဲ့သော ၁၀ နှစ်အတွင်း သိသိသာသာ တိုးပွားလာခဲ့သည်။',
     },
+    authorName: 'U Kyaw Min',
+    authorRank: 'Rank #2 • Senior Contributor',
   },
   {
     id: 'v-7',
@@ -112,6 +135,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '출산율은 지속적으로 감소하는 추세를 보이고 있다.',
       myanmar: 'ကလေးမွေးဖွားနှုန်းသည် စဉ်ဆက်မပြတ် လျော့ကျနေသည့် လားရာကို ပြသနေသည်။',
     },
+    authorName: 'Tr. Hnin Wai',
+    authorRank: 'Rank #3 • Senior Contributor',
   },
   {
     id: 'v-8',
@@ -126,6 +151,8 @@ export const VOCAB_DATA: VocabItem[] = [
       korean: '기술 혁신은 우리의 생활 방식을 완전히 변화시켰다.',
       myanmar: 'နည်းပညာ ဆန်းသစ်တီထွင်မှုသည် ကျွန်ုပ်တို့၏ လူနေမှုပုံစံကို လုံးဝ ပြောင်းလဲစေခဲ့သည်။',
     },
+    authorName: 'Daw Su Su Kyi',
+    authorRank: 'Rank #1 • Top Educator',
   },
 ];
 

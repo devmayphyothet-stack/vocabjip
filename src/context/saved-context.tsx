@@ -207,9 +207,11 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
       ...draft,
       updatedAt: new Date().toISOString(),
     };
-    const next = [updatedDraft, ...drafts.filter((d) => d.id !== draft.id)];
-    setDrafts(next);
-    await AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next));
+    setDrafts((prevDrafts) => {
+      const next = [updatedDraft, ...prevDrafts.filter((d) => d.id !== draft.id)];
+      AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
 
     // Background sync to Supabase
     if (user && isSupabaseConfigured) {
@@ -226,9 +228,11 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteDraft = async (id: string) => {
-    const next = drafts.filter((d) => d.id !== id);
-    setDrafts(next);
-    await AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next));
+    setDrafts((prevDrafts) => {
+      const next = prevDrafts.filter((d) => d.id !== id);
+      AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
 
     // Background delete from Supabase
     if (user && isSupabaseConfigured) {

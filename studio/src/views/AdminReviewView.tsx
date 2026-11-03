@@ -173,9 +173,16 @@ export function AdminReviewView({ onReviewDone }: { onReviewDone?: () => void })
                     <span className="font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700">
                       {item.category}
                     </span>
-                    <span className="text-slate-400 font-medium">
-                      By: <strong className="text-slate-700">{item.profiles?.display_name || 'Contributor'}</strong>
-                    </span>
+                    <div className="text-right">
+                      <span className="text-slate-400 font-medium">
+                        By: <strong className="text-slate-800">{item.author_name || item.profiles?.display_name || 'Contributor'}</strong>
+                      </span>
+                      {item.author_rank && (
+                        <div className="text-[10px] font-bold text-amber-700">
+                          🏆 {item.author_rank}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Words */}
@@ -258,9 +265,16 @@ export function AdminReviewView({ onReviewDone }: { onReviewDone?: () => void })
                     <span className="font-extrabold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">
                       {pat.question_number}
                     </span>
-                    <span className="text-slate-400 font-medium">
-                      By: <strong className="text-slate-700">{pat.profiles?.display_name || 'Contributor'}</strong>
-                    </span>
+                    <div className="text-right">
+                      <span className="text-slate-400 font-medium">
+                        By: <strong className="text-slate-800">{pat.author_name || pat.profiles?.display_name || 'Contributor'}</strong>
+                      </span>
+                      {pat.author_rank && (
+                        <div className="text-[10px] font-bold text-amber-700">
+                          🏆 {pat.author_rank}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>

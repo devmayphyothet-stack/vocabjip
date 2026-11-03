@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/auth-context';
 import { supabase } from '../lib/supabase';
+import { fetchContributorRankLabel } from '../lib/contributor-rank';
 import { MobileCardPreview } from '../components/MobileCardPreview';
-import { CheckCircle2, Send, Save, AlertCircle, Plus, X } from 'lucide-react';
+import { CheckCircle2, Send, Save, AlertCircle, Plus, X, Trophy } from 'lucide-react';
 
 const QUESTION_TYPES = ['Q51', 'Q52', 'Q53', 'Q54'] as const;
 
@@ -22,6 +23,11 @@ export function PatternStudioView({ onSubmitted }: { onSubmitted?: () => void })
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [myRankLabel, setMyRankLabel] = useState<string>('Contributor');
+
+  useEffect(() => {
+    fetchContributorRankLabel(user?.id).then(setMyRankLabel);
+  }, [user?.id]);
 
   const addPhrase = () => {
     if (currentPhrase.trim() && !keyPhrases.includes(currentPhrase.trim())) {
@@ -34,7 +40,7 @@ export function PatternStudioView({ onSubmitted }: { onSubmitted?: () => void })
     setKeyPhrases(keyPhrases.filter((_, i) => i !== index));
   };
 
-  const handleSave = async (submitStatus: 'draft' | 'pending_review' | 'approved') => {
+  const handleSave = async (submitStatus: 'draft' | 'pending_review') => {
     if (!title.trim() || !patternFormula.trim() || !exampleKorean.trim()) {
       setErrorMessage('ကျေးဇူးပြု၍ Pattern Title၊ Formula ပုံသေနည်း နှင့် ဥပမာစာကြောင်းကို ထည့်သွင်းပေးပါခင်ဗျာ။');
       return;
@@ -46,6 +52,7 @@ export function PatternStudioView({ onSubmitted }: { onSubmitted?: () => void })
 
     try {
       const id = `p-ext-${Date.now().toString(36)}`;
+      const authorName = user?.display_name || user?.email?.split('@')[0] || 'Contributor';
       const { error } = await supabase.from('sentence_patterns').insert({
         id,
         question_number: questionNumber,
@@ -58,15 +65,15 @@ export function PatternStudioView({ onSubmitted }: { onSubmitted?: () => void })
         key_phrases: keyPhrases,
         status: submitStatus,
         created_by: user?.id || null,
-        reviewed_by: submitStatus === 'approved' ? user?.id : null,
+        author_name: authorName,
+        author_rank: myRankLabel,
+        reviewed_by: null,
       });
 
       if (error) throw error;
 
       setSuccessMessage(
-        submitStatus === 'approved'
-          ? '🎉 Pattern ကို တိုက်ရိုက် Publish လုပ်ပြီး Mobile App သို့ ပို့ဆောင်ပြီးပါပြီ!'
-          : submitStatus === 'pending_review'
+        submitStatus === 'pending_review'
           ? '✅ စစ်ဆေးအတည်ပြုရန် Admin ထံသို့ အောင်မြင်စွာ တင်သွင်းပြီးပါပြီ။'
           : '💾 Pattern Draft အဖြစ် အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။'
       );
@@ -91,9 +98,15 @@ export function PatternStudioView({ onSubmitted }: { onSubmitted?: () => void })
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">TOPIK Sentence Pattern Studio</h1>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">TOPIK Sentence Pattern Studio</h1>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            <Trophy className="w-3.5 h-3.5 text-amber-600" />
+            {myRankLabel}
+          </span>
+        </div>
         <p className="text-sm text-slate-500 mt-1">
-          TOPIK II (မေးခွန်း ၅၁ မှ ၅၄) အတွက် အရေးအသား ပုံသေနည်းများနှင့် စံပြစာကြောင်းများ တင်သွင်းရန်
+          TOPIK II (မေးခွန်း ၅၁ မှ ၅၄) အတွက် အရေးအသား ပုံသေနည်းများနှင့် စံပြစာကြောင်းများ တင်သွင်းရန် • Admin Approve လုပ်ပြီးပါက သင့် Display Name & Rank နှင့်တကွ Mobile App တွင် ပေါ်လာပါမည်။
         </p>
       </div>
 
@@ -272,24 +285,13 @@ export function PatternStudioView({ onSubmitted }: { onSubmitted?: () => void })
             </button>
 
             <div className="flex items-center gap-3">
-              {isAdmin && (
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => handleSave('approved')}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-xs transition disabled:opacity-50">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Direct Publish to Mobile</span>
-                </button>
-              )}
-
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => handleSave('pending_review')}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-xs transition disabled:opacity-50">
                 <Send className="w-4 h-4" />
-                <span>Submit for Review</span>
+                <span>Submit for Admin Review</span>
               </button>
             </div>
           </div>

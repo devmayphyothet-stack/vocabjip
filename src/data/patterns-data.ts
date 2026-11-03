@@ -8,6 +8,8 @@ export interface PatternItem {
   exampleKorean: string;
   exampleMyanmar: string;
   keyPhrases: string[];
+  authorName?: string;
+  authorRank?: string;
 }
 
 export const PATTERNS_DATA: PatternItem[] = [
@@ -21,6 +23,8 @@ export const PATTERNS_DATA: PatternItem[] = [
     exampleKorean: '인주시의 외국인 유학생 수를 조사한 결과, 2015년 3만 명에서 2023년 12만 명으로 약 4배 급증하였다.',
     exampleMyanmar: 'အင်ဂျူမြို့ရှိ နိုင်ငံခြားသားပညာတော်သင် အရေအတွက်ကို စစ်တမ်းကောက်ယူရာ ၂၀၁၅ ခုနှစ် ၃ သောင်းမှ ၂၀၂၃ တွင် ၁ သိန်း ၂ သောင်းသို့ ၄ ဆခန့် ရုတ်တရက် တိုးပွားလာခဲ့သည်။',
     keyPhrases: ['~에 대해 조사한 결과', '~에서 ~로 증가하였다', '~배 급증세를 보였다'],
+    authorName: 'Daw Su Su Kyi',
+    authorRank: 'Rank #1 • Top Educator',
   },
   {
     id: 'p-2',
@@ -32,6 +36,8 @@ export const PATTERNS_DATA: PatternItem[] = [
     exampleKorean: '이러한 변화의 원인으로는 한류 열풍으로 인한 한국 문화에 대한 관심 증대와 대학의 장학 혜택 확대를 들 수 있다.',
     exampleMyanmar: 'ဤပြောင်းလဲမှု၏ အကြောင်းရင်းများအဖြစ် ဟန်လျူလှိုင်းကြောင့် ကိုရီးယားယဉ်ကျေးမှုအပေါ် စိတ်ဝင်စားမှု တိုးပွားလာခြင်းနှင့် တက္ကသိုလ်များ၏ ပညာသင်ဆုအခွင့်အလမ်း တိုးချဲ့ပေးခြင်းတို့ကို ဖော်ပြနိုင်သည်။',
     keyPhrases: ['이러한 원인으로는 ~을 들 수 있다', '~의 영향으로 인해', '~기 때문이다'],
+    authorName: 'U Kyaw Min',
+    authorRank: 'Rank #2 • Senior Contributor',
   },
   {
     id: 'p-3',
@@ -43,6 +49,8 @@ export const PATTERNS_DATA: PatternItem[] = [
     exampleKorean: '현대 사회에서 평생 교육은 개인의 발전뿐만 아니라 국가 경쟁력을 좌우하는 중요한 요소로 대두되고 있다.',
     exampleMyanmar: 'ခေတ်သစ်လူ့ဘောင်တွင် တစ်သက်တာပညာရေးသည် တစ်ဦးချင်းစီ၏ တိုးတက်မှုသာမက နိုင်ငံ၏ယှဉ်ပြိုင်နိုင်စွမ်းကို ဆုံးဖြတ်ပေးသော အရေးပါသည့် အချက်အဖြစ် ပေါ်ထွက်လာနေသည်။',
     keyPhrases: ['~로 대두되고 있다', '~에 대한 관심이 높아지고 있다', '중요한 역할을 담당한다'],
+    authorName: 'Daw Su Su Kyi',
+    authorRank: 'Rank #1 • Top Educator',
   },
   {
     id: 'p-4',
@@ -54,6 +62,8 @@ export const PATTERNS_DATA: PatternItem[] = [
     exampleKorean: '따라서 환경 문제를 극복하기 위해서는 시민들의 자발적인 실천뿐만 아니라 정부의 엄격한 규제와 정책적 지원이 병행되어야 한다.',
     exampleMyanmar: 'ထို့ကြောင့် သဘာဝပတ်ဝန်းကျင်ပြဿနာကို ဖြေရှင်းကျော်လွှားရန် နိုင်ငံသားများ၏ မိမိဆန္ဒအလျောက် လက်တွေ့လိုက်နာမှုသာမက အစိုးရ၏ တင်းကြပ်သော စည်းမျဉ်းများနှင့် မူဝါဒဆိုင်ရာ ထောက်ပံ့မှုများပါ တစ်ပြိုင်နက်တည်း ရှိရမည်ဖြစ်သည်။',
     keyPhrases: ['~이 함께 이루어져야 할 것이다', '~가 병행되어야 한다', '노력이 절실히 요구된다'],
+    authorName: 'Tr. Hnin Wai',
+    authorRank: 'Rank #3 • Senior Contributor',
   },
   {
     id: 'p-5',
@@ -65,6 +75,8 @@ export const PATTERNS_DATA: PatternItem[] = [
     exampleKorean: '한국어 말하기 대회에 참가를 원하시는 분은 이번 주 금요일까지 신청서를 제출해 주시기 바랍니다.',
     exampleMyanmar: 'ကိုရီးယားစကားပြောပြိုင်ပွဲတွင် ပါဝင်လိုသူများသည် ယခုတစ်ပတ် သောကြာနေ့အထိ လျှောက်လွှာတင်သွင်းပေးကြပါရန် မေတ္တာရပ်ခံအပ်ပါသည်။',
     keyPhrases: ['~해 주시기 바랍니다', '~바랍니다', '~기를 원합니다'],
+    authorName: 'U Kyaw Min',
+    authorRank: 'Rank #2 • Senior Contributor',
   },
 ];
 

@@ -8,9 +8,10 @@ import {
   Sparkles,
   Upload
 } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useAuth } from '../context/auth-context';
 import { supabase } from '../lib/supabase';
+import { fetchContributorRankLabel } from '../lib/contributor-rank';
 
 interface ParsedVocabRow {
   spoken: string;
@@ -34,6 +35,11 @@ export function BulkImportView({ onSubmitted }: { onSubmitted?: () => void }) {
   const [importing, setImporting] = useState(false);
   const [successCount, setSuccessCount] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [myRankLabel, setMyRankLabel] = useState<string>('Contributor');
+
+  useEffect(() => {
+    fetchContributorRankLabel(user?.id).then(setMyRankLabel);
+  }, [user?.id]);
 
   const sampleTemplate = `그래서\t따라서\ttta-ra-seo\tCause & Effect\tထို့ကြောင့်\tTherefore\t인터넷 사용자가 급증했다.\tအင်တာနက် အသုံးပြုသူ များပြားလာသည်။
 근데\t그러나\tgeu-reo-na\tContrast\tသို့သော်\tHowever\t스마트폰은 편리하다.\tစမတ်ဖုန်းသည် အဆင်ပြေသည်။
@@ -161,6 +167,7 @@ export function BulkImportView({ onSubmitted }: { onSubmitted?: () => void }) {
     setSuccessCount(null);
 
     try {
+      const authorName = user?.display_name || user?.email?.split('@')[0] || 'Contributor';
       const records = validRows.map((row, idx) => ({
         id: `v-bulk-${Date.now().toString(36)}-${idx}`,
         spoken: row.spoken,
@@ -174,6 +181,8 @@ export function BulkImportView({ onSubmitted }: { onSubmitted?: () => void }) {
         example_myanmar: row.exampleMyanmar,
         status,
         created_by: user?.id || null,
+        author_name: authorName,
+        author_rank: myRankLabel,
         reviewed_by: status === 'approved' ? user?.id : null,
       }));
 

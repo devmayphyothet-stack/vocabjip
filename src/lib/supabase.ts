@@ -2,13 +2,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const DEFAULT_SUPABASE_URL = 'https://fbopsfqbepwrqoqriqlm.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZib3BzZnFiZXB3cnFvcXJpcWxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1NDYzNDYsImV4cCI6MjEwOTEyMjM0Nn0.HplE0sYhdKZ6yssrjMe9n19PfTaFP2MaykzedmDfK-w';
+
+const rawUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || '').trim();
+const rawKey = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+
+const supabaseUrl =
+  rawUrl && rawUrl !== 'https://placeholder.supabase.co' && !rawUrl.includes('your-project')
+    ? rawUrl
+    : DEFAULT_SUPABASE_URL;
+
+const supabaseAnonKey =
+  rawKey && rawKey !== 'placeholder-anon-key' && rawKey.startsWith('eyJ')
+    ? rawKey
+    : DEFAULT_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(
-  process.env.EXPO_PUBLIC_SUPABASE_URL &&
-    process.env.EXPO_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+  supabaseUrl &&
+    supabaseUrl !== 'https://placeholder.supabase.co' &&
+    supabaseAnonKey &&
+    supabaseAnonKey !== 'placeholder-anon-key'
 );
 
 // Custom storage adapter for React Native AsyncStorage

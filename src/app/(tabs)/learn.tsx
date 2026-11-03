@@ -22,7 +22,17 @@ import { useCurriculum } from '@/hooks/use-curriculum';
 
 type TabMode = 'vocab' | 'patterns';
 
-const CATEGORIES = ['All', 'Cause & Effect', 'Contrast', 'Society', 'Education', 'Economy'];
+const CATEGORIES = [
+  'All',
+  'Cause & Effect',
+  'Contrast',
+  'Society',
+  'Education',
+  'Economy',
+  'Environment',
+  'Technology',
+  'General',
+];
 const QUESTION_FILTERS = ['All', 'Q51', 'Q52', 'Q53', 'Q54'];
 
 export default function LearnScreen() {
@@ -113,6 +123,25 @@ export default function LearnScreen() {
         <Text style={[styles.myanmarMeaning, { color: colors.textSecondary }]}>
           {item.myanmarMeaning}
         </Text>
+
+        {item.authorName ? (
+          <View style={[styles.contributorFooter, { borderTopColor: colors.borderLight }]}>
+            <View style={styles.contributorRow}>
+              <Ionicons name="person-circle-outline" size={15} color={colors.accent} />
+              <Text style={[styles.contributorName, { color: colors.textSecondary }]}>
+                {item.authorName}
+              </Text>
+            </View>
+            {item.authorRank ? (
+              <View style={[styles.rankPill, { backgroundColor: colors.streakLight }]}>
+                <Ionicons name="trophy" size={10} color={colors.streak} />
+                <Text style={[styles.rankPillText, { color: colors.streak }]}>
+                  {item.authorRank}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -165,6 +194,25 @@ export default function LearnScreen() {
             {item.patternFormula}
           </Text>
         </View>
+
+        {item.authorName ? (
+          <View style={[styles.contributorFooter, { borderTopColor: colors.borderLight }]}>
+            <View style={styles.contributorRow}>
+              <Ionicons name="person-circle-outline" size={15} color={colors.accent} />
+              <Text style={[styles.contributorName, { color: colors.textSecondary }]}>
+                {item.authorName}
+              </Text>
+            </View>
+            {item.authorRank ? (
+              <View style={[styles.rankPill, { backgroundColor: colors.streakLight }]}>
+                <Ionicons name="trophy" size={10} color={colors.streak} />
+                <Text style={[styles.rankPillText, { color: colors.streak }]}>
+                  {item.authorRank}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -523,6 +571,35 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+  },
+  contributorFooter: {
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  contributorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  contributorName: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  rankPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  rankPillText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
 

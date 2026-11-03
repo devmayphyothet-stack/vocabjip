@@ -126,7 +126,11 @@ begin
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'display_name', 'TOPIK Learner'),
-    case when lower(new.email) in ('admin@vocabjip.com', 'dev.mayphyothet@gmail.com') then 'admin' else 'user' end
+    case
+      when lower(new.email) in ('admin@vocabjip.com', 'dev.mayphyothet@gmail.com') then 'admin'
+      when new.raw_user_meta_data->>'requested_role' in ('contributor', 'admin') then new.raw_user_meta_data->>'requested_role'
+      else 'user'
+    end
   );
   return new;
 end;
@@ -207,10 +211,15 @@ create table if not exists public.vocabularies (
   status text check (status in ('draft', 'pending_review', 'approved', 'rejected')) default 'pending_review',
   rejection_reason text,
   created_by uuid references public.profiles(id) on delete set null,
+  author_name text default 'VocabJip Educator',
+  author_rank text default 'Contributor',
   reviewed_by uuid references public.profiles(id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.vocabularies add column if not exists author_name text default 'VocabJip Educator';
+alter table public.vocabularies add column if not exists author_rank text default 'Contributor';
 
 alter table public.vocabularies enable row level security;
 
@@ -265,10 +274,15 @@ create table if not exists public.sentence_patterns (
   status text check (status in ('draft', 'pending_review', 'approved', 'rejected')) default 'pending_review',
   rejection_reason text,
   created_by uuid references public.profiles(id) on delete set null,
+  author_name text default 'VocabJip Educator',
+  author_rank text default 'Contributor',
   reviewed_by uuid references public.profiles(id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.sentence_patterns add column if not exists author_name text default 'VocabJip Educator';
+alter table public.sentence_patterns add column if not exists author_rank text default 'Contributor';
 
 alter table public.sentence_patterns enable row level security;
 

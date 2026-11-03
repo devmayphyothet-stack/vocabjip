@@ -163,6 +163,8 @@ export async function syncCurriculumFromCloud(force: boolean = false): Promise<{
           korean: row.example_korean,
           myanmar: row.example_myanmar,
         },
+        authorName: row.author_name || 'VocabJip Educator',
+        authorRank: row.author_rank || 'Contributor',
       }));
 
       await AsyncStorage.setItem(
@@ -190,6 +192,8 @@ export async function syncCurriculumFromCloud(force: boolean = false): Promise<{
         exampleKorean: row.example_korean,
         exampleMyanmar: row.example_myanmar,
         keyPhrases: row.key_phrases || [],
+        authorName: row.author_name || 'VocabJip Educator',
+        authorRank: row.author_rank || 'Contributor',
       }));
 
       await AsyncStorage.setItem(

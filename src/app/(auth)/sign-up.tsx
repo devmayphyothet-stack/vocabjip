@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Link } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { useAuth } from '@/context/auth-context';
-import { Colors, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BrandLogo } from '@/components/BrandLogo';
+import { Colors, Spacing } from '@/constants/theme';
+import { useAuth } from '@/context/auth-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function SignUpScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -50,11 +50,15 @@ export default function SignUpScreen() {
     try {
       const res = await signUpWithOtp(email, password, displayName);
       if (res.success) {
-        // Navigate immediately to OTP screen
-        router.push({
-          pathname: '/(auth)/verify-otp',
-          params: { email: email.trim(), type: 'signup' },
-        });
+        if (res.autoConfirmed) {
+          router.replace('/(tabs)');
+        } else {
+          // Navigate to OTP screen when email confirmation is required
+          router.push({
+            pathname: '/(auth)/verify-otp',
+            params: { email: email.trim(), type: 'signup' },
+          });
+        }
       } else {
         setErrorMessage(res.error || 'Failed to create account.');
       }
@@ -144,7 +148,7 @@ export default function SignUpScreen() {
                     color: colors.text,
                   },
                 ]}
-                placeholder="you@example.com"
+                placeholder="example@gmail.com"
                 placeholderTextColor={colors.textMuted}
                 value={email}
                 onChangeText={setEmail}

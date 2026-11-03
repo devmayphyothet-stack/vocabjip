@@ -61,6 +61,39 @@ export default function VocabDetailModal() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Contributor Attribution Banner */}
+        {item.authorName ? (
+          <View
+            style={[
+              styles.contributorBanner,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}>
+            <View style={styles.contributorLeft}>
+              <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
+                <Text style={[styles.avatarLetter, { color: colors.accent }]}>
+                  {(item.authorName || 'C')[0].toUpperCase()}
+                </Text>
+              </View>
+              <View>
+                <Text style={[styles.contributorLabel, { color: colors.textMuted }]}>
+                  CONTRIBUTED BY
+                </Text>
+                <Text style={[styles.contributorName, { color: colors.text }]}>
+                  {item.authorName}
+                </Text>
+              </View>
+            </View>
+            {item.authorRank ? (
+              <View style={[styles.rankBadge, { backgroundColor: colors.streakLight }]}>
+                <Ionicons name="trophy" size={12} color={colors.streak} />
+                <Text style={[styles.rankBadgeText, { color: colors.streak }]}>
+                  {item.authorRank}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Comparison Hero Card */}
         <View
           style={[
@@ -281,6 +314,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 4,
+  },
+  contributorBanner: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  contributorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  avatarCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  contributorLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  contributorName: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  rankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  rankBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
 });
 
