@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/auth-context';
 
 export function LoginView() {
-  const { signIn, signUp, verifySignupOtp, resendSignupOtp } = useAuth();
+  const { signIn, signUp, verifySignupOtp, resendSignupOtp, sendLoginOtp } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'invite' | 'verify-otp'>('signin');
   const [email, setEmail] = useState('');
@@ -112,6 +112,29 @@ export function LoginView() {
       }
     } finally {
       setResending(false);
+    }
+  };
+
+  const handleSendLoginOtp = async () => {
+    if (!email.trim()) {
+      setError('ကျေးဇူးပြု၍ OTP ကုဒ် လက်ခံမည့် Email Address ကို အရင်ရိုက်ထည့်ပေးပါ။');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const res = await sendLoginOtp(email);
+      if (res.error) {
+        setError(res.error);
+      } else {
+        setMode('verify-otp');
+        setSuccessMsg(
+          `${email.trim()} သို့ ဂဏန်း ၆ လုံး OTP ကုဒ် ပေးပို့ပြီးပါပြီ။ အီးမေးလ်ထဲမှ ကုဒ်ကို ရိုက်ထည့်ပါ။`
+        );
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -313,6 +336,17 @@ export function LoginView() {
                       : 'Redeem Code & Create Account'}
                 </span>
               </button>
+
+              {mode === 'signin' && (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleSendLoginOtp}
+                  className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-2 disabled:opacity-50">
+                  <MailCheck className="w-4 h-4 text-blue-600" />
+                  <span>Sign In with Email OTP (OTP ကုဒ်ဖြင့် ဝင်ရန်)</span>
+                </button>
+              )}
             </>
           )}
         </form>

@@ -40,7 +40,7 @@ export function AdminAiSettingsView() {
   const [primaryKey, setPrimaryKey] = useState('');
   const [backupKey, setBackupKey] = useState('');
   const [enabled, setEnabled] = useState(true);
-  const [model, setModel] = useState('gemini-2.5-flash');
+  const [model, setModel] = useState('gemini-flash-lite-latest');
   const [showPrimary, setShowPrimary] = useState(false);
   const [showBackup, setShowBackup] = useState(false);
 
@@ -123,15 +123,55 @@ export function AdminAiSettingsView() {
     };
 
     try {
-      let attempt = await tryGenerateWithModel(model);
+      let attempt: {
+        ok: boolean;
+        status: number;
+        statusText?: string;
+        data: any;
+        modelUsed: string;
+      } | null = null;
 
-      // If the selected model is deprecated/unavailable for new users (400/404) or overloaded (503/500), auto-discover a supported model for this key
+      // Try via Vercel serverless proxy first (avoids browser regional IP blocks & auto-selects working model)
+      try {
+        const proxyRes = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: keyToTest,
+            model,
+            payload: { contents: [{ parts: [{ text: 'Reply OK' }] }] },
+          }),
+        });
+        const ct = proxyRes.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const pj = await proxyRes.json();
+          if (pj && typeof pj.ok === 'boolean') {
+            attempt = {
+              ok: pj.ok,
+              status: pj.status || proxyRes.status,
+              statusText: proxyRes.statusText,
+              data: pj.data || pj,
+              modelUsed: pj.modelUsed || model,
+            };
+            if (pj.ok && pj.modelUsed) {
+              setModel(pj.modelUsed);
+            }
+          }
+        }
+      } catch (_) {}
+
+      if (!attempt) {
+        attempt = await tryGenerateWithModel(model);
+      }
+
+      // If the selected model is deprecated/unavailable for new users (400/404) or overloaded (503/500/429), auto-discover a supported model for this key
       if (
         !attempt.ok &&
         (attempt.status === 400 ||
           attempt.status === 404 ||
           attempt.status === 503 ||
-          attempt.status === 500)
+          attempt.status === 500 ||
+          attempt.status === 429)
       ) {
         const errMessage: string = attempt.data?.error?.message || '';
         const candidateModels: string[] = [];
@@ -145,6 +185,8 @@ export function AdminAiSettingsView() {
         // 2. Standard fallback chain for new & existing Google AI Studio keys
         for (const fallback of [
           'gemini-flash-lite-latest',
+          'gemini-3.5-flash-lite',
+          'gemini-3.5-flash',
           'gemini-flash-latest',
           'gemini-3-flash-preview',
           'gemini-2.5-flash',
@@ -155,41 +197,9 @@ export function AdminAiSettingsView() {
           }
         }
 
-        // 3. Query /v1beta/models for this key to discover any other flash generateContent model
-        try {
-          const listRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models?key=${keyToTest}`
-          );
-          if (listRes.ok) {
-            const listData = await listRes.json();
-            const available = (listData.models || [])
-              .filter(
-                (m: any) =>
-                  Array.isArray(m.supportedGenerationMethods) &&
-                  m.supportedGenerationMethods.includes('generateContent') &&
-                  typeof m.name === 'string' &&
-                  m.name.includes('gemini')
-              )
-              .map((m: any) => (m.name as string).replace(/^models\//, ''));
-
-            // Prefer flash models first
-            const flashModels = available.filter((n: string) => n.includes('flash'));
-            for (const fm of [...flashModels, ...available]) {
-              if (!candidateModels.includes(fm) && fm !== model) {
-                candidateModels.push(fm);
-              }
-            }
-          }
-        } catch (_) {}
-
         for (const candidate of candidateModels) {
           const retry = await tryGenerateWithModel(candidate);
           if (retry.ok) {
-            attempt = retry;
-            setModel(retry.modelUsed);
-            break;
-          }
-          if (retry.status === 429) {
             attempt = retry;
             setModel(retry.modelUsed);
             break;

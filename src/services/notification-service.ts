@@ -26,7 +26,17 @@ export const NotificationService = {
    * Request permission for notifications
    */
   async requestPermissions(): Promise<boolean> {
-    if (Platform.OS === 'web') return false;
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          if (window.Notification.permission === 'granted') return true;
+          if (window.Notification.permission !== 'denied') {
+            await window.Notification.requestPermission();
+          }
+        }
+      } catch (_) {}
+      return true;
+    }
 
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -64,7 +74,30 @@ export const NotificationService = {
    * @param minute Minute of hour (0-59), default 0
    */
   async scheduleDailyReminder(hour = 20, minute = 0): Promise<boolean> {
-    if (Platform.OS === 'web') return false;
+    if (Platform.OS === 'web') {
+      try {
+        await this.requestPermissions();
+        await Promise.all([
+          AsyncStorage.setItem(STORAGE_KEYS.REMINDER_ENABLED, 'true'),
+          AsyncStorage.setItem(STORAGE_KEYS.REMINDER_TIME, `${hour}:${minute}`),
+        ]);
+        if (
+          typeof window !== 'undefined' &&
+          'Notification' in window &&
+          window.Notification.permission === 'granted'
+        ) {
+          try {
+            new window.Notification('🔥 VocabJip Study Reminder Enabled', {
+              body: 'နေ့စဉ် ည ၈:၀၀ နာရီတိုင်း TOPIK လေ့ကျင့်ရန် သတိပေးချက် ဖွင့်ထားပြီးပါပြီ။',
+            });
+          } catch (_) {}
+        }
+        return true;
+      } catch (e) {
+        console.warn('Error saving web reminder:', e);
+        return false;
+      }
+    }
 
     try {
       const hasPermission = await this.requestPermissions();
@@ -105,7 +138,15 @@ export const NotificationService = {
    * Cancel the daily study reminder
    */
   async cancelDailyReminder(): Promise<void> {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web') {
+      try {
+        await AsyncStorage.setItem(STORAGE_KEYS.REMINDER_ENABLED, 'false');
+        await AsyncStorage.removeItem(STORAGE_KEYS.NOTIFICATION_ID);
+      } catch (e) {
+        console.warn('Error cancelling web reminder:', e);
+      }
+      return;
+    }
 
     try {
       const storedId = await AsyncStorage.getItem(STORAGE_KEYS.NOTIFICATION_ID);

@@ -35,16 +35,26 @@ export default function ProfileScreen() {
 
   const handleToggleReminder = async (val: boolean) => {
     if (val) {
+      setReminderEnabled(true);
       const success = await NotificationService.scheduleDailyReminder(20, 0);
       if (success) {
         setReminderEnabled(true);
-        Alert.alert('Study Reminder Set! ⏰', 'နေ့စဉ် ည ၈:၀၀ နာရီတိုင်း TOPIK လေ့ကျင့်ရန် သတိပေးချက် ပို့ပေးပါမည်။');
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            'Study Reminder Set! ⏰',
+            'နေ့စဉ် ည ၈:၀၀ နာရီတိုင်း TOPIK လေ့ကျင့်ရန် သတိပေးချက် ပို့ပေးပါမည်။'
+          );
+        }
       } else {
-        Alert.alert('Notification Permission', 'Notification ခွင့်ပြုချက် မရရှိပါခင်ဗျာ။ ဖုန်း Settings ထဲတွင် Notification ဖွင့်ပေးပါ။');
+        setReminderEnabled(false);
+        Alert.alert(
+          'Notification Permission',
+          'Notification ခွင့်ပြုချက် မရရှိပါခင်ဗျာ။ ဖုန်း Settings ထဲတွင် Notification ဖွင့်ပေးပါ။'
+        );
       }
     } else {
-      await NotificationService.cancelDailyReminder();
       setReminderEnabled(false);
+      await NotificationService.cancelDailyReminder();
     }
   };
 

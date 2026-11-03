@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PATTERNS_DATA } from '@/data/patterns-data';
 import { VOCAB_DATA } from '@/data/vocab-data';
 import { supabase } from '@/lib/supabase';
-import { callGeminiGenerateContent } from '@/services/gemini-service';
+import { callGeminiGenerateContent, extractGeminiText } from '@/services/gemini-service';
 
 export interface WordDefinition {
   korean: string;
@@ -478,6 +478,103 @@ const TOPIK_ESSAY_DICTIONARY: Record<string, Omit<WordDefinition, 'korean'>> = {
     writtenEquivalent: '유지하다',
     category: 'General',
   },
+  한류: {
+    rootWord: '한류 (韓流)',
+    romaja: 'han-ryu',
+    myanmarMeaning: 'ကိုရီးယားလှိုင်း (တောင်ကိုရီးယား ယဉ်ကျေးမှု၊ K-Pop နှင့် ဇာတ်လမ်းတွဲများ ကမ္ဘာတစ်ဝန်း ရေပန်းစားပျံ့နှံ့မှု)',
+    englishMeaning: 'Korean Wave (Global popularity of South Korean culture)',
+    spokenEquivalent: '한국 문화 인기',
+    writtenEquivalent: '한류 열풍 / 한류의 확산',
+    topikTip: 'TOPIK II Q53/Q54 တွင် ယဉ်ကျေးမှုနှင့် နိုင်ငံတကာကျောင်းသား တိုးပွားလာမှု အကြောင်းရင်းဖော်ပြရာ၌ 한류의 영향 (ဟန်လျူ၏ လွှမ်းမိုးမှု) ဟု သုံးသည်။',
+    category: 'Society',
+  },
+  외국인: {
+    rootWord: '외국인 (外國人)',
+    romaja: 'oe-guk-in',
+    myanmarMeaning: 'နိုင်ငံခြားသား',
+    englishMeaning: 'Foreigner / Foreign national',
+    category: 'Society',
+  },
+  유학생: {
+    rootWord: '유학생 (留學生)',
+    romaja: 'yu-hak-saeng',
+    myanmarMeaning: 'နိုင်ငံခြားပညာတော်သင် ကျောင်းသား',
+    englishMeaning: 'International student / Study-abroad student',
+    category: 'Education',
+  },
+  추이: {
+    rootWord: '추이 (推移)',
+    romaja: 'chu-i',
+    myanmarMeaning: 'အချိန်ကာလအလိုက် ပြောင်းလဲမှု အလားအလာ (အတက်အကျ)',
+    englishMeaning: 'Trend / Transition / Change over time',
+    topikTip: 'Q53 ဇယားခေါင်းစဉ်များတွင် ~증가 추이 (တိုးပွားလာမှု အလားအလာ) ဟု အမြဲပါလေ့ရှိသည်။',
+    category: 'Statistics',
+  },
+  원인: {
+    rootWord: '원인 (原因)',
+    romaja: 'won-in',
+    myanmarMeaning: 'အကြောင်းရင်း / ဇာစ်မြစ်',
+    englishMeaning: 'Cause / Reason / Factor',
+    spokenEquivalent: '이유',
+    writtenEquivalent: '원인 / 요인',
+    topikTip: 'Q53 ဒုတိယစာပိုဒ်တွင် 이러한 변화의 원인으로는 ~을/를 들 수 있다 ပုံစံဖြင့် အမှတ်ပြည့်ရအောင် ရေးသားနိုင်သည်။',
+    category: 'Cause & Effect',
+  },
+  현황: {
+    rootWord: '현황 (現況)',
+    romaja: 'hyeon-hwang',
+    myanmarMeaning: 'လက်ရှိအခြေအနေ / ပစ္စုပ္ပန်အနေအထား',
+    englishMeaning: 'Current status / Present situation',
+    category: 'Statistics',
+  },
+  결과: {
+    rootWord: '결과 (結果)',
+    romaja: 'gyeol-gwa',
+    myanmarMeaning: 'ရလဒ် / စစ်တမ်းရလဒ်',
+    englishMeaning: 'Result / Outcome / Finding',
+    topikTip: '~에 대해 조사한 결과 (~နှင့်ပတ်သက်၍ စစ်တမ်းကောက်ယူချက်အရ) ဟု Q53 အဖွင့်ဝါကျတွင် သုံးသည်။',
+    category: 'Statistics',
+  },
+  꾸준히: {
+    rootWord: '꾸준히',
+    romaja: 'kku-jun-hi',
+    myanmarMeaning: 'တစိုက်မတ်မတ် / ပုံမှန်အဆက်မပြတ်',
+    englishMeaning: 'Steadily / Consistently',
+    spokenEquivalent: '계속',
+    writtenEquivalent: '꾸준히 / 지속적으로',
+    category: 'Statistics',
+  },
+  장학금: {
+    rootWord: '장학금 (獎學金)',
+    romaja: 'jang-hak-geum',
+    myanmarMeaning: 'ပညာသင်ဆု (စကောလားရှစ်)',
+    englishMeaning: 'Scholarship / Financial aid',
+    category: 'Education',
+  },
+  기숙사: {
+    rootWord: '기숙사 (寄宿舍)',
+    romaja: 'gi-suk-sa',
+    myanmarMeaning: 'ကျောင်းသားအဆောင် (ဘော်ဒါဆောင်)',
+    englishMeaning: 'Dormitory / Residence hall',
+    category: 'Education',
+  },
+  확대: {
+    rootWord: '확대하다 (擴大)',
+    romaja: 'hwak-dae-ha-da',
+    myanmarMeaning: 'တိုးချဲ့သည် / ချဲ့ထွင်သည်',
+    englishMeaning: 'To expand / enlarge / scale up',
+    spokenEquivalent: '늘리다 / 넓히다',
+    writtenEquivalent: '확대하다 / 확충하다',
+    category: 'Society',
+  },
+  영향: {
+    rootWord: '영향 (影響)',
+    romaja: 'yeong-hyang',
+    myanmarMeaning: 'သက်ရောက်မှု / လွှမ်းမိုးမှု',
+    englishMeaning: 'Influence / Impact / Effect',
+    topikTip: '영향을 미치다 (သက်ရောက်မှုရှိသည်) သို့မဟုတ် 영향을 받다 (လွှမ်းမိုးခံရသည်) ဟု တွဲသုံးသည်။',
+    category: 'Cause & Effect',
+  },
 };
 
 /**
@@ -809,7 +906,7 @@ Return ONLY a valid JSON object matching this exact schema:
       }
 
       const data = attempt.data;
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const rawText = extractGeminiText(data);
       if (!rawText) return null;
 
       let parsed: any;

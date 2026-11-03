@@ -1,7 +1,19 @@
+import { Platform } from 'react-native';
 import { AiEvaluationResult, AiEvaluationResponse } from '@/types/ai';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-let cachedWorkingModel = 'gemini-2.5-flash';
+let cachedWorkingModel = 'gemini-flash-lite-latest';
+
+export function extractGeminiText(data: any): string | null {
+  const parts = data?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts) || parts.length === 0) return null;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (parts[i]?.text && !parts[i]?.thought) {
+      return parts[i].text;
+    }
+  }
+  return parts[parts.length - 1]?.text || null;
+}
 
 export async function callGeminiGenerateContent(
   apiKey: string,
@@ -9,14 +21,51 @@ export async function callGeminiGenerateContent(
   preferredModel?: string
 ): Promise<{ ok: boolean; status: number; data: any; modelUsed: string }> {
   const cleanKey = apiKey.trim();
-  const initialModel = (preferredModel || cachedWorkingModel || 'gemini-2.5-flash').replace(
-    /^models\//,
-    ''
-  );
+  const rawPreferred = (preferredModel || '').replace(/^models\//, '');
+  // Prefer fast, non-overloaded flash-lite models first
+  const initialModel =
+    !rawPreferred ||
+    rawPreferred === 'gemini-2.5-flash' ||
+    rawPreferred === 'gemini-3-flash-preview' ||
+    rawPreferred === 'gemini-3.8-flash'
+      ? cachedWorkingModel
+      : rawPreferred;
+
+  // 1. Try serverless proxy first on Web (or as fallback on native) to avoid regional IP blocks
+  const proxyUrl =
+    Platform.OS === 'web' ? '/api/gemini' : 'https://vocabjip.vercel.app/api/gemini';
+  try {
+    const proxyRes = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: cleanKey,
+        model: initialModel,
+        payload: bodyPayload,
+      }),
+    });
+    const contentType = proxyRes.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const proxyJson = await proxyRes.json();
+      if (proxyJson && typeof proxyJson.ok === 'boolean') {
+        if (proxyJson.ok && proxyJson.modelUsed) {
+          cachedWorkingModel = proxyJson.modelUsed;
+        }
+        return {
+          ok: proxyJson.ok,
+          status: proxyJson.status || proxyRes.status,
+          data: proxyJson.data || proxyJson,
+          modelUsed: proxyJson.modelUsed || initialModel,
+        };
+      }
+    }
+  } catch (_) {
+    // Proxy unavailable (e.g. local dev server) — proceed to direct Google API call
+  }
 
   const tryModel = async (targetModel: string) => {
     const cleanModel = targetModel.replace(/^models\//, '');
-    const url = `${GEMINI_API_URL}/${cleanModel}:generateContent?key=${cleanKey}`;
+    const url = `${GEMINI_API_URL}/${cleanModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -32,20 +81,14 @@ export async function callGeminiGenerateContent(
     return attempt;
   }
 
-  // If 400/404 due to model deprecation OR 503/500/429 due to temporary model overload, auto-fallback
+  // Auto-fallback across all supported Flash models unless the API key itself is invalid
   const errMsg: string = attempt.data?.error?.message || '';
-  const isModelError =
-    attempt.status === 404 ||
-    attempt.status === 503 ||
-    attempt.status === 500 ||
-    attempt.status === 429 ||
-    (attempt.status === 400 &&
-      (errMsg.toLowerCase().includes('model') ||
-        errMsg.toLowerCase().includes('no longer available') ||
-        errMsg.toLowerCase().includes('not found') ||
-        errMsg.toLowerCase().includes('not supported')));
+  const isInvalidKey =
+    attempt.status === 400 &&
+    (errMsg.toLowerCase().includes('api key not valid') ||
+      errMsg.toLowerCase().includes('api_key_invalid'));
 
-  if (isModelError) {
+  if (!isInvalidKey) {
     const candidates: string[] = [];
     const matchRecommended = errMsg.match(/models\/(gemini-[a-zA-Z0-9.-]+)/);
     if (matchRecommended?.[1]) {
@@ -54,6 +97,8 @@ export async function callGeminiGenerateContent(
 
     for (const fb of [
       'gemini-flash-lite-latest',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
       'gemini-flash-latest',
       'gemini-3-flash-preview',
       'gemini-2.5-flash',
@@ -64,32 +109,9 @@ export async function callGeminiGenerateContent(
       }
     }
 
-    try {
-      const listRes = await fetch(`${GEMINI_API_URL}?key=${cleanKey}`);
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        const available = (listData.models || [])
-          .filter(
-            (m: any) =>
-              Array.isArray(m.supportedGenerationMethods) &&
-              m.supportedGenerationMethods.includes('generateContent') &&
-              typeof m.name === 'string' &&
-              m.name.includes('gemini')
-          )
-          .map((m: any) => (m.name as string).replace(/^models\//, ''));
-
-        const flashFirst = available.filter((n: string) => n.includes('flash'));
-        for (const mName of [...flashFirst, ...available]) {
-          if (!candidates.includes(mName) && mName !== initialModel) {
-            candidates.push(mName);
-          }
-        }
-      }
-    } catch (_) {}
-
     for (const candidate of candidates) {
       const retry = await tryModel(candidate);
-      if (retry.ok || retry.status === 429) {
+      if (retry.ok) {
         cachedWorkingModel = retry.modelUsed;
         return retry;
       }
@@ -233,7 +255,7 @@ Please evaluate this essay according to the instructions and return only JSON.`;
     }
 
     const data = attempt.data;
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = extractGeminiText(data);
 
     if (!rawText) {
       return {

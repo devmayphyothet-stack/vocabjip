@@ -17,6 +17,7 @@ interface AuthContextType {
   ) => Promise<{ error?: string; requiresOtp?: boolean; email?: string }>;
   verifySignupOtp: (email: string, token: string) => Promise<{ error?: string }>;
   resendSignupOtp: (email: string) => Promise<{ error?: string }>;
+  sendLoginOtp: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -139,9 +140,100 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     });
-    if (error) return { error: error.message };
+    if (error) {
+      // If user already exists or rate-limited on signup, try signing in or sending a login OTP
+      if (error.message.toLowerCase().includes('already registered')) {
+        const signInAttempt = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: pass,
+        });
+        if (!signInAttempt.error && signInAttempt.data.user) {
+          if (validInviteId) {
+            await supabase
+              .from('invitations')
+              .update({
+                is_used: true,
+                used_by: signInAttempt.data.user.id,
+                used_at: new Date().toISOString(),
+              })
+              .eq('id', validInviteId);
+          }
+          await supabase
+            .from('profiles')
+            .update({ role: targetRole, display_name: displayName.trim() })
+            .eq('id', signInAttempt.data.user.id);
+          await fetchProfile(signInAttempt.data.user.id, email.trim());
+          return {};
+        }
+        const otpFallback = await supabase.auth.signInWithOtp({
+          email: email.trim(),
+          options: { shouldCreateUser: false },
+        });
+        if (!otpFallback.error) {
+          return { requiresOtp: true, email: email.trim() };
+        }
+      }
+      return { error: error.message };
+    }
 
     if (data.user) {
+      // Check if Supabase returned a fake/obfuscated user (identities.length === 0) because the email is already registered!
+      const isAlreadyRegistered =
+        Array.isArray(data.user.identities) && data.user.identities.length === 0;
+
+      if (isAlreadyRegistered) {
+        // 1. Try signing in with the password they entered
+        const existingSignIn = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: pass,
+        });
+
+        if (!existingSignIn.error && existingSignIn.data.user) {
+          if (validInviteId) {
+            try {
+              await supabase
+                .from('invitations')
+                .update({
+                  is_used: true,
+                  used_by: existingSignIn.data.user.id,
+                  used_at: new Date().toISOString(),
+                })
+                .eq('id', validInviteId);
+            } catch (_) {}
+          }
+          try {
+            await supabase
+              .from('profiles')
+              .update({ role: targetRole, display_name: displayName.trim() })
+              .eq('id', existingSignIn.data.user.id);
+          } catch (_) {}
+          await fetchProfile(existingSignIn.data.user.id, email.trim());
+          return {};
+        }
+
+        // 2. Otherwise, explicitly send a 6-digit OTP via signInWithOtp (since signUp silently skips sending email for existing users)
+        const otpRes = await supabase.auth.signInWithOtp({
+          email: email.trim(),
+          options: {
+            shouldCreateUser: false,
+            data: {
+              display_name: displayName.trim(),
+              requested_role: targetRole,
+              invite_code: inviteCode?.trim().toUpperCase() || null,
+            },
+          },
+        });
+
+        if (otpRes.error) {
+          return { error: otpRes.error.message };
+        }
+
+        return {
+          requiresOtp: true,
+          email: email.trim(),
+        };
+      }
+
       // Mark invitation used if possible (anyone can redeem unused invitation)
       if (validInviteId) {
         try {
@@ -183,28 +275,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifySignupOtp = async (email: string, token: string) => {
     const trimmedEmail = email.trim();
-    const { data, error } = await supabase.auth.verifyOtp({
+    const cleanToken = token.trim();
+
+    // Try 'signup' first, then 'email' (for signInWithOtp / existing users), then 'magiclink'
+    let verifyResult = await supabase.auth.verifyOtp({
       email: trimmedEmail,
-      token: token.trim(),
+      token: cleanToken,
       type: 'signup',
     });
 
+    if (verifyResult.error) {
+      const emailOtpResult = await supabase.auth.verifyOtp({
+        email: trimmedEmail,
+        token: cleanToken,
+        type: 'email',
+      });
+      if (!emailOtpResult.error) {
+        verifyResult = emailOtpResult;
+      }
+    }
+
+    if (verifyResult.error) {
+      const recoveryResult = await supabase.auth.verifyOtp({
+        email: trimmedEmail,
+        token: cleanToken,
+        type: 'recovery',
+      });
+      if (!recoveryResult.error) {
+        verifyResult = recoveryResult;
+      }
+    }
+
+    const { data, error } = verifyResult;
     if (error) return { error: error.message };
 
     if (data.user) {
-      const metaRole = data.user.user_metadata?.requested_role as UserRole | undefined;
+      const metaRole =
+        (data.user.user_metadata?.requested_role as UserRole | undefined) || 'contributor';
       const metaName = data.user.user_metadata?.display_name as string | undefined;
-      if (metaRole || metaName) {
-        try {
-          await supabase
-            .from('profiles')
-            .update({
-              ...(metaRole ? { role: metaRole } : {}),
-              ...(metaName ? { display_name: metaName } : {}),
-            })
-            .eq('id', data.user.id);
-        } catch (_) {}
-      }
+      try {
+        await supabase
+          .from('profiles')
+          .update({
+            role: metaRole,
+            ...(metaName ? { display_name: metaName } : {}),
+          })
+          .eq('id', data.user.id);
+      } catch (_) {}
       await fetchProfile(data.user.id, data.user.email || trimmedEmail);
     }
 
@@ -212,9 +329,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resendSignupOtp = async (email: string) => {
+    const trimmed = email.trim();
+    // Try signInWithOtp first (works for both existing users and unconfirmed users in Supabase)
+    const otpRes = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: { shouldCreateUser: false },
+    });
+    if (!otpRes.error) {
+      return {};
+    }
+
     const { error } = await supabase.auth.resend({
       type: 'signup',
-      email: email.trim(),
+      email: trimmed,
+    });
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const sendLoginOtp = async (email: string) => {
+    const trimmed = email.trim();
+    if (!trimmed) return { error: 'Please enter your email address first.' };
+    const { error } = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: { shouldCreateUser: false },
     });
     if (error) return { error: error.message };
     return {};
@@ -247,6 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         verifySignupOtp,
         resendSignupOtp,
+        sendLoginOtp,
         signOut,
         refreshProfile,
       }}>

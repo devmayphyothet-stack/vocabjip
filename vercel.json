@@ -6,7 +6,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!assets/|_expo/).*)",
+      "source": "/((?!api/|assets/|_expo/).*)",
       "destination": "/index.html"
     }
   ]
