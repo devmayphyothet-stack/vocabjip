@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   FlatList,
   Platform,
   RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { VocabItem } from '@/data/vocab-data';
-import { PatternItem } from '@/data/patterns-data';
 import { useSaved } from '@/context/saved-context';
+import { PatternItem } from '@/data/patterns-data';
+import { VocabItem } from '@/data/vocab-data';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCurriculum } from '@/hooks/use-curriculum';
 
 type TabMode = 'vocab' | 'patterns';
@@ -238,7 +238,8 @@ export default function LearnScreen() {
                 styles.segmentText,
                 { color: activeTab === 'vocab' ? colors.text : colors.textSecondary },
               ]}>
-              Everyday → Academic ({vocabularies.length})
+              {/* Everyday → Academic ({vocabularies.length}) */}
+              Everyday → Academic
             </Text>
           </TouchableOpacity>
 
@@ -259,7 +260,8 @@ export default function LearnScreen() {
                     activeTab === 'patterns' ? colors.text : colors.textSecondary,
                 },
               ]}>
-              Writing Patterns ({patterns.length})
+              {/* Writing Patterns ({patterns.length}) */}
+              Writing Patterns
             </Text>
           </TouchableOpacity>
         </View>
@@ -293,57 +295,57 @@ export default function LearnScreen() {
         <View style={styles.filterScroll}>
           {activeTab === 'vocab'
             ? CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setSelectedCategory(cat)}
+              <TouchableOpacity
+                key={cat}
+                onPress={() => setSelectedCategory(cat)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      selectedCategory === cat ? colors.primary : colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}>
+                <Text
                   style={[
-                    styles.chip,
+                    styles.chipText,
                     {
-                      backgroundColor:
-                        selectedCategory === cat ? colors.primary : colors.card,
-                      borderColor: colors.border,
+                      color:
+                        selectedCategory === cat
+                          ? colors.primaryContrast
+                          : colors.textSecondary,
                     },
                   ]}>
-                  <Text
-                    style={[
-                      styles.chipText,
-                      {
-                        color:
-                          selectedCategory === cat
-                            ? colors.primaryContrast
-                            : colors.textSecondary,
-                      },
-                    ]}>
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))
             : QUESTION_FILTERS.map((q) => (
-                <TouchableOpacity
-                  key={q}
-                  onPress={() => setSelectedQuestion(q)}
+              <TouchableOpacity
+                key={q}
+                onPress={() => setSelectedQuestion(q)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      selectedQuestion === q ? colors.primary : colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}>
+                <Text
                   style={[
-                    styles.chip,
+                    styles.chipText,
                     {
-                      backgroundColor:
-                        selectedQuestion === q ? colors.primary : colors.card,
-                      borderColor: colors.border,
+                      color:
+                        selectedQuestion === q
+                          ? colors.primaryContrast
+                          : colors.textSecondary,
                     },
                   ]}>
-                  <Text
-                    style={[
-                      styles.chipText,
-                      {
-                        color:
-                          selectedQuestion === q
-                            ? colors.primaryContrast
-                            : colors.textSecondary,
-                      },
-                    ]}>
-                    {q}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                  {q}
+                </Text>
+              </TouchableOpacity>
+            ))}
         </View>
       </View>
 

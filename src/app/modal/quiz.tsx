@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { StreakService } from '@/services/streak-service';
 import { useAuth } from '@/context/auth-context';
-import { useCurriculum } from '@/hooks/use-curriculum';
 import { QuizStepItem, QuizTopicItem } from '@/data/quiz-data';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useCurriculum } from '@/hooks/use-curriculum';
+import { StreakService } from '@/services/streak-service';
 
 const QUIZ_PROGRESS_KEY = '@vocabjip_quiz_step_progress';
 
@@ -75,7 +75,7 @@ export default function QuizModal() {
         ...prev,
         [stepId]: { bestScore: nextBest, passed: nextPassed },
       };
-      AsyncStorage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify(updated)).catch(() => {});
+      AsyncStorage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify(updated)).catch(() => { });
       return updated;
     });
   };
@@ -257,17 +257,17 @@ export default function QuizModal() {
                         {(topic.authorName || 'C')[0].toUpperCase()}
                       </Text>
                     </View>
-                    <View>
+                    {/* <View>
                       <Text style={[styles.contributorName, { color: colors.text }]}>
                         {topic.authorName}
                       </Text>
-                      {/* <View style={styles.rankBadgeRow}>
+                      <View style={styles.rankBadgeRow}>
                         <Ionicons name="ribbon" size={12} color={colors.streak} />
                         <Text style={[styles.contributorRank, { color: colors.streak }]}>
                           {topic.authorRank}
                         </Text>
-                      </View> */}
-                    </View>
+                      </View>
+                    </View> */}
                   </View>
 
                   <View style={[styles.enterTopicBtn, { backgroundColor: colors.primary }]}>
@@ -342,8 +342,8 @@ export default function QuizModal() {
                       borderColor: isPassed
                         ? colors.success
                         : unlocked
-                        ? colors.accent
-                        : colors.border,
+                          ? colors.accent
+                          : colors.border,
                       opacity: unlocked ? 1 : 0.65,
                     },
                   ]}>
@@ -356,8 +356,8 @@ export default function QuizModal() {
                             backgroundColor: isPassed
                               ? colors.success
                               : unlocked
-                              ? colors.accent
-                              : colors.border,
+                                ? colors.accent
+                                : colors.border,
                           },
                         ]}>
                         {isPassed ? (

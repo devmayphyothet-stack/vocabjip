@@ -171,7 +171,7 @@ export default function AboutScreen() {
                 Our Contributors (ကျေးဇူးတင်မှတ်တမ်း)
               </Text>
               <Text style={[styles.feedbackBannerSubtitle, { color: colors.textSecondary }]}>
-                VocabJip ဖြစ်တည်လာအောင် ဝိုင်းဝန်းပံ့ပိုးပေးကြသော Contributors များ
+                VocabJip App ဖြစ်လာအောင် ဝိုင်းဝန်းပံ့ပိုးပေးကြသော Contributors များ
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

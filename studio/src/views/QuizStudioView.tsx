@@ -1,13 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/auth-context';
-import { supabase } from '../lib/supabase';
-import { QuizQuestionItem, QuizStepRecord, QuizTopicRecord } from '../types';
 import {
   AlertCircle,
-  Award,
   CheckCircle2,
-  ChevronRight,
-  Clock,
   Edit3,
   FolderPlus,
   Layers,
@@ -16,11 +9,13 @@ import {
   RefreshCw,
   Save,
   Send,
-  Sparkles,
-  Trophy,
   UserCheck,
-  X,
+  X
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/auth-context';
+import { supabase } from '../lib/supabase';
+import { QuizQuestionItem, QuizStepRecord, QuizTopicRecord } from '../types';
 
 const QUIZ_CATEGORIES = [
   'Cause & Effect',
@@ -417,7 +412,7 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
             </span> */}
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Contributor များ စိတ်ကြိုက် Topic အသစ်ဖန်တီးနိုင်ပြီး တစ်ဦးရေးသားနေသော Topic/Step ကို အခြားသူများ တိုက်ရိုက်မြင်တွေ့နိုင်ပါသည်။ (၁ Step = မေးခွန်း ၅ ပုဒ် • အောင်မှတ် ၃/၅)
+            Contributor များ စိတ်ကြိုက် Topic အသစ်ဖန်တီးနိုင်ပြီး တစ်ဦးရေးသားနေသော Topic/Step ကို အခြားသူများ တိုက်ရိုက်မြင်တွေ့နိုင်ပါသည်။
           </p>
         </div>
 
@@ -536,13 +531,12 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
                         key={idx}
                         type="button"
                         onClick={() => setActiveQuestionIdx(idx)}
-                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition ${
-                          isCurrent
+                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition ${isCurrent
                             ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                             : done
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}>
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}>
                         <span>Q{idx + 1}</span>
                         {done && (
                           <CheckCircle2
@@ -605,19 +599,17 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
                       return (
                         <div
                           key={optIdx}
-                          className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition ${
-                            isCorrect
+                          className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition ${isCorrect
                               ? 'bg-emerald-50/70 border-emerald-400'
                               : 'bg-white border-slate-200'
-                          }`}>
+                            }`}>
                           <button
                             type="button"
                             onClick={() => updateCurrentQuestion({ correctIndex: optIdx })}
-                            className={`w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center shrink-0 transition ${
-                              isCorrect
+                            className={`w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center shrink-0 transition ${isCorrect
                                 ? 'bg-emerald-600 text-white shadow-xs'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
+                              }`}
                             title="Mark as correct answer">
                             {String.fromCharCode(65 + optIdx)}
                           </button>
@@ -755,15 +747,13 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
                     return (
                       <div
                         key={idx}
-                        className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2.5 ${
-                          isAns
+                        className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2.5 ${isAns
                             ? 'bg-emerald-50 border-emerald-400 text-emerald-900'
                             : 'bg-white border-slate-200 text-slate-700'
-                        }`}>
-                        <span
-                          className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                            isAns ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
                           }`}>
+                        <span
+                          className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${isAns ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
                           {String.fromCharCode(65 + idx)}
                         </span>
                         <span>{opt || `Option ${String.fromCharCode(65 + idx)}`}</span>
@@ -872,11 +862,10 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
                               return (
                                 <div
                                   key={st.id}
-                                  className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
-                                    isMine
+                                  className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${isMine
                                       ? 'bg-blue-50/40 border-blue-200'
                                       : 'bg-slate-50 border-slate-200/80'
-                                  }`}>
+                                    }`}>
                                   <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
                                       <span className="font-extrabold text-slate-900">

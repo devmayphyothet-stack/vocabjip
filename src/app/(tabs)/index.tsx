@@ -307,7 +307,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>
-              VocabJip ဖြစ်တည်လာစေရန် စေတနာဖြင့် သင်ခန်းစာများ ရေးသားမျှဝေပေးနေကြသော Contributors များ
+              VocabJip App ဖြစ်လာစေရန် စေတနာဖြင့် သင်ခန်းစာများ ရေးသားမျှဝေပေးနေကြသော Contributors များ
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
