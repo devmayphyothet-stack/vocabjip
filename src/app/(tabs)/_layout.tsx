@@ -1,12 +1,15 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Platform } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+  const { fontScale } = useWindowDimensions();
+  const { t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const insets = useSafeAreaInsets();
@@ -22,12 +25,13 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.borderLight,
-          height: 64 + bottomInset,
+          height: 76 + bottomInset + Math.max(0, fontScale - 1) * 48,
           paddingBottom: bottomInset,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontSize: 11,
+          lineHeight: 18,
           fontWeight: '600',
           marginBottom: 3,
         },
@@ -35,7 +39,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('home'),
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
@@ -48,7 +52,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="learn"
         options={{
-          title: 'Learn',
+          title: t('learn'),
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'book' : 'book-outline'}
@@ -61,7 +65,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="practice"
         options={{
-          title: 'Practice',
+          title: t('practice'),
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'create' : 'create-outline'}
@@ -74,7 +78,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="saved"
         options={{
-          title: 'Saved',
+          title: t('saved'),
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'bookmark' : 'bookmark-outline'}
@@ -87,7 +91,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('profileTab'),
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'person' : 'person-outline'}

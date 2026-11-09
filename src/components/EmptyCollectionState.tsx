@@ -1,3 +1,4 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ export function EmptyCollectionState({
   onExploreVocab,
   onExplorePatterns,
 }: EmptyCollectionStateProps) {
+  const { t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
@@ -39,11 +41,11 @@ export function EmptyCollectionState({
       <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
         <View style={styles.tagRow}>
           <Ionicons name="book-outline" size={16} color="rgba(255,255,255,0.85)" />
-          <Text style={styles.tagText}>YOUR COLLECTION</Text>
+          <Text style={styles.tagText}>{t('collection')}</Text>
         </View>
 
-        <Text style={styles.heroTitle}>Keep a phrase.{'\n'}Build a habit.</Text>
-        <Text style={styles.heroSubtitle}>Tap the bookmark on a pattern or word.</Text>
+        <Text style={styles.heroTitle}>{t('collection')}</Text>
+        <Text style={styles.heroSubtitle}>{t('bookmarkHint')}</Text>
       </View>
 
       {/* Burmese Encouragement */}
@@ -54,21 +56,23 @@ export function EmptyCollectionState({
       {/* 2 Action Buttons */}
       <View style={styles.actionGroup}>
         <TouchableOpacity
+          accessibilityRole="button"
           onPress={handleVocab}
           style={[styles.primaryBtn, { backgroundColor: colors.primary }]}>
           <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
-            Explore vocabulary
+            {t('vocab')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
+          accessibilityRole="button"
           onPress={handlePatterns}
           style={[
             styles.secondaryBtn,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}>
           <Text style={[styles.secondaryBtnText, { color: colors.text }]}>
-            Explore writing patterns
+            {t('patterns')}
           </Text>
         </TouchableOpacity>
       </View>

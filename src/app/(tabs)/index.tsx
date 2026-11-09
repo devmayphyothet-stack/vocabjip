@@ -1,14 +1,10 @@
-import { useSaved } from '@/context/saved-context';
+import { ContinueLearningCard } from '@/components/ContinueLearningCard';
+import { CurriculumStatus } from '@/components/CurriculumStatus';
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/BrandLogo';
@@ -22,8 +18,7 @@ export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest } = useAuth();
-  const { drafts } = useSaved();
-  const latestDraft = drafts[0];
+  const { preferences, t } = useLearningPreferences();
   const { vocabularies, syncNow } = useCurriculum();
   const { streakDays, dailyGoal, dailyCompleted, isGoalAchieved } = useDailyStreak();
 
@@ -35,7 +30,7 @@ export default function HomeScreen() {
   // Pool of Admin-approved vocab tips from Cloud Contributors
   const tipPool = useMemo(() => {
     const withTips = vocabularies.filter(
-      (v) => v.spoken && v.written && (v.usageTip || v.myanmarMeaning)
+      (v) => v.spoken && v.written && (v.usageTip || v.myanmarMeaning),
     );
     return withTips.length > 0 ? withTips : vocabularies;
   }, [vocabularies]);
@@ -55,10 +50,11 @@ export default function HomeScreen() {
   }, [tipPool, tipOffset]);
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Top Header */}
         <View style={styles.headerRow}>
           <TouchableOpacity
@@ -66,37 +62,60 @@ export default function HomeScreen() {
             activeOpacity={0.7}
             accessibilityLabel="About VocabJip"
             accessibilityRole="button"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+          >
             <BrandLogo size={40} />
             <View>
               <Text style={[styles.dateText, { color: colors.textSecondary }]}>
-                {today} • Today
+                {today} • {t('today')}
               </Text>
               <Text style={[styles.brandTitle, { color: colors.text }]}>VocabJip</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('profile')}
             onPress={() => router.push('/(tabs)/profile')}
-            style={[styles.profileAvatar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            style={[
+              styles.profileAvatar,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
             <Ionicons name="person" size={18} color={colors.accent} />
           </TouchableOpacity>
         </View>
 
+        {!preferences.onboarded && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => router.push('/modal/get-started')}
+            style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <Text style={{ color: colors.text, fontWeight: '700' }}>{t('welcome')}</Text>
+            <Text style={{ color: colors.accent, paddingVertical: 12 }}>{t('setup')}</Text>
+          </TouchableOpacity>
+        )}
+        <ContinueLearningCard />
+        <CurriculumStatus />
         {/* Guest Reminder Banner */}
         {(!user || isGuest) && (
-          <View style={[styles.guestBanner, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}>
+          <View
+            style={[
+              styles.guestBanner,
+              { backgroundColor: colors.accentLight, borderColor: colors.accent },
+            ]}
+          >
             <View style={{ flex: 1 }}>
-              <Text style={[styles.guestBannerTitle, { color: colors.accent }]}>
-                Guest Mode
-              </Text>
+              <Text style={[styles.guestBannerTitle, { color: colors.accent }]}>{t('guest')}</Text>
               <Text style={[styles.guestBannerSubtitle, { color: colors.textSecondary }]}>
-                Sign up to save drafts and bookmarks to your account.
+                {t('guestSyncHelp')}
               </Text>
             </View>
             <TouchableOpacity
               onPress={() => router.push('/(auth)/sign-up')}
-              style={[styles.guestBannerBtn, { backgroundColor: colors.accent }]}>
-              <Text style={styles.guestBannerBtnText}>Sign Up</Text>
+              style={[styles.guestBannerBtn, { backgroundColor: colors.accent }]}
+            >
+              <Text style={styles.guestBannerBtnText}>{t('signUp')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -104,19 +123,15 @@ export default function HomeScreen() {
         {/* Streak & Goal Cards */}
         <View style={styles.statsRow}>
           <View
-            style={[
-              styles.statCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
             <View style={styles.statIconRow}>
               <View style={[styles.iconPill, { backgroundColor: colors.streakLight }]}>
                 <Ionicons name="flame" size={18} color={colors.streak} />
               </View>
               <Text style={[styles.statValue, { color: colors.text }]}>{streakDays}</Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              Day Streak
-            </Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('streak')}</Text>
           </View>
 
           <View
@@ -127,21 +142,34 @@ export default function HomeScreen() {
                 borderColor: isGoalAchieved ? colors.streak : colors.border,
                 borderWidth: isGoalAchieved ? 1.5 : 1,
               },
-            ]}>
+            ]}
+          >
             <View style={styles.statIconRow}>
-              <View style={[styles.iconPill, { backgroundColor: isGoalAchieved ? colors.streakLight : colors.accentLight }]}>
+              <View
+                style={[
+                  styles.iconPill,
+                  { backgroundColor: isGoalAchieved ? colors.streakLight : colors.accentLight },
+                ]}
+              >
                 <Ionicons
-                  name={isGoalAchieved ? "trophy" : "checkmark-done"}
+                  name={isGoalAchieved ? 'trophy' : 'checkmark-done'}
                   size={18}
                   color={isGoalAchieved ? colors.streak : colors.accent}
                 />
               </View>
-              <Text style={[styles.statValue, { color: isGoalAchieved ? colors.streak : colors.text }]}>
+              <Text
+                style={[styles.statValue, { color: isGoalAchieved ? colors.streak : colors.text }]}
+              >
                 {dailyCompleted}/{dailyGoal}
               </Text>
             </View>
-            <Text style={[styles.statLabel, { color: isGoalAchieved ? colors.streak : colors.textSecondary }]}>
-              {isGoalAchieved ? "Goal Done! 🎉" : "Daily Goal"}
+            <Text
+              style={[
+                styles.statLabel,
+                { color: isGoalAchieved ? colors.streak : colors.textSecondary },
+              ]}
+            >
+              {t(isGoalAchieved ? 'goalDone' : 'dailyGoal')}
             </Text>
           </View>
         </View>
@@ -149,14 +177,25 @@ export default function HomeScreen() {
         {/* Today's High-Yield Tip (Dynamic Daily Rotation from Approved Contributor Content) */}
         {todayTip ? (
           <View
-            style={[
-              styles.tipCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
             <View style={styles.tipHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
-                <Text style={[styles.tipBadge, { backgroundColor: colors.streakLight, color: colors.streak }]}>
-                  TODAY'S TOPIK TIP
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  flexWrap: 'wrap',
+                  flex: 1,
+                }}
+              >
+                <Text
+                  style={[
+                    styles.tipBadge,
+                    { backgroundColor: colors.streakLight, color: colors.streak },
+                  ]}
+                >
+                  {t('tip')}
                 </Text>
                 {todayTip.authorName && (
                   <View style={styles.tipAuthorPill}>
@@ -172,16 +211,22 @@ export default function HomeScreen() {
               <TouchableOpacity
                 onPress={() => setTipOffset((prev) => prev + 1)}
                 style={[styles.shuffleTipBtn, { backgroundColor: colors.cardMuted }]}
-                accessibilityLabel="Shuffle another tip">
+                accessibilityRole="button"
+                accessibilityLabel={t('shuffleTip')}
+              >
                 <Ionicons name="shuffle" size={14} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <Text style={[styles.tipTitle, { color: colors.text }]}>
-              {todayTip.spoken} အစား <Text style={{ color: colors.accent }}>{todayTip.written}</Text> ကို သုံးပါ
+              {todayTip.spoken} {preferences.language === 'my' ? 'အစား' : '→'}{' '}
+              <Text style={{ color: colors.accent }}>{todayTip.written}</Text>{' '}
+              {preferences.language === 'my' ? 'ကို သုံးပါ' : ''}
             </Text>
             <Text style={[styles.tipDesc, { color: colors.textSecondary }]}>
-              {todayTip.usageTip || todayTip.myanmarMeaning}
+              {preferences.language === 'my'
+                ? todayTip.usageTip || todayTip.myanmarMeaning
+                : todayTip.englishMeaning}
             </Text>
             <TouchableOpacity
               onPress={() => {
@@ -190,41 +235,42 @@ export default function HomeScreen() {
                   params: { id: todayTip.id },
                 });
               }}
-              style={styles.tipActionRow}>
+              style={styles.tipActionRow}
+            >
               <Text style={[styles.tipActionText, { color: colors.accent }]}>
-                View Spoken → Academic breakdown
+                {t('viewLesson')}
               </Text>
               <Ionicons name="arrow-forward" size={14} color={colors.accent} />
             </TouchableOpacity>
           </View>
         ) : (
           <View
-            style={[
-              styles.tipCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
-            <Text style={[styles.tipBadge, { backgroundColor: colors.streakLight, color: colors.streak, alignSelf: 'flex-start' }]}>
-              TODAY'S TOPIK TIP
+            style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <Text
+              style={[
+                styles.tipBadge,
+                {
+                  backgroundColor: colors.streakLight,
+                  color: colors.streak,
+                  alignSelf: 'flex-start',
+                },
+              ]}
+            >
+              {t('tip')}
             </Text>
             <Text style={[styles.tipDesc, { color: colors.textSecondary }]}>
               Contributor များ၏ အတည်ပြုပြီး TOPIK ဝေါဟာရများကို Cloud မှ ချိတ်ဆက်ရယူနိုင်ပါသည်။
             </Text>
             <TouchableOpacity onPress={syncNow} style={styles.tipActionRow}>
-              <Text style={[styles.tipActionText, { color: colors.accent }]}>
-                Sync Dynamic Curriculum Now
-              </Text>
+              <Text style={[styles.tipActionText, { color: colors.accent }]}>{t('download')}</Text>
               <Ionicons name="sync-outline" size={14} color={colors.accent} />
             </TouchableOpacity>
           </View>
         )}
 
-        {latestDraft && <TouchableOpacity accessibilityRole="button" onPress={() => router.push({ pathname: latestDraft.type === 'statement' ? '/modal/statement-editor' : '/modal/wongoji-editor', params: { draftId: latestDraft.id } })} style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={{ color: colors.accent, fontWeight: '700' }}>Continue writing</Text><Text style={{ color: colors.text, marginTop: 6 }}>{latestDraft.title}</Text><Text style={{ color: colors.textSecondary, marginTop: 4 }}>Your latest saved writing is ready to resume.</Text>
-        </TouchableOpacity>}
         {/* Quick Actions Grid */}
-        <Text style={[styles.sectionHeading, { color: colors.text }]}>
-          Quick Practice
-        </Text>
+        <Text style={[styles.sectionHeading, { color: colors.text }]}>{t('quickPractice')}</Text>
         <View style={styles.actionGrid}>
           {/* Quick Quiz */}
           <TouchableOpacity
@@ -232,15 +278,14 @@ export default function HomeScreen() {
             style={[
               styles.actionCard,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <View style={[styles.actionIconBox, { backgroundColor: colors.accentLight }]}>
               <Ionicons name="sparkles" size={22} color={colors.accent} />
             </View>
-            <Text style={[styles.actionTitle, { color: colors.text }]}>
-              Step-by-Step Quiz
-            </Text>
+            <Text style={[styles.actionTitle, { color: colors.text }]}>{t('quiz')}</Text>
             <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
-              Topics • 5 Qs per step
+              {t('quizShort')}
             </Text>
           </TouchableOpacity>
 
@@ -250,13 +295,12 @@ export default function HomeScreen() {
             style={[
               styles.actionCard,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <View style={[styles.actionIconBox, { backgroundColor: colors.streakLight }]}>
               <Ionicons name="grid-outline" size={22} color={colors.streak} />
             </View>
-            <Text style={[styles.actionTitle, { color: colors.text }]}>
-              Wongoji Grid
-            </Text>
+            <Text style={[styles.actionTitle, { color: colors.text }]}>Wongoji Grid</Text>
             <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
               Q53 Graph & Q54
             </Text>
@@ -269,23 +313,23 @@ export default function HomeScreen() {
           style={[
             styles.communityCard,
             { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          ]}
+        >
           <View style={[styles.communityIconBox, { backgroundColor: colors.accentLight }]}>
             <Ionicons name="people" size={20} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.communityHeaderRow}>
               <View style={[styles.communityBadgeBox, { backgroundColor: colors.streakLight }]}>
-                <Text style={[styles.communityBadge, { color: colors.streak }]}>
-                  COMMUNITY
-                </Text>
+                <Text style={[styles.communityBadge, { color: colors.streak }]}>COMMUNITY</Text>
               </View>
               <Text style={[styles.communityTitle, { color: colors.text }]}>
                 Peer Essay Showcase
               </Text>
             </View>
             <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>
-              မြန်မာဘာသာစကား လေ့လာနေသူ အချင်းချင်း Q53/Q54 အမှတ်ကောင်းထားတဲ့ စာမူတွေကို ကြည့်ရှုပြီး ကိုယ့်ရဲ့ ရေးလက်စ စာမူတွေကို ဝေမျှလိုက်ပါ။
+              မြန်မာဘာသာစကား လေ့လာနေသူ အချင်းချင်း Q53/Q54 အမှတ်ကောင်းထားတဲ့ စာမူတွေကို ကြည့်ရှုပြီး
+              ကိုယ့်ရဲ့ ရေးလက်စ စာမူတွေကို ဝေမျှလိုက်ပါ။
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -297,23 +341,23 @@ export default function HomeScreen() {
           style={[
             styles.communityCard,
             { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          ]}
+        >
           <View style={[styles.communityIconBox, { backgroundColor: colors.streakLight }]}>
             <Ionicons name="heart" size={20} color={colors.streak} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.communityHeaderRow}>
               <View style={[styles.communityBadgeBox, { backgroundColor: colors.accentLight }]}>
-                <Text style={[styles.communityBadge, { color: colors.accent }]}>
-                  GRATITUDE
-                </Text>
+                <Text style={[styles.communityBadge, { color: colors.accent }]}>GRATITUDE</Text>
               </View>
               <Text style={[styles.communityTitle, { color: colors.text }]}>
                 Our Contributors & Mentors
               </Text>
             </View>
             <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>
-              VocabJip App ဖြစ်လာစေရန် စေတနာဖြင့် သင်ခန်းစာများ ရေးသားမျှဝေပေးနေကြသော Contributors များ
+              VocabJip App ဖြစ်လာစေရန် စေတနာဖြင့် သင်ခန်းစာများ ရေးသားမျှဝေပေးနေကြသော Contributors
+              များ
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -341,16 +385,13 @@ export default function HomeScreen() {
             style={[
               styles.vocabRowCard,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <View style={{ flex: 1 }}>
               <View style={styles.vocabCompareRow}>
-                <Text style={[styles.spokenText, { color: colors.textMuted }]}>
-                  {item.spoken}
-                </Text>
+                <Text style={[styles.spokenText, { color: colors.textMuted }]}>{item.spoken}</Text>
                 <Ionicons name="arrow-forward" size={14} color={colors.accent} />
-                <Text style={[styles.writtenText, { color: colors.accent }]}>
-                  {item.written}
-                </Text>
+                <Text style={[styles.writtenText, { color: colors.accent }]}>{item.written}</Text>
               </View>
               <Text style={[styles.vocabMeaning, { color: colors.textSecondary }]}>
                 {item.myanmarMeaning}
@@ -390,6 +431,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   profileAvatar: {
+    minWidth: 44,
+    minHeight: 44,
     width: 42,
     height: 42,
     borderRadius: 21,
@@ -483,6 +526,8 @@ const styles = StyleSheet.create({
     color: '#B45309',
   },
   shuffleTipBtn: {
+    minWidth: 44,
+    minHeight: 44,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -632,4 +677,3 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
 });
-

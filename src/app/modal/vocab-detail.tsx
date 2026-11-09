@@ -1,11 +1,6 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,22 +12,45 @@ import { SpeechService } from '@/services/speech-service';
 import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function VocabDetailModal() {
+  const { preferences, t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isVocabSaved, toggleSaveVocab } = useSaved();
-  const { vocabularies } = useCurriculum();
+  const { vocabularies, isLoading, syncNow } = useCurriculum();
   const [isPlaying, React_useState] = React.useState(false);
 
-  const item = vocabularies.find((v) => v.id === id) || vocabularies[0];
+  const item = id ? vocabularies.find((value) => value.id === id) : vocabularies[0];
   if (!item) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.topBar}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
             onPress={() => router.back()}
-            style={[styles.closeBtn, { borderColor: colors.border }]}>
+            style={[styles.closeBtn, { borderColor: colors.border }]}
+          >
             <Ionicons name="close" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ padding: 24, gap: 12 }}>
+          <Text>{t(isLoading ? 'loadingLessons' : 'unavailableLesson')}</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => router.replace('/(tabs)/learn')}
+            style={{ minHeight: 44 }}
+          >
+            <Text>{t('learn')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              void syncNow();
+            }}
+            style={{ minHeight: 44 }}
+          >
+            <Text>{t('retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -55,16 +73,23 @@ export default function VocabDetailModal() {
       {/* Modal Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('close')}
           onPress={() => router.back()}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerCategory, { color: colors.textSecondary }]}>
           {item.category}
         </Text>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t(saved ? 'removeBookmark' : 'addBookmark')}
+          accessibilityState={{ selected: saved }}
           onPress={() => toggleSaveVocab(item.id)}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons
             name={saved ? 'bookmark' : 'bookmark-outline'}
             size={20}
@@ -80,7 +105,8 @@ export default function VocabDetailModal() {
             style={[
               styles.contributorBanner,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <View style={styles.contributorLeft}>
               <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
                 <Text style={[styles.avatarLetter, { color: colors.accent }]}>
@@ -109,28 +135,32 @@ export default function VocabDetailModal() {
 
         {/* Comparison Hero Card */}
         <View
-          style={[
-            styles.heroCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <View style={styles.badgeRow}>
-            <Text style={[styles.spBadge, { backgroundColor: colors.cardMuted, color: colors.textMuted }]}>
+            <Text
+              style={[
+                styles.spBadge,
+                { backgroundColor: colors.cardMuted, color: colors.textMuted },
+              ]}
+            >
               SPOKEN / EVERYDAY
             </Text>
             <Ionicons name="arrow-forward" size={16} color={colors.accent} />
-            <Text style={[styles.acBadge, { backgroundColor: colors.accentLight, color: colors.accent }]}>
+            <Text
+              style={[
+                styles.acBadge,
+                { backgroundColor: colors.accentLight, color: colors.accent },
+              ]}
+            >
               WRITTEN / ACADEMIC
             </Text>
           </View>
 
           <View style={styles.wordsRow}>
-            <Text style={[styles.spokenWord, { color: colors.textMuted }]}>
-              {item.spoken}
-            </Text>
+            <Text style={[styles.spokenWord, { color: colors.textMuted }]}>{item.spoken}</Text>
             <Ionicons name="arrow-forward" size={24} color={colors.accent} />
-            <Text style={[styles.writtenWord, { color: colors.text }]}>
-              {item.written}
-            </Text>
+            <Text style={[styles.writtenWord, { color: colors.text }]}>{item.written}</Text>
           </View>
 
           <TouchableOpacity
@@ -139,7 +169,9 @@ export default function VocabDetailModal() {
               styles.pronounceRow,
               { backgroundColor: isPlaying ? colors.accentLight : 'transparent' },
             ]}
-            accessibilityLabel="Listen to pronunciation">
+            accessibilityRole="button"
+            accessibilityLabel={t('listen')}
+          >
             <Ionicons
               name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
               size={20}
@@ -156,18 +188,14 @@ export default function VocabDetailModal() {
 
         {/* Myanmar Meaning */}
         <View
-          style={[
-            styles.sectionCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            အဓိပ္ပာယ် (MYANMAR MEANING)
-          </Text>
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('meaning')}</Text>
           <Text style={[styles.meaningMain, { color: colors.text }]}>
-            {item.myanmarMeaning}
+            {preferences.language === 'my' ? item.myanmarMeaning : item.englishMeaning}
           </Text>
           <Text style={[styles.meaningEnglish, { color: colors.textMuted }]}>
-            English: {item.englishMeaning}
+            {preferences.language === 'my' ? item.englishMeaning : item.myanmarMeaning}
           </Text>
         </View>
 
@@ -176,24 +204,19 @@ export default function VocabDetailModal() {
           style={[
             styles.sectionCard,
             { backgroundColor: colors.streakLight, borderColor: 'transparent' },
-          ]}>
+          ]}
+        >
           <View style={styles.tipTitleRow}>
             <Ionicons name="bulb-outline" size={18} color={colors.streak} />
-            <Text style={[styles.tipTitle, { color: colors.streak }]}>
-              TOPIK WRITING RULE
-            </Text>
+            <Text style={[styles.tipTitle, { color: colors.streak }]}>TOPIK WRITING RULE</Text>
           </View>
-          <Text style={[styles.tipContent, { color: colors.text }]}>
-            {item.usageTip}
-          </Text>
+          <Text style={[styles.tipContent, { color: colors.text }]}>{item.usageTip}</Text>
         </View>
 
         {/* Example Sentence */}
         <View
-          style={[
-            styles.sectionCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             နမူနာဝါကျ (EXAMPLE SENTENCE)
           </Text>
@@ -221,8 +244,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   closeBtn: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: 19,
     borderWidth: 1,
     alignItems: 'center',
@@ -375,4 +398,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-

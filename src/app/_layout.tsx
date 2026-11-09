@@ -1,3 +1,4 @@
+import { LearningPreferencesProvider } from '@/context/learning-preferences-context';
 import { DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
@@ -20,7 +21,9 @@ function AccountProviders({ children }: { children: React.ReactNode }) {
     );
   return (
     <SavedProvider key={user?.id || 'guest'}>
-      <AiProvider key={user?.id || 'guest'}>{children}</AiProvider>
+      <LearningPreferencesProvider key={user?.id || 'guest'}>
+        <AiProvider key={user?.id || 'guest'}>{children}</AiProvider>
+      </LearningPreferencesProvider>
     </SavedProvider>
   );
 }
@@ -36,6 +39,7 @@ export default function RootLayout() {
         <AuthProvider>
           <AccountProviders>
             <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="modal/get-started" options={{ presentation: 'modal' }} />
               <Stack.Screen name="modal/edit-profile" options={{ presentation: 'modal' }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />

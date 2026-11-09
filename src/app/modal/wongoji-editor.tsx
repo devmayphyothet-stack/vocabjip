@@ -1,3 +1,4 @@
+import { useCurriculum } from '@/hooks/use-curriculum';
 import { useWritingRecovery } from '@/hooks/use-writing-recovery';
 import { createDraftId, isUuid } from '@/lib/draft-utils';
 import React, { useState, useEffect, useRef } from 'react';
@@ -32,7 +33,10 @@ export default function WongojiEditorModal() {
   const { saveDraft, syncStatus, drafts } = useSaved();
   const { isConnected } = useAi();
   const recovery = useWritingRecovery();
+  const { essayPrompts } = useCurriculum();
   const params = useLocalSearchParams<{
+    promptId?: string;
+    durationMinutes?: string;
     draftId?: string;
     type?: string;
     promptTitle?: string;
@@ -47,6 +51,7 @@ export default function WongojiEditorModal() {
   const hasManuallySavedRef = useRef(false);
   const type = existing?.type === 'Q54' || params.type === 'Q54' ? 'Q54' : 'Q53';
   const promptTitle = existing?.title || params.promptTitle || (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
+  const writingPrompt = essayPrompts.find(prompt => params.promptId ? prompt.id === params.promptId : prompt.title === promptTitle);
   const charTarget = params.charTarget || (type === 'Q53' ? '200 – 300' : '600 – 700');
   const [viewMode, setViewMode] = useState<ViewMode>('text');
   const [content, setContent] = useState(initialContentRef.current);
@@ -56,7 +61,7 @@ export default function WongojiEditorModal() {
   };
 
   // Timer State (20 minutes = 1200 seconds)
-  const [secondsLeft, setSecondsLeft] = useState(1200);
+  const [secondsLeft, setSecondsLeft] = useState([5, 10, 15, 20].includes(Number(params.durationMinutes)) ? Number(params.durationMinutes) * 60 : 1200);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [isSavedFeedback, setIsSavedFeedback] = useState(false);
   const [showPausedModal, setShowPausedModal] = useState(false);
@@ -302,6 +307,7 @@ export default function WongojiEditorModal() {
         {recovery.status === 'error' ? 'Could not save · Tap Save to retry' : recovery.status === 'saving' ? 'Saving on this device…' : syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing…' : syncStatus === 'pending' ? 'Saved on device · Sync pending' : syncStatus === 'error' ? 'Saved on device · Cloud sync needs retry' : 'Drafts save on this device'}
       </Text>
 
+      {writingPrompt && <Text style={{ paddingHorizontal: 24, paddingVertical: 12, color: colors.textSecondary }}>{writingPrompt.promptText}</Text>}
       {/* Title & Target Bar */}
       <View style={styles.metaBar}>
         <View style={{ flex: 1 }}>

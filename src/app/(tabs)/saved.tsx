@@ -1,13 +1,6 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Modal,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,10 +14,14 @@ import { useCurriculum } from '@/hooks/use-curriculum';
 type SavedTab = 'vocab' | 'patterns' | 'drafts';
 
 export default function SavedScreen() {
+  const { t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const {
-    syncStatus, retrySync, hasGuestItems, importGuestItems,
+    syncStatus,
+    retrySync,
+    hasGuestItems,
+    importGuestItems,
     savedVocabIds,
     savedPatternIds,
     drafts,
@@ -48,39 +45,92 @@ export default function SavedScreen() {
     if (!draftToDelete) return;
     const id = draftToDelete.id;
     setDraftToDelete(null);
-    try { await deleteDraft(id); } catch (error: any) { Alert.alert('Could not delete draft', error.message); }
+    try {
+      await deleteDraft(id);
+    } catch (error: any) {
+      Alert.alert('Could not delete draft', error.message);
+    }
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Your Collection</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('collection')}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Keep what helps you grow • Offline-ready
         </Text>
 
-        <Text accessibilityLiveRegion="polite" style={{ color: colors.textSecondary, marginVertical: 8 }}>
-          {syncStatus === 'synced' ? 'Synced with your account' : syncStatus === 'syncing' ? 'Syncing…' : syncStatus === 'pending' ? 'Saved on device · Waiting to sync' : syncStatus === 'error' ? 'Cloud sync could not finish. Your saved items are on this device.' : 'Saved on this device'}
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ color: colors.textSecondary, marginVertical: 8 }}
+        >
+          {t(
+            syncStatus === 'synced'
+              ? 'savedSynced'
+              : syncStatus === 'syncing'
+                ? 'savedSyncing'
+                : syncStatus === 'pending'
+                  ? 'savedPending'
+                  : syncStatus === 'error'
+                    ? 'savedSyncFailed'
+                    : 'savedLocal',
+          )}
         </Text>
-        {(syncStatus === 'error' || syncStatus === 'pending') && <TouchableOpacity accessibilityRole="button" onPress={() => { void retrySync(); }} style={{ paddingVertical: 10 }}><Text style={{ color: colors.accent }}>Retry cloud sync</Text></TouchableOpacity>}
-        {hasGuestItems && <TouchableOpacity accessibilityRole="button" onPress={() => Alert.alert('Import guest items?', 'Move this device’s guest drafts and bookmarks into your current account?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Import', onPress: () => { importGuestItems().catch(() => Alert.alert('Import failed', 'Guest items remain available. Please retry.')); } }])} style={{ paddingVertical: 10 }}><Text style={{ color: colors.accent }}>Import guest drafts and bookmarks</Text></TouchableOpacity>}
+        {(syncStatus === 'error' || syncStatus === 'pending') && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              void retrySync();
+            }}
+            style={{ paddingVertical: 10 }}
+          >
+            <Text style={{ color: colors.accent }}>{t('retrySync')}</Text>
+          </TouchableOpacity>
+        )}
+        {hasGuestItems && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() =>
+              Alert.alert(
+                'Import guest items?',
+                'Move this device’s guest drafts and bookmarks into your current account?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Import',
+                    onPress: () => {
+                      importGuestItems().catch(() =>
+                        Alert.alert('Import failed', 'Guest items remain available. Please retry.'),
+                      );
+                    },
+                  },
+                ],
+              )
+            }
+            style={{ paddingVertical: 10 }}
+          >
+            <Text style={{ color: colors.accent }}>Import guest drafts and bookmarks</Text>
+          </TouchableOpacity>
+        )}
         {/* Tab Switcher */}
         <View style={[styles.tabContainer, { backgroundColor: colors.cardMuted }]}>
           <TouchableOpacity
             onPress={() => setActiveTab('vocab')}
             style={[
               styles.tabBtn,
-              activeTab === 'vocab' && [
-                styles.tabBtnActive,
-                { backgroundColor: colors.card },
-              ],
-            ]}>
+              activeTab === 'vocab' && [styles.tabBtnActive, { backgroundColor: colors.card }],
+            ]}
+          >
             <Text
               style={[
                 styles.tabText,
                 { color: activeTab === 'vocab' ? colors.text : colors.textSecondary },
-              ]}>
-              Vocab ({savedVocabs.length})
+              ]}
+            >
+              {t('vocab')} ({savedVocabs.length})
             </Text>
           </TouchableOpacity>
 
@@ -88,17 +138,16 @@ export default function SavedScreen() {
             onPress={() => setActiveTab('patterns')}
             style={[
               styles.tabBtn,
-              activeTab === 'patterns' && [
-                styles.tabBtnActive,
-                { backgroundColor: colors.card },
-              ],
-            ]}>
+              activeTab === 'patterns' && [styles.tabBtnActive, { backgroundColor: colors.card }],
+            ]}
+          >
             <Text
               style={[
                 styles.tabText,
                 { color: activeTab === 'patterns' ? colors.text : colors.textSecondary },
-              ]}>
-              Patterns ({savedPatterns.length})
+              ]}
+            >
+              {t('patterns')} ({savedPatterns.length})
             </Text>
           </TouchableOpacity>
 
@@ -106,17 +155,16 @@ export default function SavedScreen() {
             onPress={() => setActiveTab('drafts')}
             style={[
               styles.tabBtn,
-              activeTab === 'drafts' && [
-                styles.tabBtnActive,
-                { backgroundColor: colors.card },
-              ],
-            ]}>
+              activeTab === 'drafts' && [styles.tabBtnActive, { backgroundColor: colors.card }],
+            ]}
+          >
             <Text
               style={[
                 styles.tabText,
                 { color: activeTab === 'drafts' ? colors.text : colors.textSecondary },
-              ]}>
-              Drafts ({drafts.length})
+              ]}
+            >
+              {t('drafts')} ({drafts.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -133,7 +181,8 @@ export default function SavedScreen() {
               style={[
                 styles.itemCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
+              ]}
+            >
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() =>
@@ -142,24 +191,21 @@ export default function SavedScreen() {
                     params: { id: item.id },
                   })
                 }
-                style={{ flex: 1 }}>
+                style={{ flex: 1 }}
+              >
                 <View style={styles.cardHeaderRow}>
                   <Text style={[styles.spokenText, { color: colors.textMuted }]}>
                     {item.spoken}
                   </Text>
                   <Ionicons name="arrow-forward" size={14} color={colors.accent} />
-                  <Text style={[styles.writtenText, { color: colors.accent }]}>
-                    {item.written}
-                  </Text>
+                  <Text style={[styles.writtenText, { color: colors.accent }]}>{item.written}</Text>
                 </View>
                 <Text style={[styles.meaningText, { color: colors.textSecondary }]}>
                   {item.myanmarMeaning}
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => toggleSaveVocab(item.id)}
-                style={styles.iconBtn}>
+              <TouchableOpacity onPress={() => toggleSaveVocab(item.id)} style={styles.iconBtn}>
                 <Ionicons name="bookmark" size={20} color={colors.accent} />
               </TouchableOpacity>
             </View>
@@ -184,7 +230,8 @@ export default function SavedScreen() {
               style={[
                 styles.itemCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
+              ]}
+            >
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() =>
@@ -193,23 +240,20 @@ export default function SavedScreen() {
                     params: { id: item.id },
                   })
                 }
-                style={{ flex: 1 }}>
+                style={{ flex: 1 }}
+              >
                 <View style={[styles.qTag, { backgroundColor: colors.streakLight }]}>
                   <Text style={[styles.qTagText, { color: colors.streak }]}>
                     {item.questionNumber}
                   </Text>
                 </View>
-                <Text style={[styles.patternTitle, { color: colors.text }]}>
-                  {item.title}
-                </Text>
+                <Text style={[styles.patternTitle, { color: colors.text }]}>{item.title}</Text>
                 <Text style={[styles.meaningText, { color: colors.textSecondary }]}>
                   {item.myanmarTitle}
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => toggleSavePattern(item.id)}
-                style={styles.iconBtn}>
+              <TouchableOpacity onPress={() => toggleSavePattern(item.id)} style={styles.iconBtn}>
                 <Ionicons name="bookmark" size={20} color={colors.streak} />
               </TouchableOpacity>
             </View>
@@ -234,12 +278,16 @@ export default function SavedScreen() {
               style={[
                 styles.itemCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
+              ]}
+            >
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() =>
                   router.push({
-                    pathname: item.type === 'statement' ? '/modal/statement-editor' : '/modal/wongoji-editor',
+                    pathname:
+                      item.type === 'statement'
+                        ? '/modal/statement-editor'
+                        : '/modal/wongoji-editor',
                     params: {
                       draftId: item.id,
                       type: item.type,
@@ -247,23 +295,21 @@ export default function SavedScreen() {
                     },
                   })
                 }
-                style={{ flex: 1 }}>
+                style={{ flex: 1 }}
+              >
                 <View style={styles.draftHeaderRow}>
                   <View style={[styles.qTag, { backgroundColor: colors.accentLight }]}>
-                    <Text style={[styles.qTagText, { color: colors.accent }]}>
-                      {item.type}
-                    </Text>
+                    <Text style={[styles.qTagText, { color: colors.accent }]}>{item.type}</Text>
                   </View>
                   <Text style={[styles.charTag, { color: colors.textMuted }]}>
                     {item.charCount} chars
                   </Text>
                 </View>
-                <Text style={[styles.draftTitle, { color: colors.text }]}>
-                  {item.title}
-                </Text>
+                <Text style={[styles.draftTitle, { color: colors.text }]}>{item.title}</Text>
                 <Text
                   numberOfLines={2}
-                  style={[styles.draftSnippet, { color: colors.textSecondary }]}>
+                  style={[styles.draftSnippet, { color: colors.textSecondary }]}
+                >
                   {item.content}
                 </Text>
               </TouchableOpacity>
@@ -272,7 +318,8 @@ export default function SavedScreen() {
                 onPress={() => handleDeleteDraft(item)}
                 accessibilityLabel="Delete Draft"
                 accessibilityRole="button"
-                style={styles.iconBtn}>
+                style={styles.iconBtn}
+              >
                 <Ionicons name="trash-outline" size={18} color={colors.error} />
               </TouchableOpacity>
             </View>
@@ -280,9 +327,7 @@ export default function SavedScreen() {
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Ionicons name="document-text-outline" size={44} color={colors.textMuted} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                No drafts saved yet
-              </Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('noDrafts')}</Text>
               <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                 Your Wongoji writings will be saved locally so you never lose a sentence.
               </Text>
@@ -296,23 +341,21 @@ export default function SavedScreen() {
         visible={Boolean(draftToDelete)}
         transparent
         animationType="fade"
-        onRequestClose={() => setDraftToDelete(null)}>
+        onRequestClose={() => setDraftToDelete(null)}
+      >
         <View style={styles.modalBackdrop}>
           <View
-            style={[
-              styles.modalCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
             <View style={[styles.modalIconCircle, { backgroundColor: colors.errorLight }]}>
               <Ionicons name="trash-outline" size={24} color={colors.error} />
             </View>
 
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Delete Draft?
-            </Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Delete Draft?</Text>
 
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-              "{draftToDelete?.title}" ကို ဖျက်ပစ်ရန် သေချာပါသလား? ဖျက်ပြီးပါက ပြန်လည်ရယူနိုင်မည် မဟုတ်ပါ။
+              "{draftToDelete?.title}" ကို ဖျက်ပစ်ရန် သေချာပါသလား? ဖျက်ပြီးပါက ပြန်လည်ရယူနိုင်မည်
+              မဟုတ်ပါ။
             </Text>
 
             <View style={styles.modalBtnRow}>
@@ -321,15 +364,15 @@ export default function SavedScreen() {
                 style={[
                   styles.modalCancelBtn,
                   { backgroundColor: colors.cardMuted, borderColor: colors.border },
-                ]}>
-                <Text style={[styles.modalCancelText, { color: colors.text }]}>
-                  Cancel
-                </Text>
+                ]}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={confirmDeleteDraft}
-                style={[styles.modalDeleteBtn, { backgroundColor: colors.error }]}>
+                style={[styles.modalDeleteBtn, { backgroundColor: colors.error }]}
+              >
                 <Text style={styles.modalDeleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
@@ -443,6 +486,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   iconBtn: {
+    minWidth: 44,
+    minHeight: 44,
     padding: 8,
   },
   emptyBox: {
@@ -525,4 +570,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

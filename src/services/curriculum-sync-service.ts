@@ -1,3 +1,4 @@
+import { playableTopics } from '@/lib/quiz-curriculum';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { VocabItem } from '@/data/vocab-data';
@@ -86,7 +87,7 @@ export async function getCurriculumQuizTopics(): Promise<QuizTopicItem[]> {
     }
     const dynamicTopics: QuizTopicItem[] = JSON.parse(cachedStr);
     if (!Array.isArray(dynamicTopics)) return [];
-    return dynamicTopics.filter((dt) => dt.steps && dt.steps.length > 0);
+    return playableTopics(dynamicTopics);
   } catch {
     return [];
   }
@@ -119,7 +120,7 @@ export async function syncCurriculumFromCloud(force: boolean = false): Promise<{
   error?: string;
 }> {
   if (!isSupabaseConfigured) {
-    return { synced: false, newVocabsCount: 0, newPatternsCount: 0 };
+    return { synced: false, newVocabsCount: 0, newPatternsCount: 0, error: 'Updates unavailable' };
   }
 
   try {
@@ -271,6 +272,12 @@ export async function syncCurriculumFromCloud(force: boolean = false): Promise<{
         STORAGE_KEYS.DYNAMIC_ESSAY_PROMPTS,
         JSON.stringify(mappedPrompts)
       );
+    }
+
+    const partialError = vError || pError || qtError || qsError || epError;
+    if (partialError) {
+      notifyCurriculumUpdated();
+      return { synced: false, newVocabsCount, newPatternsCount, error: 'Some lessons could not be updated. Available lessons have been kept.' };
     }
 
     // 4. Update last sync time

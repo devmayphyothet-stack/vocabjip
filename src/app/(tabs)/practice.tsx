@@ -1,3 +1,5 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
+import { CurriculumStatus } from '@/components/CurriculumStatus';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import {
@@ -14,6 +16,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function PracticeScreen() {
+  const { t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { essayPrompts } = useCurriculum();
@@ -31,12 +34,13 @@ export default function PracticeScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
+      <CurriculumStatus />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Practice Room</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('practice')}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Small steps. Exam-ready Korean manuscript writing.
           </Text>

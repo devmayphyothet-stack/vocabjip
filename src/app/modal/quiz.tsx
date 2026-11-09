@@ -1,10 +1,15 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
+import { CurriculumStatus } from '@/components/CurriculumStatus';
+import { createQuizSession, restoreQuizSession, QuizSession } from '@/lib/quiz-session';
+import { LearningSessionService } from '@/services/learning-session-service';
 import { accountKey, setAccountItem } from '@/lib/account-storage';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState, useRef } from 'react';
 import {
   RefreshControl,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,9 +34,17 @@ type QuizViewMode = 'topics' | 'steps' | 'playing' | 'result';
 
 export default function QuizModal() {
   const { user } = useAuth();
+  const { preferences, t } = useLearningPreferences();
+  const params = useLocalSearchParams<{ resume?: string }>();
+  const [pausedSession, setPausedSession] = useState<QuizSession | null>(null);
+  const [resumeLoaded, setResumeLoaded] = useState(false);
+  const [notice, setNotice] = useState('');
+  const resumeAttempted = useRef(false);
+  const answersRef = useRef<number[]>([]);
+  const finishing = useRef(false);
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
-  const { quizTopics, isSyncing, syncNow } = useCurriculum();
+  const { quizTopics, isSyncing, isLoading, syncNow } = useCurriculum();
 
   const [viewMode, setViewMode] = useState<QuizViewMode>('topics');
   const [selectedTopic, setSelectedTopic] = useState<QuizTopicItem | null>(null);
@@ -43,6 +56,26 @@ export default function QuizModal() {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    void LearningSessionService.read(user?.id)
+      .then((value) => {
+        if (active) {
+          setPausedSession(value);
+          setResumeLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setNotice(t('progressFailed'));
+          setResumeLoaded(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   // Load saved step progress from AsyncStorage
   useEffect(() => {
@@ -68,17 +101,18 @@ export default function QuizModal() {
 
   const saveStepResult = async (stepId: string, finalScore: number, requiredScore: number) => {
     const passed = finalScore >= requiredScore;
-    setProgressMap((prev) => {
-      const existing = prev[stepId];
-      const nextBest = existing ? Math.max(existing.bestScore, finalScore) : finalScore;
-      const nextPassed = existing ? existing.passed || passed : passed;
-      const updated: StepProgressMap = {
-        ...prev,
-        [stepId]: { bestScore: nextBest, passed: nextPassed },
-      };
-      setAccountItem(QUIZ_PROGRESS_KEY, JSON.stringify(updated), user?.id).catch(() => { });
-      return updated;
-    });
+    const raw = await AsyncStorage.getItem(accountKey(QUIZ_PROGRESS_KEY, user?.id));
+    const savedProgress: StepProgressMap = raw ? JSON.parse(raw) : {};
+    const existing = savedProgress[stepId];
+    const updated = {
+      ...savedProgress,
+      [stepId]: {
+        bestScore: Math.max(existing?.bestScore || 0, finalScore),
+        passed: !!existing?.passed || passed,
+      },
+    };
+    await setAccountItem(QUIZ_PROGRESS_KEY, JSON.stringify(updated), user?.id);
+    setProgressMap(updated);
   };
 
   // Determine if a step inside a topic is unlocked:
@@ -96,14 +130,82 @@ export default function QuizModal() {
     setViewMode('steps');
   };
 
-  const handleStartStep = (step: QuizStepItem) => {
+  const persistSession = (step: QuizStepItem, index: number, answers: number[]) => {
+    const next = createQuizSession(step, index, answers);
+    setPausedSession(next);
+    void LearningSessionService.write(next, user?.id).catch(() => setNotice(t('progressFailed')));
+  };
+
+  function resumeSavedSession(session: QuizSession | null) {
+    if (!session || isLoading) return;
+    const topic = quizTopics.find((topic) => topic.id === session.topicId);
+    const step = topic?.steps.find((step) => step.id === session.stepId);
+    const restored = step && restoreQuizSession(session, step);
+    if (!topic || !step) {
+      setNotice(t('unavailableLesson'));
+      return;
+    }
+    if (!restored) {
+      setNotice(t('quizChanged'));
+      void LearningSessionService.write(null, user?.id).catch(() => setNotice(t('progressFailed')));
+      setPausedSession(null);
+      return;
+    }
+    setSelectedTopic(topic);
+    setSelectedStep(step);
+    setCurrentIndex(restored.index);
+    setSelectedOption(restored.selectedOption);
+    setIsAnswerSubmitted(restored.submitted);
+    setScore(restored.score);
+    answersRef.current = restored.answers;
+    setViewMode('playing');
+  }
+  const startFreshStep = (step: QuizStepItem) => {
+    answersRef.current = [];
+    finishing.current = false;
+    persistSession(step, 0, []);
     setSelectedStep(step);
     setCurrentIndex(0);
     setSelectedOption(null);
     setIsAnswerSubmitted(false);
     setScore(0);
+    setNotice('');
     setViewMode('playing');
   };
+  const handleStartStep = (step: QuizStepItem) => {
+    if (!resumeLoaded || isLoading) {
+      setNotice(t('loadingLessons'));
+      return;
+    }
+    if (!step.questions.length) {
+      setNotice(t('quizChanged'));
+      return;
+    }
+    if (pausedSession?.stepId === step.id) {
+      resumeSavedSession(pausedSession);
+      return;
+    }
+    if (pausedSession) {
+      Alert.alert(t('replaceQuiz'), t('replaceQuizHelp'), [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('start'), onPress: () => startFreshStep(step) },
+      ]);
+      return;
+    }
+    startFreshStep(step);
+  };
+  useEffect(() => {
+    if (
+      isLoading ||
+      !resumeLoaded ||
+      !quizTopics.length ||
+      params.resume !== '1' ||
+      resumeAttempted.current
+    )
+      return;
+    resumeAttempted.current = true;
+    resumeSavedSession(pausedSession);
+  }, [resumeLoaded, quizTopics, params.resume, isLoading]);
 
   const questions = selectedStep?.questions || [];
   const currentQ = questions[currentIndex];
@@ -115,24 +217,39 @@ export default function QuizModal() {
   };
 
   const handleCheckAnswer = () => {
-    if (selectedOption === null || !currentQ) return;
+    if (selectedOption === null || !currentQ || isAnswerSubmitted) return;
     setIsAnswerSubmitted(true);
-    if (selectedOption === currentQ.correctIndex) {
-      setScore((prev) => prev + 1);
-    }
+    answersRef.current = [...answersRef.current.slice(0, currentIndex), selectedOption];
+    if (selectedStep) persistSession(selectedStep, currentIndex, answersRef.current);
+    setScore(
+      answersRef.current.reduce(
+        (total, answer, index) =>
+          total + Number(answer === selectedStep?.questions[index]?.correctIndex),
+        0,
+      ),
+    );
   };
 
-  const handleNext = () => {
-    if (!selectedStep) return;
+  const handleNext = async () => {
+    if (!selectedStep || !isAnswerSubmitted || finishing.current) return;
     if (currentIndex < questions.length - 1) {
+      persistSession(selectedStep, currentIndex + 1, answersRef.current);
       setCurrentIndex((prev) => prev + 1);
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
     } else {
       const required = selectedStep.passingScore || 3;
-      saveStepResult(selectedStep.id, score, required);
-      StreakService.recordActivity(user?.id);
-      setViewMode('result');
+      finishing.current = true;
+      try {
+        await saveStepResult(selectedStep.id, score, required);
+        await LearningSessionService.write(null, user?.id);
+        setPausedSession(null);
+        void StreakService.recordActivity(user?.id);
+        setViewMode('result');
+      } catch {
+        finishing.current = false;
+        setNotice(t('progressFailed'));
+      }
     }
   };
 
@@ -158,26 +275,53 @@ export default function QuizModal() {
   if (viewMode === 'topics') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        {notice ? (
+          <Text accessibilityRole="alert" style={{ padding: 16, color: colors.error }}>
+            {notice}
+          </Text>
+        ) : null}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
+            onPress={() => router.back()}
+            style={styles.closeBtn}
+          >
             <Ionicons name="close" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.topBarTitle, { color: colors.text }]}>Quiz Topics</Text>
-          <TouchableOpacity onPress={syncNow} style={styles.closeBtn}>
+          <Text style={[styles.topBarTitle, { color: colors.text }]}>{t('topics')}</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('retry')}
+            onPress={syncNow}
+            style={styles.closeBtn}
+          >
             <Ionicons name="sync-outline" size={20} color={colors.accent} />
           </TouchableOpacity>
         </View>
 
+        <CurriculumStatus />
+        {pausedSession && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            disabled={isLoading}
+            onPress={() => resumeSavedSession(pausedSession)}
+            style={{ minHeight: 48, padding: 16 }}
+          >
+            <Text style={{ color: colors.accent }}>
+              {t('resumeQuiz')} · {pausedSession.title}
+            </Text>
+          </TouchableOpacity>
+        )}
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isSyncing} onRefresh={syncNow} />}>
+          refreshControl={<RefreshControl refreshing={isSyncing} onRefresh={syncNow} />}
+        >
           <View style={styles.heroHeader}>
-            <Text style={[styles.heroTitle, { color: colors.text }]}>
-              Choose a Lesson Topic
-            </Text>
+            <Text style={[styles.heroTitle, { color: colors.text }]}>{t('chooseTopic')}</Text>
             <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
-              Topic တစ်ခုချင်းစီအောက်ရှိ Step 1 မှစတင်ဖြေဆိုပါ။ မေးခွန်း ၅ ပုဒ်တွင် အနည်းဆုံး ၃ ပုဒ်မှန်မှသာ နောက်ထပ် Step ပွင့်ပါမည်။
+              {t('quizHelp')}
             </Text>
           </View>
 
@@ -193,7 +337,8 @@ export default function QuizModal() {
                 style={[
                   styles.topicCard,
                   { backgroundColor: colors.card, borderColor: colors.border },
-                ]}>
+                ]}
+              >
                 <View style={styles.topicCardTop}>
                   <View style={[styles.categoryPill, { backgroundColor: colors.accentLight }]}>
                     <Text style={[styles.categoryPillText, { color: colors.accent }]}>
@@ -210,7 +355,8 @@ export default function QuizModal() {
                             ? colors.successLight
                             : colors.cardMuted,
                       },
-                    ]}>
+                    ]}
+                  >
                     <Ionicons
                       name={
                         passedSteps === totalSteps && totalSteps > 0
@@ -233,7 +379,8 @@ export default function QuizModal() {
                               ? colors.success
                               : colors.textSecondary,
                         },
-                      ]}>
+                      ]}
+                    >
                       {passedSteps}/{totalSteps} Steps
                     </Text>
                   </View>
@@ -292,6 +439,11 @@ export default function QuizModal() {
   if (viewMode === 'steps' && selectedTopic) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        {notice ? (
+          <Text accessibilityRole="alert" style={{ padding: 16, color: colors.error }}>
+            {notice}
+          </Text>
+        ) : null}
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => setViewMode('topics')} style={styles.closeBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
@@ -308,7 +460,8 @@ export default function QuizModal() {
             style={[
               styles.topicBanner,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <Text style={[styles.topicBannerCategory, { color: colors.accent }]}>
               {selectedTopic.category.toUpperCase()}
             </Text>
@@ -316,7 +469,8 @@ export default function QuizModal() {
               {selectedTopic.myanmarTitle}
             </Text>
             <Text style={[styles.topicBannerRule, { color: colors.textSecondary }]}>
-              🎯 Step တစ်ခုတွင် မေးခွန်း ၅ ပုဒ်ပါဝင်ပြီး အနည်းဆုံး ၃ ပုဒ်မှန်မှ နောက်ထပ် Step ပွင့်ပါမည်။
+              🎯 Step တစ်ခုတွင် မေးခွန်း ၅ ပုဒ်ပါဝင်ပြီး အနည်းဆုံး ၃ ပုဒ်မှန်မှ နောက်ထပ် Step
+              ပွင့်ပါမည်။
             </Text>
           </View>
 
@@ -347,7 +501,8 @@ export default function QuizModal() {
                           : colors.border,
                       opacity: unlocked ? 1 : 0.65,
                     },
-                  ]}>
+                  ]}
+                >
                   <View style={styles.stepHeaderRow}>
                     <View style={styles.stepBadgeGroup}>
                       <View
@@ -360,7 +515,8 @@ export default function QuizModal() {
                                 ? colors.accent
                                 : colors.border,
                           },
-                        ]}>
+                        ]}
+                      >
                         {isPassed ? (
                           <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                         ) : unlocked ? (
@@ -370,9 +526,7 @@ export default function QuizModal() {
                         )}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.stepTitle, { color: colors.text }]}>
-                          {step.title}
-                        </Text>
+                        <Text style={[styles.stepTitle, { color: colors.text }]}>{step.title}</Text>
                         <Text style={[styles.stepMeta, { color: colors.textSecondary }]}>
                           {qCount} Questions • Need {reqScore}/{qCount} to unlock next
                         </Text>
@@ -385,7 +539,8 @@ export default function QuizModal() {
                     style={[
                       styles.stepContributorRow,
                       { backgroundColor: colors.background, borderColor: colors.borderLight },
-                    ]}>
+                    ]}
+                  >
                     <View style={styles.contributorInfo}>
                       <Ionicons name="person-circle-outline" size={18} color={colors.accent} />
                       <Text style={[styles.stepContributorName, { color: colors.text }]}>
@@ -408,7 +563,8 @@ export default function QuizModal() {
                         style={[
                           styles.bestScoreTag,
                           { color: isPassed ? colors.success : colors.streak },
-                        ]}>
+                        ]}
+                      >
                         Best: {bestScore}/{qCount}
                       </Text>
                     ) : null}
@@ -429,7 +585,8 @@ export default function QuizModal() {
                           style={[
                             styles.startStepLabel,
                             { color: isPassed ? colors.success : colors.accent },
-                          ]}>
+                          ]}
+                        >
                           {isPassed ? 'Passed • Practice Again' : 'Start Step Now'}
                         </Text>
                         <Ionicons
@@ -462,11 +619,21 @@ export default function QuizModal() {
 
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        {notice ? (
+          <Text accessibilityRole="alert" style={{ padding: 16, color: colors.error }}>
+            {notice}
+          </Text>
+        ) : null}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => setViewMode('steps')} style={styles.closeBtn}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('back')}
+            onPress={() => setViewMode('steps')}
+            style={styles.closeBtn}
+          >
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.topBarTitle, { color: colors.text }]}>Step Result</Text>
+          <Text style={[styles.topBarTitle, { color: colors.text }]}>{t('stepResult')}</Text>
           <View style={{ width: 38 }} />
         </View>
 
@@ -475,7 +642,8 @@ export default function QuizModal() {
             style={[
               styles.resultIconCircle,
               { backgroundColor: passed ? colors.successLight : colors.streakLight },
-            ]}>
+            ]}
+          >
             <Ionicons
               name={passed ? 'trophy' : 'refresh-circle'}
               size={44}
@@ -484,29 +652,21 @@ export default function QuizModal() {
           </View>
 
           <Text style={[styles.resultTitle, { color: colors.text }]}>
-            {passed ? `Step ${selectedStep.stepNumber} Passed! 🎉` : 'Almost There!'}
+            {t(passed ? 'stepPassed' : 'almostThere')}
           </Text>
           <Text style={[styles.resultSubtitle, { color: colors.textSecondary }]}>
             {passed
-              ? hasNextStep
-                ? `ဂုဏ်ယူပါတယ်! အောင်မှတ်ပြည့်မီသဖြင့် Step ${selectedStep.stepNumber + 1} ပွင့်သွားပါပြီ။`
-                : 'ဂုဏ်ယူပါတယ်! ဒီ Topic ရဲ့ Step အားလုံးကို အောင်မြင်စွာ ဖြေဆိုပြီးပါပြီ။'
-              : `နောက်ထပ် Step ပွင့်ရန် အနည်းဆုံး ${reqScore}/${qTotal} မှတ် လိုအပ်ပါသည်။ ပြန်လည်ကြိုးစားကြည့်ပါ!`}
+              ? t(hasNextStep ? 'nextStep' : 'stepPassed')
+              : `${t('retryStep')} · ${t('passTarget')}: ${reqScore}/${qTotal}`}
           </Text>
 
           <View
-            style={[
-              styles.scoreCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
             <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>
-              YOUR SCORE (PASS REQUIREMENT: {reqScore}/{qTotal})
+              {t('passTarget')}: {reqScore}/{qTotal}
             </Text>
-            <Text
-              style={[
-                styles.scoreValue,
-                { color: passed ? colors.success : colors.streak },
-              ]}>
+            <Text style={[styles.scoreValue, { color: passed ? colors.success : colors.streak }]}>
               {score} / {qTotal}
             </Text>
             <Text style={[styles.scoreNotice, { color: colors.textSecondary }]}>
@@ -518,9 +678,10 @@ export default function QuizModal() {
           {passed && hasNextStep ? (
             <TouchableOpacity
               onPress={handleContinueNextStep}
-              style={[styles.primaryBtn, { backgroundColor: colors.success }]}>
+              style={[styles.primaryBtn, { backgroundColor: colors.success }]}
+            >
               <Text style={[styles.primaryBtnText, { color: '#FFFFFF' }]}>
-                Continue to Step {selectedStep.stepNumber + 1} →
+                {t('nextStep')} · {selectedStep.stepNumber + 1} →
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -530,25 +691,25 @@ export default function QuizModal() {
             style={[
               styles.primaryBtn,
               { backgroundColor: passed && hasNextStep ? colors.cardMuted : colors.primary },
-            ]}>
+            ]}
+          >
             <Text
               style={[
                 styles.primaryBtnText,
                 {
-                  color:
-                    passed && hasNextStep ? colors.text : colors.primaryContrast,
+                  color: passed && hasNextStep ? colors.text : colors.primaryContrast,
                 },
-              ]}>
-              Retry Step {selectedStep.stepNumber}
+              ]}
+            >
+              {t('retryStep')} · {selectedStep.stepNumber}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => setViewMode('steps')}
-            style={[styles.secondaryBtn, { borderColor: colors.border }]}>
-            <Text style={[styles.secondaryBtnText, { color: colors.text }]}>
-              Back to Steps Map
-            </Text>
+            style={[styles.secondaryBtn, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.secondaryBtnText, { color: colors.text }]}>{t('stepsMap')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -564,24 +725,40 @@ export default function QuizModal() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {notice ? (
+        <Text accessibilityRole="alert" style={{ padding: 16, color: colors.error }}>
+          {notice}
+        </Text>
+      ) : null}
       {/* Top Bar with Progress */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => setViewMode('steps')} style={styles.closeBtn}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('back')}
+          onPress={() => setViewMode('steps')}
+          style={styles.closeBtn}
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
           <Text style={[styles.progressText, { color: colors.text }]}>
-            Step {selectedStep.stepNumber} • Question {currentIndex + 1} of {questions.length}
+            {t('step')} {selectedStep.stepNumber} • {t('question')} {currentIndex + 1}/
+            {questions.length}
           </Text>
           <Text style={[styles.passReqSmall, { color: colors.textSecondary }]}>
-            Need {selectedStep.passingScore || 3}/{questions.length} correct to pass
+            {t('passTarget')}: {selectedStep.passingScore || 3}/{questions.length}
           </Text>
         </View>
         <View style={{ width: 38 }} />
       </View>
 
       {/* Progress Bar */}
-      <View style={[styles.progressBarTrack, { backgroundColor: colors.borderLight }]}>
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLabel={t('quiz')}
+        accessibilityValue={{ min: 0, max: questions.length, now: currentIndex + 1 }}
+        style={[styles.progressBarTrack, { backgroundColor: colors.borderLight }]}
+      >
         <View
           style={[
             styles.progressBarFill,
@@ -599,7 +776,8 @@ export default function QuizModal() {
           style={[
             styles.quizContributorChip,
             { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          ]}
+        >
           <View style={styles.contributorInfo}>
             <View style={[styles.avatarCircleSmall, { backgroundColor: colors.accentLight }]}>
               <Text style={[styles.avatarLetterSmall, { color: colors.accent }]}>
@@ -622,17 +800,20 @@ export default function QuizModal() {
           style={[
             styles.questionCard,
             { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          ]}
+        >
           <Text style={[styles.spokenWordPrompt, { color: colors.accent }]}>
             "{currentQ.spokenWord}"
           </Text>
           <Text style={[styles.questionText, { color: colors.text }]}>
-            {currentQ.questionText}
+            {preferences.language === 'my'
+              ? currentQ.myanmarQuestionText || currentQ.questionText
+              : currentQ.questionText}
           </Text>
         </View>
 
         {/* Options */}
-        <View style={styles.optionsList}>
+        <View accessibilityRole="radiogroup" style={styles.optionsList}>
           {currentQ.options.map((option, idx) => {
             const isSelected = selectedOption === idx;
             let optionBg: string = colors.card;
@@ -659,11 +840,15 @@ export default function QuizModal() {
               <TouchableOpacity
                 key={idx}
                 disabled={isAnswerSubmitted}
+                accessibilityRole="radio"
+                accessibilityLabel={option}
+                accessibilityState={{ checked: isSelected, disabled: isAnswerSubmitted }}
                 onPress={() => handleSelectOption(idx)}
                 style={[
                   styles.optionCard,
                   { backgroundColor: optionBg, borderColor: optionBorder },
-                ]}>
+                ]}
+              >
                 <View
                   style={[
                     styles.optionLetterCircle,
@@ -671,12 +856,11 @@ export default function QuizModal() {
                       borderColor: optionBorder,
                       backgroundColor: isSelected ? optionBorder : 'transparent',
                     },
-                  ]}>
+                  ]}
+                >
                   <Text
-                    style={[
-                      styles.optionLetter,
-                      { color: isSelected ? '#FFFFFF' : textColor },
-                    ]}>
+                    style={[styles.optionLetter, { color: isSelected ? '#FFFFFF' : textColor }]}
+                  >
                     {String.fromCharCode(65 + idx)}
                   </Text>
                 </View>
@@ -695,7 +879,8 @@ export default function QuizModal() {
                 backgroundColor: isCorrect ? colors.successLight : colors.errorLight,
                 borderColor: isCorrect ? colors.success : colors.error,
               },
-            ]}>
+            ]}
+          >
             <View style={styles.feedbackHeader}>
               <Ionicons
                 name={isCorrect ? 'checkmark-circle' : 'close-circle'}
@@ -703,21 +888,22 @@ export default function QuizModal() {
                 color={isCorrect ? colors.success : colors.error}
               />
               <Text
-                style={[
-                  styles.feedbackTitle,
-                  { color: isCorrect ? colors.success : colors.error },
-                ]}>
-                {isCorrect ? 'Nice work!' : 'Keep learning!'}
+                accessibilityLiveRegion="polite"
+                style={[styles.feedbackTitle, { color: isCorrect ? colors.success : colors.error }]}
+              >
+                {t(isCorrect ? 'correct' : 'keepLearning')}
               </Text>
             </View>
 
             <Text style={[styles.feedbackExplanation, { color: colors.text }]}>
-              {currentQ.explanation}
+              {preferences.language === 'en'
+                ? currentQ.englishExplanation || currentQ.explanation
+                : currentQ.explanation}
             </Text>
 
             <View style={[styles.exampleBox, { backgroundColor: colors.card }]}>
               <Text style={[styles.exampleLabel, { color: colors.textSecondary }]}>
-                EXAMPLE USAGE:
+                {t('example')}
               </Text>
               <Text style={[styles.exampleSentence, { color: colors.text }]}>
                 {currentQ.exampleSentence}
@@ -737,17 +923,19 @@ export default function QuizModal() {
               styles.primaryBtn,
               { backgroundColor: colors.primary },
               selectedOption === null && { opacity: 0.4 },
-            ]}>
+            ]}
+          >
             <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
-              Check Answer
+              {t('checkAnswer')}
             </Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={handleNext}
-            style={[styles.primaryBtn, { backgroundColor: colors.primary }]}>
+            style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+          >
             <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
-              {currentIndex < questions.length - 1 ? 'Next Question' : 'Complete Step'}
+              {t(currentIndex < questions.length - 1 ? 'nextQuestion' : 'seeResults')}
             </Text>
           </TouchableOpacity>
         )}
@@ -773,8 +961,8 @@ const styles = StyleSheet.create({
     maxWidth: '70%',
   },
   closeBtn: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',

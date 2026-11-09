@@ -2,6 +2,8 @@ export interface QuizQuestion {
   id: number;
   spokenWord: string;
   questionText: string;
+  myanmarQuestionText?: string;
+  englishExplanation?: string;
   options: string[];
   correctIndex: number;
   explanation: string;

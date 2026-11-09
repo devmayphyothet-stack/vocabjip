@@ -1,3 +1,4 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import { AVATARS } from '@/lib/profile-fields';
 import React, { useState, useEffect } from 'react';
 import {
@@ -23,6 +24,7 @@ import { NotificationService } from '@/services/notification-service';
 import { useDailyStreak } from '@/hooks/use-daily-streak';
 
 export default function ProfileScreen() {
+  const { t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest, signOut } = useAuth();
@@ -88,13 +90,14 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>My Learning Space</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('learningSpace')}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Progress, one sentence at a time.
           </Text>
         </View>
 
-        {user && <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/modal/edit-profile')} style={{ paddingVertical: 14 }}><Text style={{ color: colors.accent, fontWeight: '700' }}>Edit profile</Text></TouchableOpacity>}
+        {user && <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/modal/edit-profile')} style={{ paddingVertical: 14 }}><Text style={{ color: colors.accent, fontWeight: '700' }}>{t('editProfile')}</Text></TouchableOpacity>}
+        <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/modal/get-started')} style={{ minHeight: 48, justifyContent: 'center' }}><Text style={{ color: colors.accent }}>{t('preferences')}</Text></TouchableOpacity>
         {/* User Card */}
         <View
           style={[

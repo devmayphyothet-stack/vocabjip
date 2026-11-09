@@ -1,12 +1,6 @@
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,21 +11,44 @@ import { useSaved } from '@/context/saved-context';
 import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function PatternDetailModal() {
+  const { t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isPatternSaved, toggleSavePattern } = useSaved();
-  const { patterns } = useCurriculum();
+  const { patterns, isLoading, syncNow } = useCurriculum();
 
-  const pattern = patterns.find((p) => p.id === id) || patterns[0];
+  const pattern = id ? patterns.find((value) => value.id === id) : patterns[0];
   if (!pattern) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.topBar}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
             onPress={() => router.back()}
-            style={[styles.closeBtn, { borderColor: colors.border }]}>
+            style={[styles.closeBtn, { borderColor: colors.border }]}
+          >
             <Ionicons name="close" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ padding: 24, gap: 12 }}>
+          <Text>{t(isLoading ? 'loadingLessons' : 'unavailableLesson')}</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => router.replace('/(tabs)/learn')}
+            style={{ minHeight: 44 }}
+          >
+            <Text>{t('learn')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              void syncNow();
+            }}
+            style={{ minHeight: 44 }}
+          >
+            <Text>{t('retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -44,8 +61,11 @@ export default function PatternDetailModal() {
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t('close')}
           onPress={() => router.back()}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={[styles.qPill, { backgroundColor: colors.streakLight }]}>
@@ -54,8 +74,12 @@ export default function PatternDetailModal() {
           </Text>
         </View>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t(saved ? 'removeBookmark' : 'addBookmark')}
+          accessibilityState={{ selected: saved }}
           onPress={() => toggleSavePattern(pattern.id)}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons
             name={saved ? 'bookmark' : 'bookmark-outline'}
             size={20}
@@ -71,7 +95,8 @@ export default function PatternDetailModal() {
             style={[
               styles.contributorBanner,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <View style={styles.contributorLeft}>
               <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
                 <Text style={[styles.avatarLetter, { color: colors.accent }]}>
@@ -104,17 +129,11 @@ export default function PatternDetailModal() {
           <Text style={[styles.myanmarTitle, { color: colors.textSecondary }]}>
             {pattern.myanmarTitle}
           </Text>
-          <Text style={[styles.desc, { color: colors.textSecondary }]}>
-            {pattern.description}
-          </Text>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>{pattern.description}</Text>
         </View>
 
         {/* Pattern Formula */}
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardHeaderTitle, { color: colors.textSecondary }]}>
             STRUCTURE & FORMULA
           </Text>
@@ -126,18 +145,15 @@ export default function PatternDetailModal() {
                   color: colors.text,
                   fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
                 },
-              ]}>
+              ]}
+            >
               {pattern.patternFormula}
             </Text>
           </View>
         </View>
 
         {/* Key Phrases */}
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardHeaderTitle, { color: colors.textSecondary }]}>
             KEY PHRASES TO MEMORIZE
           </Text>
@@ -152,11 +168,7 @@ export default function PatternDetailModal() {
         </View>
 
         {/* Exam Example Sentence */}
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardHeaderTitle, { color: colors.textSecondary }]}>
             TOPIK EXAM EXAMPLE
           </Text>
@@ -180,7 +192,8 @@ export default function PatternDetailModal() {
               },
             });
           }}
-          style={[styles.practiceBtn, { backgroundColor: colors.primary }]}>
+          style={[styles.practiceBtn, { backgroundColor: colors.primary }]}
+        >
           <Ionicons name="create-outline" size={18} color={colors.primaryContrast} />
           <Text style={[styles.practiceBtnText, { color: colors.primaryContrast }]}>
             Practice in Wongoji Editor
@@ -203,8 +216,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   closeBtn: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: 19,
     borderWidth: 1,
     alignItems: 'center',
@@ -343,4 +356,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-

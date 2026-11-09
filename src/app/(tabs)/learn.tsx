@@ -1,3 +1,5 @@
+import { CurriculumStatus } from '@/components/CurriculumStatus';
+import { useLearningPreferences } from '@/context/learning-preferences-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -36,6 +38,7 @@ const CATEGORIES = [
 const QUESTION_FILTERS = ['All', 'Q51', 'Q52', 'Q53', 'Q54'];
 
 export default function LearnScreen() {
+  const { preferences, t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { isVocabSaved, toggleSaveVocab, isPatternSaved, toggleSavePattern } = useSaved();
@@ -51,9 +54,9 @@ export default function LearnScreen() {
     const matchesSearch =
       item.spoken.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.written.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.myanmarMeaning.includes(searchQuery);
-    const matchesCat =
-      selectedCategory === 'All' || item.category === selectedCategory;
+      item.myanmarMeaning.includes(searchQuery) ||
+      item.englishMeaning.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
     return matchesSearch && matchesCat;
   });
 
@@ -63,35 +66,32 @@ export default function LearnScreen() {
       pat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pat.myanmarTitle.includes(searchQuery) ||
       pat.exampleKorean.includes(searchQuery);
-    const matchesQ =
-      selectedQuestion === 'All' || pat.questionNumber === selectedQuestion;
+    const matchesQ = selectedQuestion === 'All' || pat.questionNumber === selectedQuestion;
     return matchesSearch && matchesQ;
   });
 
   const renderVocabCard = ({ item }: { item: VocabItem }) => {
     const saved = isVocabSaved(item.id);
     return (
-      <TouchableOpacity
-        onPress={() =>
-          router.push({
-            pathname: '/modal/vocab-detail',
-            params: { id: item.id },
-          })
-        }
-        style={[
-          styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardHeader}>
           <View style={styles.badgeRow}>
-            <Text style={[styles.categoryBadge, { backgroundColor: colors.cardMuted, color: colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.categoryBadge,
+                { backgroundColor: colors.cardMuted, color: colors.textSecondary },
+              ]}
+            >
               {item.category}
             </Text>
           </View>
           <TouchableOpacity
             onPress={() => toggleSaveVocab(item.id)}
             style={styles.bookmarkBtn}
-            accessibilityLabel="Bookmark">
+            accessibilityRole="button"
+            accessibilityLabel={t(saved ? 'removeBookmark' : 'addBookmark')}
+            accessibilityState={{ selected: saved }}
+          >
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}
               size={20}
@@ -100,30 +100,34 @@ export default function LearnScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.comparisonRow}>
-          <View style={styles.spokenBox}>
-            <Text style={[styles.microLabel, { color: colors.textMuted }]}>SPOKEN</Text>
-            <Text style={[styles.spokenWord, { color: colors.textSecondary }]}>
-              {item.spoken}
-            </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`${item.spoken}, ${item.written}. ${preferences.language === 'my' ? item.myanmarMeaning : item.englishMeaning}`}
+          onPress={() => router.push({ pathname: '/modal/vocab-detail', params: { id: item.id } })}
+          style={{ minHeight: 44, gap: 10 }}
+        >
+          <View style={styles.comparisonRow}>
+            <View style={styles.spokenBox}>
+              <Text style={[styles.microLabel, { color: colors.textMuted }]}>{t('spoken')}</Text>
+              <Text style={[styles.spokenWord, { color: colors.textSecondary }]}>
+                {item.spoken}
+              </Text>
+            </View>
+
+            <View style={[styles.arrowPill, { backgroundColor: colors.accentLight }]}>
+              <Ionicons name="arrow-forward" size={14} color={colors.accent} />
+            </View>
+
+            <View style={styles.writtenBox}>
+              <Text style={[styles.microLabel, { color: colors.accent }]}>{t('academic')}</Text>
+              <Text style={[styles.writtenWord, { color: colors.text }]}>{item.written}</Text>
+            </View>
           </View>
 
-          <View style={[styles.arrowPill, { backgroundColor: colors.accentLight }]}>
-            <Ionicons name="arrow-forward" size={14} color={colors.accent} />
-          </View>
-
-          <View style={styles.writtenBox}>
-            <Text style={[styles.microLabel, { color: colors.accent }]}>ACADEMIC</Text>
-            <Text style={[styles.writtenWord, { color: colors.text }]}>
-              {item.written}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={[styles.myanmarMeaning, { color: colors.textSecondary }]}>
-          {item.myanmarMeaning}
-        </Text>
-
+          <Text style={[styles.myanmarMeaning, { color: colors.textSecondary }]}>
+            {preferences.language === 'my' ? item.myanmarMeaning : item.englishMeaning}
+          </Text>
+        </TouchableOpacity>
         {item.authorName ? (
           <View style={[styles.contributorFooter, { borderTopColor: colors.borderLight }]}>
             <View style={styles.contributorRow}>
@@ -142,33 +146,25 @@ export default function LearnScreen() {
             ) : null} */}
           </View>
         ) : null}
-      </TouchableOpacity>
+      </View>
     );
   };
 
   const renderPatternCard = ({ item }: { item: PatternItem }) => {
     const saved = isPatternSaved(item.id);
     return (
-      <TouchableOpacity
-        onPress={() =>
-          router.push({
-            pathname: '/modal/pattern-detail',
-            params: { id: item.id },
-          })
-        }
-        style={[
-          styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardHeader}>
           <View style={[styles.qBadge, { backgroundColor: colors.streakLight }]}>
-            <Text style={[styles.qBadgeText, { color: colors.streak }]}>
-              {item.questionNumber}
-            </Text>
+            <Text style={[styles.qBadgeText, { color: colors.streak }]}>{item.questionNumber}</Text>
           </View>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t(saved ? 'removeBookmark' : 'addBookmark')}
+            accessibilityState={{ selected: saved }}
             onPress={() => toggleSavePattern(item.id)}
-            style={styles.bookmarkBtn}>
+            style={styles.bookmarkBtn}
+          >
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}
               size={20}
@@ -177,24 +173,33 @@ export default function LearnScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.patternTitle, { color: colors.text }]}>{item.title}</Text>
-        <Text style={[styles.patternMyanmar, { color: colors.textSecondary }]}>
-          {item.myanmarTitle}
-        </Text>
-
-        <View style={[styles.formulaBox, { backgroundColor: colors.cardMuted }]}>
-          <Text
-            style={[
-              styles.formulaText,
-              {
-                color: colors.text,
-                fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
-              },
-            ]}>
-            {item.patternFormula}
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={preferences.language === 'my' ? item.myanmarTitle : item.title}
+          onPress={() =>
+            router.push({ pathname: '/modal/pattern-detail', params: { id: item.id } })
+          }
+          style={{ minHeight: 44, gap: 10 }}
+        >
+          <Text style={[styles.patternTitle, { color: colors.text }]}>{item.title}</Text>
+          <Text style={[styles.patternMyanmar, { color: colors.textSecondary }]}>
+            {item.myanmarTitle}
           </Text>
-        </View>
 
+          <View style={[styles.formulaBox, { backgroundColor: colors.cardMuted }]}>
+            <Text
+              style={[
+                styles.formulaText,
+                {
+                  color: colors.text,
+                  fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
+                },
+              ]}
+            >
+              {item.patternFormula}
+            </Text>
+          </View>
+        </TouchableOpacity>
         {item.authorName ? (
           <View style={[styles.contributorFooter, { borderTopColor: colors.borderLight }]}>
             <View style={styles.contributorRow}>
@@ -213,37 +218,44 @@ export default function LearnScreen() {
             ) : null} */}
           </View>
         ) : null}
-      </TouchableOpacity>
+      </View>
     );
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <CurriculumStatus />
       {/* Title & Segmented Control */}
       <View style={styles.header}>
-        <Text style={[styles.pageTitle, { color: colors.text }]}>Learning Lab</Text>
+        <Text style={[styles.pageTitle, { color: colors.text }]}>{t('learn')}</Text>
 
         <View style={[styles.segmentContainer, { backgroundColor: colors.cardMuted }]}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeTab === 'vocab' }}
             onPress={() => setActiveTab('vocab')}
             style={[
               styles.segmentBtn,
-              activeTab === 'vocab' && [
-                styles.segmentBtnActive,
-                { backgroundColor: colors.card },
-              ],
-            ]}>
+              activeTab === 'vocab' && [styles.segmentBtnActive, { backgroundColor: colors.card }],
+            ]}
+          >
             <Text
               style={[
                 styles.segmentText,
                 { color: activeTab === 'vocab' ? colors.text : colors.textSecondary },
-              ]}>
+              ]}
+            >
               {/* Everyday → Academic ({vocabularies.length}) */}
-              Everyday → Academic
+              {t('spoken')} → {t('academic')}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeTab === 'patterns' }}
             onPress={() => setActiveTab('patterns')}
             style={[
               styles.segmentBtn,
@@ -251,41 +263,41 @@ export default function LearnScreen() {
                 styles.segmentBtnActive,
                 { backgroundColor: colors.card },
               ],
-            ]}>
+            ]}
+          >
             <Text
               style={[
                 styles.segmentText,
                 {
-                  color:
-                    activeTab === 'patterns' ? colors.text : colors.textSecondary,
+                  color: activeTab === 'patterns' ? colors.text : colors.textSecondary,
                 },
-              ]}>
+              ]}
+            >
               {/* Writing Patterns ({patterns.length}) */}
-              Writing Patterns
+              {t('patterns')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
         <View
-          style={[
-            styles.searchBar,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <Ionicons name="search" size={18} color={colors.textMuted} />
           <TextInput
+            accessibilityLabel={t(activeTab === 'vocab' ? 'searchVocab' : 'searchPatterns')}
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder={
-              activeTab === 'vocab'
-                ? 'Search Korean or Myanmar meaning...'
-                : 'Search patterns (e.g. Trend, Graph, Conclusion)...'
-            }
+            placeholder={t(activeTab === 'vocab' ? 'searchVocab' : 'searchPatterns')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t('clearSearch')}
+              onPress={() => setSearchQuery('')}
+            >
               <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           ) : null}
@@ -295,57 +307,55 @@ export default function LearnScreen() {
         <View style={styles.filterScroll}>
           {activeTab === 'vocab'
             ? CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => setSelectedCategory(cat)}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor:
-                      selectedCategory === cat ? colors.primary : colors.card,
-                    borderColor: colors.border,
-                  },
-                ]}>
-                <Text
+                <TouchableOpacity
+                  key={cat === 'All' ? t('all') : cat}
+                  onPress={() => setSelectedCategory(cat)}
                   style={[
-                    styles.chipText,
+                    styles.chip,
                     {
-                      color:
-                        selectedCategory === cat
-                          ? colors.primaryContrast
-                          : colors.textSecondary,
+                      backgroundColor: selectedCategory === cat ? colors.primary : colors.card,
+                      borderColor: colors.border,
                     },
-                  ]}>
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      {
+                        color:
+                          selectedCategory === cat ? colors.primaryContrast : colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {cat === 'All' ? t('all') : cat}
+                  </Text>
+                </TouchableOpacity>
+              ))
             : QUESTION_FILTERS.map((q) => (
-              <TouchableOpacity
-                key={q}
-                onPress={() => setSelectedQuestion(q)}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor:
-                      selectedQuestion === q ? colors.primary : colors.card,
-                    borderColor: colors.border,
-                  },
-                ]}>
-                <Text
+                <TouchableOpacity
+                  key={q === 'All' ? t('all') : q}
+                  onPress={() => setSelectedQuestion(q)}
                   style={[
-                    styles.chipText,
+                    styles.chip,
                     {
-                      color:
-                        selectedQuestion === q
-                          ? colors.primaryContrast
-                          : colors.textSecondary,
+                      backgroundColor: selectedQuestion === q ? colors.primary : colors.card,
+                      borderColor: colors.border,
                     },
-                  ]}>
-                  {q}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      {
+                        color:
+                          selectedQuestion === q ? colors.primaryContrast : colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {q === 'All' ? t('all') : q}
+                  </Text>
+                </TouchableOpacity>
+              ))}
         </View>
       </View>
 
@@ -369,8 +379,19 @@ export default function LearnScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={36} color={colors.textMuted} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No vocabulary matches found
+                {t('noMatches')}
               </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                  setSelectedQuestion('All');
+                }}
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={{ color: colors.accent }}>{t('clearFilters')}</Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -393,8 +414,19 @@ export default function LearnScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={36} color={colors.textMuted} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No writing patterns found
+                {t('noMatches')}
               </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                  setSelectedQuestion('All');
+                }}
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={{ color: colors.accent }}>{t('clearFilters')}</Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -424,7 +456,8 @@ const styles = StyleSheet.create({
   },
   segmentBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    minHeight: 48,
     borderRadius: 9,
     alignItems: 'center',
   },
@@ -445,7 +478,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 44,
+    minHeight: 48,
     gap: 8,
   },
   searchInput: {
@@ -460,7 +493,8 @@ const styles = StyleSheet.create({
   },
   chip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 12,
+    minHeight: 44,
     borderRadius: 20,
     borderWidth: 1,
   },
@@ -494,6 +528,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   bookmarkBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 4,
   },
   comparisonRow: {
@@ -604,4 +642,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

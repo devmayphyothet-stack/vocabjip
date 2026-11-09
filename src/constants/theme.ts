@@ -9,7 +9,7 @@ export const Colors = {
   light: {
     text: '#18181B',
     textSecondary: '#71717A',
-    textMuted: '#A1A1AA',
+    textMuted: '#71717A',
     background: '#FAF9F6', // Warm ivory paper background
     card: '#FFFFFF',
     cardMuted: '#F4F4F5',
