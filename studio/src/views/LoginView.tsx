@@ -353,7 +353,7 @@ export function LoginView() {
           )}
         </form>
 
-        {/* Invite link toggle (for teachers who have a code) */}
+        {/* Invite link toggle (for contributors who have a code) */}
         {mode === 'signin' && (
           <div className="pt-2 text-center">
             <button

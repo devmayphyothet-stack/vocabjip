@@ -4,7 +4,7 @@ import { useAuth } from '@/context/auth-context';
 
 export function useDailyStreak() {
   const { user } = useAuth();
-  const [state, setState] = useState<StreakState>(StreakService.getState());
+  const [state, setState] = useState<StreakState>(StreakService.getState(user?.id));
 
   useEffect(() => {
     // 1. Initialize streak with user id if available
@@ -13,7 +13,7 @@ export function useDailyStreak() {
     // 2. Subscribe to real-time updates
     const unsubscribe = StreakService.subscribe((newState) => {
       setState(newState);
-    });
+    }, user?.id);
 
     return unsubscribe;
   }, [user?.id]);

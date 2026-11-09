@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
+import { validateEssayEvaluation } from '@/lib/ai-validation';
 import { Platform } from 'react-native';
 import { AiEvaluationResult, AiEvaluationResponse } from '@/types/ai';
 
@@ -12,7 +14,7 @@ export function extractGeminiText(data: any): string | null {
       return parts[i].text;
     }
   }
-  return parts[parts.length - 1]?.text || null;
+  return null;
 }
 
 export async function callGeminiGenerateContent(
@@ -35,7 +37,7 @@ export async function callGeminiGenerateContent(
   const proxyUrl =
     Platform.OS === 'web' ? '/api/gemini' : 'https://vocabjip.vercel.app/api/gemini';
   try {
-    const proxyRes = await fetch(proxyUrl, {
+    const proxyRes = await fetchWithTimeout(proxyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -43,7 +45,7 @@ export async function callGeminiGenerateContent(
         model: initialModel,
         payload: bodyPayload,
       }),
-    });
+    }, 35000);
     const contentType = proxyRes.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const proxyJson = await proxyRes.json();
@@ -65,10 +67,10 @@ export async function callGeminiGenerateContent(
 
   const tryModel = async (targetModel: string) => {
     const cleanModel = targetModel.replace(/^models\//, '');
-    const url = `${GEMINI_API_URL}/${cleanModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-    const res = await fetch(url, {
+    const url = `${GEMINI_API_URL}/${cleanModel}:generateContent`;
+    const res = await fetchWithTimeout(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey },
       body: JSON.stringify(bodyPayload),
     });
     const data = await res.json().catch(() => ({}));
@@ -88,7 +90,7 @@ export async function callGeminiGenerateContent(
     (errMsg.toLowerCase().includes('api key not valid') ||
       errMsg.toLowerCase().includes('api_key_invalid'));
 
-  if (!isInvalidKey) {
+  if (!isInvalidKey && [404, 503].includes(attempt.status)) {
     const candidates: string[] = [];
     const matchRecommended = errMsg.match(/models\/(gemini-[a-zA-Z0-9.-]+)/);
     if (matchRecommended?.[1]) {
@@ -109,7 +111,7 @@ export async function callGeminiGenerateContent(
       }
     }
 
-    for (const candidate of candidates) {
+    for (const candidate of candidates.slice(0, 1)) {
       const retry = await tryModel(candidate);
       if (retry.ok) {
         cachedWorkingModel = retry.modelUsed;
@@ -167,9 +169,10 @@ Scoring dimensions:
   - Text organization & logic (글의 논리적 전개 구조) max 15
   - Academic language use & style (어휘 및 문법의 정확성과 다양성) max 15
 
+The estimatedScore MUST equal the sum of the three dimension scores.
 Respond ONLY with a valid JSON object matching this exact schema:
 {
-  "estimatedScore": <number between 1 and ${maxScore}>,
+  "estimatedScore": <number between 0 and ${maxScore}>,
   "overallSummary": "<2-3 encouraging and constructive sentences in Myanmar summarizing the writing>",
   "structureRating": {
     "score": <number>,
@@ -279,33 +282,12 @@ Please evaluate this essay according to the instructions and return only JSON.`;
       }
     }
 
+    if (!validateEssayEvaluation(parsed, questionType)) {
+      return { success: false, errorType: 'UNKNOWN', error: 'The AI returned incomplete or inconsistent feedback. Please retry; no score has been recorded.' };
+    }
     const result: AiEvaluationResult = {
-      questionType,
-      promptTopic,
-      essayText,
-      charCount: essayText.length,
-      estimatedScore: Math.min(maxScore, Math.max(1, parsed.estimatedScore || Math.round(maxScore * 0.7))),
-      maxScore,
-      overallSummary: parsed.overallSummary || 'စာရေးသားမှု ကောင်းမွန်ပါသည်။ အသေးစိတ် အကြံပြုချက်များကို လေ့လာပါ။',
-      structureRating: parsed.structureRating || {
-        score: Math.round(maxScore * 0.3),
-        max: Math.round(maxScore * 0.33),
-        comment: 'စာပိုဒ်ဖွဲ့စည်းပုံ ရှင်းလင်းပါသည်။',
-      },
-      contentRating: parsed.contentRating || {
-        score: Math.round(maxScore * 0.3),
-        max: Math.round(maxScore * 0.33),
-        comment: 'အဓိက အချက်အလက်များ ပြည့်စုံပါသည်။',
-      },
-      languageRating: parsed.languageRating || {
-        score: Math.round(maxScore * 0.3),
-        max: Math.round(maxScore * 0.33),
-        comment: 'သဒ္ဒါနှင့် ဝေါဟာရ အသုံးပြုမှု ကောင်းမွန်ပါသည်။',
-      },
-      strengths: parsed.strengths || ['ဝေါဟာရ အသုံးအနှုန်း ကောင်းမွန်ခြင်း'],
-      improvements: parsed.improvements || ['အပိုဒ်ကူး စကားလုံးများကို ပိုမို အသုံးပြုပါ'],
-      grammarCorrections: parsed.grammarCorrections || [],
-      vocabularySuggestions: parsed.vocabularySuggestions || [],
+      ...parsed,
+      questionType, promptTopic, essayText, charCount: essayText.length, maxScore,
       evaluatedAt: new Date().toISOString(),
     };
 

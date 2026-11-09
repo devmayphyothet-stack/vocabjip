@@ -136,7 +136,7 @@ export function AdminAnalyticsView() {
         }
       });
 
-      // Filter OUT Admin so only actual teachers/contributors are scored and ranked
+      // Filter OUT Admin so only actual contributors are scored and ranked
       const list = Object.values(statsMap)
         .filter(item => item.role === 'contributor')
         .map(item => ({

@@ -98,7 +98,7 @@ export default function ContributorsScreen() {
         { data: reviewRows },
       ] = await Promise.all([
         supabase
-          .from('profiles')
+          .from('contributor_directory')
           .select('id, display_name, role, created_at')
           .eq('role', 'contributor')
           .order('created_at', { ascending: true }),
@@ -115,9 +115,8 @@ export default function ContributorsScreen() {
           .select('id, author_name, created_by')
           .eq('status', 'approved'),
         supabase
-          .from('essay_submissions')
-          .select('id, reviewer_name, reviewed_by')
-          .eq('status', 'reviewed'),
+          .from('contributor_review_counts')
+          .select('reviewer_id, review_count'),
       ]);
 
       if (vocabRows || patternRows || stepRows || profileRows) {
@@ -156,10 +155,10 @@ export default function ContributorsScreen() {
         });
 
         (reviewRows || []).forEach((r: any) => {
-          const name = (r.reviewed_by && idToName.get(r.reviewed_by)) || r.reviewer_name;
+          const name = idToName.get(r.reviewer_id);
           if (name) {
-            const entry = getOrCreateByName(name, r.reviewed_by);
-            if (entry) entry.essayReviewCount += 1;
+            const entry = getOrCreateByName(name, r.reviewer_id);
+            if (entry) entry.essayReviewCount += r.review_count;
           }
         });
       }
@@ -266,7 +265,7 @@ export default function ContributorsScreen() {
           <BrandLogo size={64} rounded={true} containerStyle={{ marginVertical: 8 }} />
 
           <Text style={[styles.heroTitle, { color: colors.text }]}>
-            VocabJip exists solely thanks to{'\n'}our contributing teachers.
+            VocabJip exists solely thanks to{'\n'}our Contributors.
           </Text>
 
           <Text style={[styles.koreanQuote, { color: colors.accent }]}>
@@ -534,8 +533,7 @@ export default function ContributorsScreen() {
               Want to Contribute to VocabJip?
             </Text>
             <Text style={[styles.joinDesc, { color: colors.textSecondary }]}>
-              TOPIK Level 5/6 ရရှိထားသူများနှင့် ကိုရီးယားဘာသာစကား သင်ကြားနေသော ဆရာ၊
-              ဆရာမများအနေဖြင့် VocabJip Studio တွင် ပါဝင်ရေးသားလိုပါက Feedback မှတစ်ဆင့်
+              TOPIK Level 5/6 ရရှိထားသူများနှင့် ကိုရီးယားဘာသာစကား Contributors များအနေဖြင့် VocabJip Studio တွင် ပါဝင်ရေးသားလိုပါက Feedback မှတစ်ဆင့်
               ဆက်သွယ်နိုင်ပါသည်။
             </Text>
           </View>

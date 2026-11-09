@@ -1,3 +1,4 @@
+import { createDraftId, isUuid } from '@/lib/draft-utils';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -30,7 +31,7 @@ export default function WongojiEditorModal() {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
 
-  const { saveDraft } = useSaved();
+  const { saveDraft, syncStatus, drafts } = useSaved();
   const { isConnected } = useAi();
   const params = useLocalSearchParams<{
     draftId?: string;
@@ -41,7 +42,7 @@ export default function WongojiEditorModal() {
   }>();
 
   // Keep a stable draft ID for this editor session so saving/closing updates the same draft instead of duplicating
-  const sessionDraftIdRef = useRef<string>(params.draftId || `draft-${Date.now()}`);
+  const sessionDraftIdRef = useRef<string>(params.draftId && isUuid(params.draftId) ? params.draftId : createDraftId());
   const initialContentRef = useRef<string>(
     params.initialContent ||
       ((params.type || 'Q53') === 'Q53'
@@ -106,13 +107,17 @@ export default function WongojiEditorModal() {
 
   const handleManualSave = async () => {
     hasManuallySavedRef.current = true;
-    await saveDraft({
+    try { await saveDraft({
       id: sessionDraftIdRef.current,
       type,
       title: promptTitle,
       content,
       charCount: content.length,
     });
+    } catch (error: any) {
+      Alert.alert('Could not save draft', error.message);
+      return;
+    }
     if (content.trim().length > 10) {
       StreakService.recordActivity(user?.id);
     }
@@ -127,13 +132,13 @@ export default function WongojiEditorModal() {
     }
     hasManuallySavedRef.current = true;
     // Auto save draft before navigating using the stable session draft ID
-    await saveDraft({
+    try { await saveDraft({
       id: sessionDraftIdRef.current,
       type,
       title: promptTitle,
       content,
       charCount: content.length,
-    });
+    }); } catch (error: any) { Alert.alert('Could not save draft', error.message); return; }
 
     if (!isConnected) {
       router.push('/modal/ai-connect');
@@ -149,22 +154,22 @@ export default function WongojiEditorModal() {
     }
   };
 
-  const handleTeacherReview = async () => {
+  const handleContributorReview = async () => {
     if (!content.trim()) {
-      Alert.alert('Empty Draft', 'Please write some sentences before requesting a teacher review.');
+      Alert.alert('Empty Draft', 'Please write some sentences before requesting a contributor review.');
       return;
     }
     hasManuallySavedRef.current = true;
-    await saveDraft({
+    try { await saveDraft({
       id: sessionDraftIdRef.current,
       type,
       title: promptTitle,
       content,
       charCount: content.length,
-    });
+    }); } catch (error: any) { Alert.alert('Could not save draft', error.message); return; }
 
     router.push({
-      pathname: '/modal/teacher-review' as any,
+      pathname: '/modal/contributor-review',
       params: {
         essayText: content,
         questionType: type,
@@ -173,17 +178,15 @@ export default function WongojiEditorModal() {
     });
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     const isModified = content !== initialContentRef.current;
-    // Only auto-save on close if content is non-empty AND (user edited it OR it's a brand-new draft they saved)
-    if (content.trim() && (isModified || (params.draftId && hasManuallySavedRef.current))) {
-      saveDraft({
-        id: sessionDraftIdRef.current,
-        type,
-        title: promptTitle,
-        content,
-        charCount: content.length,
-      });
+    if (isModified || hasManuallySavedRef.current) {
+      try {
+        await saveDraft({ id: sessionDraftIdRef.current, type, title: promptTitle, content, charCount: content.length });
+      } catch (error: any) {
+        Alert.alert('Could not save draft', error.message);
+        return;
+      }
     }
     router.back();
   };
@@ -282,15 +285,19 @@ export default function WongojiEditorModal() {
             />
           </TouchableOpacity>
 
+        </View>
+      </View>
+
+      <View style={styles.reviewActions}>
           <TouchableOpacity
-            onPress={handleTeacherReview}
+            onPress={handleContributorReview}
             style={[
               styles.aiReviewBtn,
               { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' },
             ]}>
             <Ionicons name="school" size={14} color="#B45309" />
             <Text style={[styles.aiReviewBtnText, { color: '#B45309' }]}>
-              Teacher
+              Contributors
             </Text>
           </TouchableOpacity>
 
@@ -302,8 +309,10 @@ export default function WongojiEditorModal() {
               AI Review
             </Text>
           </TouchableOpacity>
-        </View>
       </View>
+      <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: colors.textSecondary, fontSize: 12 }}>
+        {!drafts.some(draft => draft.id === sessionDraftIdRef.current && draft.content === content) ? 'Unsaved changes · Tap Save' : syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing…' : syncStatus === 'pending' ? 'Saved on device · Sync pending' : syncStatus === 'error' ? 'Saved on device · Cloud sync needs retry' : 'Drafts save on this device'}
+      </Text>
 
       {/* Title & Target Bar */}
       <View style={styles.metaBar}>
@@ -312,7 +321,7 @@ export default function WongojiEditorModal() {
             {promptTitle}
           </Text>
           <Text style={[styles.targetInfo, { color: colors.textSecondary }]}>
-            Target: {charTarget} characters • Autosaved locally
+            Target: {charTarget} characters • Save to keep your changes
           </Text>
         </View>
 
@@ -491,11 +500,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  reviewActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: 8,
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.two,
+  },
   aiReviewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    height: 36,
+    minHeight: 44,
     paddingHorizontal: 10,
     borderRadius: 10,
     borderWidth: 1,

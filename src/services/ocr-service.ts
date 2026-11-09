@@ -1,4 +1,4 @@
-import { callGeminiGenerateContent } from '@/services/gemini-service';
+import { callGeminiGenerateContent, extractGeminiText } from '@/services/gemini-service';
 
 export interface UncertainWord {
   id: string;
@@ -18,7 +18,9 @@ export async function extractKoreanHandwriting(
   base64Image: string,
   apiKey?: string | null
 ): Promise<{ success: boolean; result?: OcrResult; error?: string }> {
-  // If API key is available, call Gemini Multimodal Vision
+  if (!base64Image.trim()) return { success: false, error: 'No image was received. Please select your photo again.' };
+  if (!apiKey?.trim()) return { success: false, error: 'Connect your Gemini key before scanning handwriting.' };
+  // Extract only from the selected image.
   if (apiKey && apiKey.trim()) {
     try {
       const prompt = `You are a specialized Korean OCR and handwriting recognition engine for TOPIK II Wongoji (원고지) manuscript papers.
@@ -64,9 +66,12 @@ Return ONLY a valid JSON object matching this schema:
 
       if (attempt.ok) {
         const data = attempt.data;
-        const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const rawJson = extractGeminiText(data);
         if (rawJson) {
           const parsed = JSON.parse(rawJson);
+          if (typeof parsed.extractedText !== 'string' || !parsed.extractedText.trim() || !['Q53', 'Q54'].includes(parsed.detectedQuestionType) || !Array.isArray(parsed.uncertainWords) || parsed.uncertainWords.some((word: any) => !word || typeof word.id !== 'string' || typeof word.word !== 'string' || typeof word.suggestedCorrection !== 'string' || typeof word.confidence !== 'number' || word.confidence < 0 || word.confidence > 1)) {
+            return { success: false, error: 'The image could not be read reliably. Try a clearer photo.' };
+          }
           return {
             success: true,
             result: {
@@ -78,36 +83,9 @@ Return ONLY a valid JSON object matching this schema:
           };
         }
       }
-    } catch (e: any) {
-      console.warn('Gemini OCR API failed, falling back to simulated extraction:', e);
+    } catch {
+      return { success: false, error: 'Scanning could not finish. Your photo was not converted. Please retry.' };
     }
   }
-
-  // Graceful Demo / Local simulation when key is not connected or image is demo
-  const sampleExtracted =
-    '최근 통계청 조사에 따르면 1인 가구의 비율이 지속적으로 증가하고 있다. 2015년 27%에서 2024년 35%로 약 8%p 상승하였다. 이러한 변화의 주된 원인으로는 청년층의 독립 증가와 고령화로 인한 독거 노인 가구 증가를 들 수 있다. 따라서 이에 맞춘 맞춤형 복지 정책과 사회적 지원 체계가 마련되어야 한다.';
-
-  return {
-    success: true,
-    result: {
-      extractedText: sampleExtracted,
-      charCount: sampleExtracted.length,
-      detectedQuestionType: 'Q53',
-      uncertainWords: [
-        {
-          id: 'u1',
-          word: '지속적으로',
-          suggestedCorrection: '지속적으로',
-          confidence: 0.78,
-        },
-        {
-          id: 'u2',
-          word: '마련되어야',
-          suggestedCorrection: '마련되어야',
-          confidence: 0.82,
-        },
-      ],
-    },
-  };
+  return { success: false, error: 'Could not read handwriting from this photo. Check your connection and Gemini key, then retry.' };
 }
-

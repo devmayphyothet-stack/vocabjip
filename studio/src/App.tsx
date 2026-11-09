@@ -20,7 +20,9 @@ import { LoginView } from './views/LoginView';
 import { Loader2 } from 'lucide-react';
 
 export function AppContent() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isContributor, refreshProfile, signOut } = useAuth();
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteError, setInviteError] = useState('');
   const [activeView, setActiveView] = useState<string>('');
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -75,6 +77,25 @@ export function AppContent() {
 
   if (!user) {
     return <LoginView />;
+  }
+
+  if (!isAdmin && !isContributor) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#FBFBF9] p-6">
+      <form className="max-w-md space-y-4" onSubmit={async event => {
+        event.preventDefault(); setInviteError('');
+        const { error } = await supabase.rpc('redeem_contributor_invitation', { invite_code: inviteCode.trim().toUpperCase() });
+        if (error) { setInviteError(error.message); return; }
+        sessionStorage.removeItem('vocabjip_pending_invite');
+        await refreshProfile();
+      }}>
+        <h1 className="text-xl font-bold">Contributors access</h1>
+        <p>Your account needs a Contributors invitation to use Studio.</p>
+        <label className="block">Invitation code<input className="block border rounded p-3 w-full" value={inviteCode} onChange={event => setInviteCode(event.target.value)} required /></label>
+        {inviteError && <p role="alert">{inviteError}</p>}
+        <button className="bg-blue-600 text-white rounded p-3" type="submit">Redeem invitation</button>
+        <button className="ml-4" type="button" onClick={() => { void signOut(); }}>Sign out</button>
+      </form>
+    </div>;
   }
 
   return (

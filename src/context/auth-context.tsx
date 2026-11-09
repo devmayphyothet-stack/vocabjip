@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { migrateLegacyStorage } from '@/lib/account-storage';
 import { AuthState, PendingOtpSession, UserProfile } from '@/types/auth';
 
 const STORAGE_KEYS = {
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Restore persistent state on mount
   const restoreSession = useCallback(async () => {
     try {
+      await migrateLegacyStorage();
       if (isSupabaseConfigured) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -110,6 +112,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsedOtp: PendingOtpSession = JSON.parse(storedOtpJson);
         const now = Date.now();
         if (parsedOtp.expiresAt > now) {
+          delete parsedOtp.password;
+          await AsyncStorage.setItem(STORAGE_KEYS.PENDING_OTP, JSON.stringify(parsedOtp));
           setPendingOtp(parsedOtp);
         } else {
           await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_OTP);
@@ -124,6 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     restoreSession();
+
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') { setUser(null); setIsGuest(false); }
+      if (event === 'TOKEN_REFRESHED' && !session) { setUser(null); }
+    });
 
     // Listen to AppState changes (e.g. user returns from Gmail)
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
@@ -143,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.remove();
+      authSubscription.unsubscribe();
     };
   }, [restoreSession]);
 
@@ -157,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const continueAsGuest = async () => {
+    if (user) await signOut();
     setIsGuest(true);
     await AsyncStorage.setItem(STORAGE_KEYS.IS_GUEST, 'true');
   };
@@ -171,7 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const session: PendingOtpSession = {
       email: trimmedEmail,
       displayName,
-      password,
       type: 'signup',
       sentAt: now,
       expiresAt: now + OTP_VALID_DURATION_MS,
@@ -376,7 +386,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (isSupabaseConfigured) {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
     }
     setUser(null);
     setIsGuest(false);

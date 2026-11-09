@@ -27,7 +27,7 @@ export function Navbar({ activeView, setActiveView, pendingReviewCount = 0 }: Na
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              {isAdmin ? 'Content Moderation & Teacher Management' : 'TOPIK II Curriculum Creator'}
+              {isAdmin ? 'Content Moderation & Contributor Management' : 'TOPIK II Curriculum Creator'}
             </p>
           </div>
         </div>
@@ -68,7 +68,7 @@ export function Navbar({ activeView, setActiveView, pendingReviewCount = 0 }: Na
         {/* User Info & Logout */}
         <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
           <div className="text-right hidden md:block">
-            <p className="text-xs font-bold text-slate-900 leading-tight">{user?.display_name || 'Teacher'}</p>
+            <p className="text-xs font-bold text-slate-900 leading-tight">{user?.display_name || 'Contributors'}</p>
             <p className="text-[11px] text-slate-400 font-mono">{user?.email}</p>
           </div>
 

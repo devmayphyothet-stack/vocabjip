@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+import { accountKey } from '@/lib/account-storage';
 
 const KEYS = {
   STREAK_DAYS: '@vocabjip:streak_days',
@@ -8,7 +9,6 @@ const KEYS = {
   DAILY_COMPLETED: '@vocabjip:daily_completed',
   DAILY_COMPLETED_DATE: '@vocabjip:daily_completed_date',
 };
-
 export interface StreakState {
   streakDays: number;
   dailyGoal: number;
@@ -16,206 +16,132 @@ export interface StreakState {
   lastActiveDate: string;
   isGoalAchieved: boolean;
 }
-
 type StreakListener = (state: StreakState) => void;
-const listeners = new Set<StreakListener>();
-
-// Format local date YYYY-MM-DD
-function getLocalDateString(d = new Date()): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+const states = new Map<string, StreakState>();
+const listeners = new Map<string, Set<StreakListener>>();
+const queues = new Map<string, Promise<unknown>>();
+const scope = (userId?: string) => userId || 'guest';
+function todayString() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
-
-// Calculate difference in days between two YYYY-MM-DD strings
-function getDaysDifference(dateStr1: string, dateStr2: string): number {
-  const d1 = new Date(dateStr1 + 'T00:00:00');
-  const d2 = new Date(dateStr2 + 'T00:00:00');
-  const diffTime = d2.getTime() - d1.getTime();
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
-}
-
-let currentState: StreakState = {
+const defaults = (): StreakState => ({
   streakDays: 1,
   dailyGoal: 3,
   dailyCompleted: 0,
-  lastActiveDate: getLocalDateString(),
+  lastActiveDate: todayString(),
   isGoalAchieved: false,
-};
-
-function notifyListeners() {
-  listeners.forEach((l) => l(currentState));
+});
+function serial<T>(userId: string | undefined, operation: () => Promise<T>) {
+  const key = scope(userId);
+  const promise = (queues.get(key) || Promise.resolve()).then(operation);
+  queues.set(
+    key,
+    promise.catch(() => {}),
+  );
+  return promise;
 }
-
+function publish(state: StreakState, userId?: string) {
+  states.set(scope(userId), state);
+  listeners.get(scope(userId))?.forEach((listener) => listener(state));
+}
+async function persist(state: StreakState, userId?: string) {
+  await Promise.all(
+    [
+      [KEYS.STREAK_DAYS, String(state.streakDays)],
+      [KEYS.LAST_ACTIVE_DATE, state.lastActiveDate],
+      [KEYS.DAILY_GOAL, String(state.dailyGoal)],
+      [KEYS.DAILY_COMPLETED, String(state.dailyCompleted)],
+      [KEYS.DAILY_COMPLETED_DATE, todayString()],
+    ].map(([key, value]) => AsyncStorage.setItem(accountKey(key, userId), value)),
+  );
+  publish(state, userId);
+  if (userId) {
+    void Promise.resolve(
+      supabase
+        .from('profiles')
+        .update({
+          streak_days: state.streakDays,
+          daily_goal: state.dailyGoal,
+          daily_completed: state.dailyCompleted,
+        })
+        .eq('id', userId),
+    )
+      .then(({ error }) => {
+        if (error) console.warn('Progress is saved on this device; cloud sync did not finish.');
+      })
+      .catch(() => {
+        /* Local progress remains available offline. */
+      });
+  }
+}
+async function initialize(userId?: string): Promise<StreakState> {
+  const today = todayString();
+  const [streak, last, goal, completed, completedDate] = await Promise.all(
+    Object.values(KEYS).map((key) => AsyncStorage.getItem(accountKey(key, userId))),
+  );
+  const difference = last
+    ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${last}T00:00:00Z`)) / 86400000)
+    : 0;
+  const dailyGoal = Math.max(1, Number(goal) || 3);
+  const dailyCompleted = completedDate === today ? Math.max(0, Number(completed) || 0) : 0;
+  const state = {
+    streakDays: difference > 1 ? 1 : Math.max(1, Number(streak) || 1) + (difference === 1 ? 1 : 0),
+    dailyGoal,
+    dailyCompleted,
+    lastActiveDate: today,
+    isGoalAchieved: dailyCompleted >= dailyGoal,
+  };
+  await persist(state, userId);
+  return state;
+}
 export const StreakService = {
-  subscribe(listener: StreakListener) {
-    listeners.add(listener);
-    listener(currentState);
+  subscribe(listener: StreakListener, userId?: string) {
+    const key = scope(userId);
+    if (!listeners.has(key)) listeners.set(key, new Set());
+    listeners.get(key)!.add(listener);
+    listener(this.getState(userId));
     return () => {
-      listeners.delete(listener);
+      listeners.get(key)?.delete(listener);
     };
   },
-
-  getState(): StreakState {
-    return currentState;
+  getState(userId?: string) {
+    return states.get(scope(userId)) || defaults();
   },
-
-  /**
-   * Initialize or update streak upon app open
-   */
-  async initStreak(userId?: string): Promise<StreakState> {
-    const today = getLocalDateString();
-
-    try {
-      // 1. Read stored values
-      const [storedStreak, storedLastDate, storedGoal, storedCompleted, storedCompletedDate] =
-        await Promise.all([
-          AsyncStorage.getItem(KEYS.STREAK_DAYS),
-          AsyncStorage.getItem(KEYS.LAST_ACTIVE_DATE),
-          AsyncStorage.getItem(KEYS.DAILY_GOAL),
-          AsyncStorage.getItem(KEYS.DAILY_COMPLETED),
-          AsyncStorage.getItem(KEYS.DAILY_COMPLETED_DATE),
-        ]);
-
-      let streakDays = storedStreak ? parseInt(storedStreak, 10) : 1;
-      let lastActiveDate = storedLastDate || today;
-      let dailyGoal = storedGoal ? parseInt(storedGoal, 10) : 3;
-      let dailyCompleted = storedCompleted ? parseInt(storedCompleted, 10) : 0;
-      let completedDate = storedCompletedDate || today;
-
-      // 2. Check daily completed reset (if date changed)
-      if (completedDate !== today) {
-        dailyCompleted = 0;
-        completedDate = today;
-        await AsyncStorage.setItem(KEYS.DAILY_COMPLETED, '0');
-        await AsyncStorage.setItem(KEYS.DAILY_COMPLETED_DATE, today);
+  initStreak(userId?: string) {
+    return serial(userId, async () => {
+      try {
+        return await initialize(userId);
+      } catch {
+        return this.getState(userId);
       }
-
-      // 3. Check streak progression
-      if (!storedLastDate) {
-        // First time
-        streakDays = 1;
-        lastActiveDate = today;
-      } else {
-        const diff = getDaysDifference(storedLastDate, today);
-        if (diff === 0) {
-          // Same day, streak intact
-        } else if (diff === 1) {
-          // Exactly 1 day later: consecutive day!
-          streakDays += 1;
-          lastActiveDate = today;
-        } else if (diff > 1) {
-          // Missed more than 1 day: streak reset
-          streakDays = 1;
-          lastActiveDate = today;
-        }
-      }
-
-      // 4. Save updated local storage
-      await Promise.all([
-        AsyncStorage.setItem(KEYS.STREAK_DAYS, streakDays.toString()),
-        AsyncStorage.setItem(KEYS.LAST_ACTIVE_DATE, lastActiveDate),
-        AsyncStorage.setItem(KEYS.DAILY_GOAL, dailyGoal.toString()),
-      ]);
-
-      currentState = {
-        streakDays,
-        dailyGoal,
-        dailyCompleted,
-        lastActiveDate,
-        isGoalAchieved: dailyCompleted >= dailyGoal,
-      };
-
-      notifyListeners();
-
-      // 5. Sync to Supabase if logged in
-      if (userId) {
-        supabase
-          .from('profiles')
-          .update({
-            streak_days: streakDays,
-            daily_goal: dailyGoal,
-            daily_completed: dailyCompleted,
-          })
-          .eq('id', userId)
-          .then(({ error }) => {
-            if (error) console.warn('Supabase streak sync error:', error.message);
-          });
-      }
-
-      return currentState;
-    } catch (e) {
-      console.warn('Error in initStreak:', e);
-      return currentState;
-    }
+    });
   },
-
-  /**
-   * Record completion of a learning activity (Quiz, Wongoji practice, Vocab review)
-   */
-  async recordActivity(userId?: string): Promise<StreakState> {
-    const today = getLocalDateString();
-
-    try {
-      let completed = currentState.dailyCompleted + 1;
-      const isGoalAchieved = completed >= currentState.dailyGoal;
-
-      await AsyncStorage.setItem(KEYS.DAILY_COMPLETED, completed.toString());
-      await AsyncStorage.setItem(KEYS.DAILY_COMPLETED_DATE, today);
-
-      currentState = {
-        ...currentState,
-        dailyCompleted: completed,
-        isGoalAchieved,
-      };
-
-      notifyListeners();
-
-      // Sync to Supabase if logged in
-      if (userId) {
-        supabase
-          .from('profiles')
-          .update({
-            daily_completed: completed,
-            streak_days: currentState.streakDays,
-          })
-          .eq('id', userId)
-          .then(({ error }) => {
-            if (error) console.warn('Supabase activity sync error:', error.message);
-          });
+  recordActivity(userId?: string) {
+    return serial(userId, async () => {
+      try {
+        const state = await initialize(userId);
+        const dailyCompleted = state.dailyCompleted + 1;
+        const next = {
+          ...state,
+          dailyCompleted,
+          isGoalAchieved: dailyCompleted >= state.dailyGoal,
+        };
+        await persist(next, userId);
+        return next;
+      } catch {
+        return this.getState(userId);
       }
-
-      return currentState;
-    } catch (e) {
-      console.warn('Error recording activity:', e);
-      return currentState;
-    }
+    });
   },
-
-  /**
-   * Set custom daily goal (e.g. 3, 5, or 10 activities per day)
-   */
-  async setDailyGoal(newGoal: number, userId?: string): Promise<void> {
-    if (newGoal <= 0) return;
-    try {
-      await AsyncStorage.setItem(KEYS.DAILY_GOAL, newGoal.toString());
-      currentState = {
-        ...currentState,
-        dailyGoal: newGoal,
-        isGoalAchieved: currentState.dailyCompleted >= newGoal,
-      };
-      notifyListeners();
-
-      if (userId) {
-        await supabase
-          .from('profiles')
-          .update({ daily_goal: newGoal })
-          .eq('id', userId);
-      }
-    } catch (e) {
-      console.warn('Error setting daily goal:', e);
-    }
+  setDailyGoal(newGoal: number, userId?: string) {
+    return serial(userId, async () => {
+      if (!Number.isInteger(newGoal) || newGoal < 1) return;
+      const state = await initialize(userId);
+      await persist(
+        { ...state, dailyGoal: newGoal, isGoalAchieved: state.dailyCompleted >= newGoal },
+        userId,
+      );
+    });
   },
 };
-

@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { accountKey } from '@/lib/account-storage';
+import { useAuth } from '@/context/auth-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { validateGeminiKey, requestEssayEvaluation } from '@/services/gemini-service';
 import { AiEvaluationResponse, AiEvaluationResult } from '@/types/ai';
@@ -27,18 +29,23 @@ interface AiContextType {
 const AiContext = createContext<AiContextType | undefined>(undefined);
 
 export function AiProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const active = useRef(true);
+  const storageKey = (key: string) => accountKey(key, user?.id);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [latestEvaluation, setLatestEvaluation] = useState<AiEvaluationResult | null>(null);
 
   // Load saved key on mount
   useEffect(() => {
+    active.current = true;
     (async () => {
       try {
         const [savedKey, savedEval] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY),
-          AsyncStorage.getItem(STORAGE_KEYS.LAST_EVALUATION),
+          AsyncStorage.getItem(storageKey(STORAGE_KEYS.GEMINI_API_KEY)),
+          AsyncStorage.getItem(storageKey(STORAGE_KEYS.LAST_EVALUATION)),
         ]);
+        if (!active.current) return;
         if (savedKey) {
           setApiKey(savedKey);
         }
@@ -49,6 +56,9 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
         console.warn('Failed to load saved AI key:', e);
       }
     })();
+    return () => { active.current = false; };
+    // AccountProviders remounts this provider on an account change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const maskedKey = apiKey
@@ -68,8 +78,9 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: check.error || 'Invalid API key.' };
       }
 
+      if (!active.current) return { success: false, error: 'Account changed. Please reconnect.' };
       setApiKey(trimmed);
-      await AsyncStorage.setItem(STORAGE_KEYS.GEMINI_API_KEY, trimmed);
+      await AsyncStorage.setItem(storageKey(STORAGE_KEYS.GEMINI_API_KEY), trimmed);
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message || 'Verification failed.' };
@@ -80,7 +91,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
   const removeKey = async () => {
     setApiKey(null);
-    await AsyncStorage.removeItem(STORAGE_KEYS.GEMINI_API_KEY);
+    await AsyncStorage.removeItem(storageKey(STORAGE_KEYS.GEMINI_API_KEY));
   };
 
   const evaluateEssay = async (
@@ -103,10 +114,10 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       promptTopic
     );
 
-    if (response.success && response.result) {
+    if (active.current && response.success && response.result) {
       setLatestEvaluation(response.result);
       await AsyncStorage.setItem(
-        STORAGE_KEYS.LAST_EVALUATION,
+        storageKey(STORAGE_KEYS.LAST_EVALUATION),
         JSON.stringify(response.result)
       );
     }

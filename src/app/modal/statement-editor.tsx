@@ -1,3 +1,5 @@
+import { createDraftId } from '@/lib/draft-utils';
+import { useRef } from 'react';
 import React, { useState } from 'react';
 import {
   View,
@@ -34,6 +36,7 @@ export default function StatementEditorModal() {
   const targetUniversity = params.university || 'Korean University';
   const targetMajor = params.major || 'Selected Major';
 
+  const draftIds = useRef<Record<string, string>>({});
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   // Store contents of the 4 sections
@@ -68,17 +71,19 @@ export default function StatementEditorModal() {
   };
 
   const handleSaveDraft = async () => {
-    await saveDraft({
-      id: `statement-${Date.now()}`,
+    const id = draftIds.current[currentSection.id] ||= createDraftId();
+    try { await saveDraft({
+      id,
       type: 'statement',
       title: `${targetUniversity} - ${targetMajor} (${currentSection.title})`,
       content: currentContent,
       charCount: currentContent.length,
     });
+    } catch (error: any) { Alert.alert('Could not save draft', error.message); return; }
     if (currentContent.trim().length > 10) {
       StreakService.recordActivity(user?.id);
     }
-    Alert.alert('Draft Saved', 'Your statement draft is safely saved on this device and synced.');
+    Alert.alert('Draft Saved', 'Your statement draft is saved on this device. Check Your Collection for cloud sync status.');
   };
 
   const handleGetAiFeedback = () => {

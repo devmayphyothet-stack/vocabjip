@@ -1,3 +1,4 @@
+import { accountKey } from '@/lib/account-storage';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -47,7 +48,7 @@ export default function QuizModal() {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(QUIZ_PROGRESS_KEY);
+        const raw = await AsyncStorage.getItem(accountKey(QUIZ_PROGRESS_KEY, user?.id));
         if (raw) {
           setProgressMap(JSON.parse(raw));
         }
@@ -75,7 +76,7 @@ export default function QuizModal() {
         ...prev,
         [stepId]: { bestScore: nextBest, passed: nextPassed },
       };
-      AsyncStorage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify(updated)).catch(() => { });
+      AsyncStorage.setItem(accountKey(QUIZ_PROGRESS_KEY, user?.id), JSON.stringify(updated)).catch(() => { });
       return updated;
     });
   };

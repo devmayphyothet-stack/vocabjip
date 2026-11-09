@@ -20,7 +20,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 export default function AccountPrivacyModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
-  const { user, isGuest, signOut } = useAuth();
+  const { user, isGuest } = useAuth();
   const { drafts, savedVocabIds, savedPatternIds } = useSaved();
 
   const [isExporting, setIsExporting] = useState(false);
@@ -48,22 +48,7 @@ export default function AccountPrivacyModal() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete your account?',
-      'This cannot be undone. Your cloud data will be removed, including your synced drafts, bookmarks, profile, and saved AI connection.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Forever',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/(tabs)');
-            Alert.alert('Account Deleted', 'Your local and cloud data has been purged.');
-          },
-        },
-      ]
-    );
+    Alert.alert('Account deletion is not available yet', 'Signing out does not delete your account or cloud data. Account deletion will be added in a future update.');
   };
 
   return (
@@ -133,7 +118,7 @@ export default function AccountPrivacyModal() {
               <Text style={[styles.cardTitle, { color: colors.text }]}>Cloud Data & Sync</Text>
               <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
                 {user && !isGuest
-                  ? `Authenticated as ${user.email}. Drafts and progress are automatically synchronized with Supabase.`
+                  ? `Authenticated as ${user.email}. Your Collection shows whether drafts and bookmarks have finished syncing.`
                   : 'Currently in Local Guest Mode. Data stays on this device.'}
               </Text>
             </View>
@@ -146,9 +131,9 @@ export default function AccountPrivacyModal() {
             styles.dangerCard,
             { backgroundColor: colors.card, borderColor: colors.errorLight },
           ]}>
-          <Text style={[styles.dangerTitle, { color: colors.error }]}>DANGER ZONE</Text>
+          <Text style={[styles.dangerTitle, { color: colors.error }]}>ACCOUNT DELETION</Text>
           <Text style={[styles.dangerDesc, { color: colors.textSecondary }]}>
-            Permanently remove your account, profile, synced drafts, and reset all local settings.
+            Account deletion is not available in this version. Signing out keeps your account and cloud data.
           </Text>
 
           <TouchableOpacity
@@ -156,7 +141,7 @@ export default function AccountPrivacyModal() {
             style={[styles.deleteBtn, { borderColor: colors.error }]}>
             <Ionicons name="trash-outline" size={16} color={colors.error} />
             <Text style={[styles.deleteBtnText, { color: colors.error }]}>
-              Delete your account
+              Account deletion unavailable
             </Text>
           </TouchableOpacity>
         </View>

@@ -784,43 +784,19 @@ export class KoreanDictionaryService {
       }
     } catch (_) {}
 
-    // 3. Fetch System Gemini API Keys from Admin `app_settings` (plus .env / user fallback)
-    const candidateKeys: string[] = [];
-    let modelName = 'gemini-2.5-flash';
-
+    // Shared dictionary credentials are read only inside the server function.
     try {
-      const { data: settingRow } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'system_gemini_config')
-        .maybeSingle();
-
-      if (settingRow?.value) {
-        const cfg = settingRow.value as any;
-        if (cfg.enabled !== false) {
-          if (cfg.primary_key?.trim()) candidateKeys.push(cfg.primary_key.trim());
-          if (cfg.backup_key?.trim()) candidateKeys.push(cfg.backup_key.trim());
-        }
-        if (cfg.model) modelName = cfg.model;
+      const { data, error } = await supabase.functions.invoke('vocab-lens', {
+        body: { word: trimmed, stem, context: essayContext?.slice(0, 220) },
+      });
+      if (!error && data?.definition?.myanmarMeaning) {
+        const definition: WordDefinition = data.definition;
+        await this.saveToLocalLensCache(trimmed, stem, definition);
+        return definition;
       }
-    } catch (_) {}
-
-    const envKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY?.trim();
-    if (envKey && !candidateKeys.includes(envKey)) {
-      candidateKeys.push(envKey);
-    }
-    if (userGeminiKey?.trim() && !candidateKeys.includes(userGeminiKey.trim())) {
-      candidateKeys.push(userGeminiKey.trim());
-    }
-
-    if (candidateKeys.length === 0) {
-      return {
-        ...syncResult,
-        myanmarMeaning: 'အဓိပ္ပာယ် အော်တိုဖော်ပြရန် System Gemini AI Key လိုအပ်ပါသည်',
-        englishMeaning: 'Admin can configure System Gemini Key in Studio -> System Gemini AI Keys',
-        isUnindexed: false,
-      };
-    }
+    } catch { /* Personal key or offline dictionary can still be used. */ }
+    const candidateKeys = userGeminiKey?.trim() ? [userGeminiKey.trim()] : [];
+    const modelName = 'gemini-flash-lite-latest';
 
     // 4. Try candidate keys in order (Auto-failover from Primary -> Backup if 429 Quota reached)
     for (const activeKey of candidateKeys) {
@@ -833,25 +809,6 @@ export class KoreanDictionaryService {
       );
       if (aiDef) {
         await this.saveToLocalLensCache(trimmed, stem, aiDef);
-        // Save to global Supabase cache in background so next learners get it for free
-        supabase
-          .from('vocab_lens_cache')
-          .upsert(
-            {
-              word_key: stem,
-              korean: trimmed,
-              root_word: aiDef.rootWord,
-              romaja: aiDef.romaja,
-              myanmar_meaning: aiDef.myanmarMeaning,
-              english_meaning: aiDef.englishMeaning,
-              spoken_equivalent: aiDef.spokenEquivalent || null,
-              written_equivalent: aiDef.writtenEquivalent || null,
-              topik_tip: aiDef.topikTip || null,
-              category: aiDef.category || 'General',
-            },
-            { onConflict: 'word_key' }
-          )
-          .then(() => {});
         return aiDef;
       }
     }

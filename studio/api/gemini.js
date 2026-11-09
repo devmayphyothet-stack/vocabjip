@@ -25,7 +25,11 @@ module.exports = async function handler(req, res) {
 
   try {
     const { apiKey, model, payload } = req.body || {};
-    const cleanKey = (apiKey || '').trim();
+    if (typeof apiKey !== 'string' || (model != null && (typeof model !== 'string' || !/^(models\/)?[a-zA-Z0-9.-]+$/.test(model))) || !payload || typeof payload !== 'object' || !Array.isArray(payload.contents)) {
+      return res.status(400).json({ error: { message: 'Invalid request' } });
+    }
+    if (JSON.stringify(payload).length > 8000000) return res.status(413).json({ error: { message: 'Request too large' } });
+    const cleanKey = apiKey.trim();
     if (!cleanKey) {
       return res.status(400).json({ error: { message: 'Missing Gemini API key' } });
     }
@@ -40,11 +44,12 @@ module.exports = async function handler(req, res) {
     let lastData = {};
     let lastModel = initialModel;
 
-    for (const targetModel of modelsToTry) {
-      const url = `${GEMINI_API_URL}/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+    for (const targetModel of modelsToTry.slice(0, 2)) {
+      const url = `${GEMINI_API_URL}/${targetModel}:generateContent`;
       const upstream = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(15000),
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey },
         body: JSON.stringify(payload),
       });
 
@@ -62,6 +67,7 @@ module.exports = async function handler(req, res) {
       lastData = data;
       lastModel = targetModel;
 
+      if (![404, 503].includes(upstream.status)) break;
       const errMsg = (data?.error?.message || '').toLowerCase();
       if (
         upstream.status === 400 &&
@@ -81,7 +87,7 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({
       ok: false,
       status: 500,
-      error: { message: err?.message || 'Proxy error' },
+      error: { message: 'AI request could not finish. Please retry.' },
     });
   }
 };

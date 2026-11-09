@@ -1,3 +1,4 @@
+import { validateStatementEvaluation } from '@/lib/ai-validation';
 import { StatementAiFeedback } from '@/types/statement';
 import { callGeminiGenerateContent } from '@/services/gemini-service';
 
@@ -87,19 +88,10 @@ Please evaluate this personal statement and return JSON only.`;
       else throw new Error('Could not parse response');
     }
 
-    const result: StatementAiFeedback = {
-      toneScore: parsed.toneScore || 8,
-      clarityScore: parsed.clarityScore || 8,
-      overallFeedback:
-        parsed.overallFeedback ||
-        'အခြေခံ ရည်ရွယ်ချက်ဖော်ပြမှု ရှင်းလင်းပါသည်။ ပိုမိုခိုင်မာစေရန် အသေးစိတ် အချက်အလက်များ ထပ်ဖြည့်နိုင်ပါသည်။',
-      professorImpression:
-        parsed.professorImpression ||
-        'စိတ်အားထက်သန်မှုရှိပြီး ရည်မှန်းချက်ရှင်းလင်းသော လျှောက်ထားသူတစ်ဦးအဖြစ် ရှုမြင်ခံရနိုင်ပါသည်။',
-      strengths: parsed.strengths || ['လျှောက်ထားရခြင်း ရည်ရွယ်ချက် ပေါ်လွင်ခြင်း'],
-      keyImprovements: parsed.keyImprovements || ['လက်တွေ့ အတွေ့အကြုံ ဥပမာတစ်ခု ထပ်ဖြည့်ပါ'],
-      sentenceImprovements: parsed.sentenceImprovements || [],
-    };
+    if (!validateStatementEvaluation(parsed)) {
+      return { success: false, error: 'The AI returned incomplete feedback. Please retry; no scores have been recorded.' };
+    }
+    const result: StatementAiFeedback = parsed;
 
     return { success: true, result };
   } catch (err: any) {

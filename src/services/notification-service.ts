@@ -55,6 +55,8 @@ export const NotificationService = {
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('daily-streak', {
           name: 'Daily Study Reminders',
+          // Expo exports AndroidImportance through its platform module; TypeScript verifies this API.
+          // eslint-disable-next-line import/namespace
           importance: Notifications.AndroidImportance.HIGH,
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#2563EB',

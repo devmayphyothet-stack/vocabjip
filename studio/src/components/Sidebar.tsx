@@ -78,13 +78,13 @@ export function Sidebar({ activeView, setActiveView, pendingReviewCount = 0 }: S
     {
       id: 'essay-reviews',
       label: 'Student Essay Grading',
-      subtitle: 'Q53 & Q54 Teacher Evaluations',
+      subtitle: 'Q53 & Q54 Contributors Evaluations',
       icon: FileText,
     },
     {
       id: 'invitations',
       label: 'Contributor Invites',
-      subtitle: 'Magic links for teachers',
+      subtitle: 'Magic links for Contributors',
       icon: KeyRound,
     },
     {

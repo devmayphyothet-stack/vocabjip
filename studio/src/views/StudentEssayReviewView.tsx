@@ -205,7 +205,7 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
         <div>
           <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
             <FileEdit className="w-4 h-4" />
-            <span>Human Teacher Evaluation • Q53 & Q54</span>
+            <span>Contributors Evaluation • Q53 & Q54</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Student Essay Grading Queue
@@ -239,7 +239,7 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
       <div className="flex flex-wrap items-center gap-2">
         {[
           { id: 'all', label: `All Submissions (${submissions.length})` },
-          { id: 'pending', label: `⏳ Waiting for Teacher (${pendingCount})` },
+          { id: 'pending', label: `⏳ Waiting for Contributors (${pendingCount})` },
           { id: 'in_review', label: `✍️ Currently In Review (${inReviewCount})` },
           { id: 'reviewed', label: `✅ Graded (${reviewedCount})` },
         ].map((tab) => (
@@ -309,7 +309,7 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
                     )}
                     {item.status === 'in_review' && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 flex items-center gap-1">
-                        <Lock className="w-3 h-3" /> In Review ({item.reviewer_name || 'Teacher'})
+                        <Lock className="w-3 h-3" /> In Review ({item.reviewer_name || 'Contributors'})
                       </span>
                     )}
                     {item.status === 'reviewed' && (
@@ -500,7 +500,7 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    💬 အထွေထွေ သုံးသပ်ချက်နှင့် အားပေးစကား (Overall Teacher Comment in Myanmar)
+                    💬 အထွေထွေ သုံးသပ်ချက်နှင့် အားပေးစကား (Overall Contributors Comment in Myanmar)
                   </label>
                   <textarea
                     rows={3}
@@ -530,7 +530,7 @@ export function StudentEssayReviewView({ onReviewCompleted }: StudentEssayReview
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>Submit Teacher Evaluation to Student</span>
+                        <span>Submit Contributors Evaluation to Student</span>
                       </>
                     )}
                   </button>

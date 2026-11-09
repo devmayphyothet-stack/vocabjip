@@ -77,7 +77,7 @@ export function QuizStudioView({ onSubmitted }: { onSubmitted?: () => void }) {
           supabase.from('quiz_steps').select('*').order('step_number', { ascending: true }),
           supabase.from('vocabularies').select('id, created_by, status'),
           supabase.from('sentence_patterns').select('id, created_by, status'),
-          supabase.from('profiles').select('id, display_name, email, role'),
+          supabase.from('contributor_directory').select('id, display_name, role'),
         ]);
 
       if (tData) setTopics(tData as QuizTopicRecord[]);

@@ -137,7 +137,7 @@ export function AdminInvitationsView() {
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Contributor Invitations</h1>
           <p className="text-slate-500 text-xs mt-1">
-            Generate magic invitation codes for TOPIK teachers, university mentors, and advanced learners.
+            Generate magic invitation codes for TOPIK Contributors, university mentors, and advanced learners.
           </p>
         </div>
 
@@ -321,7 +321,7 @@ export function AdminInvitationsView() {
                     <span>Invitation Created Successfully!</span>
                   </div>
                   <p className="text-xs text-emerald-700">
-                    Share this magic onboarding link with the teacher/contributor:
+                    Share this magic onboarding link with the Contributor:
                   </p>
                   <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-emerald-300">
                     <input
@@ -354,7 +354,7 @@ export function AdminInvitationsView() {
                   </label>
                   <div className="p-3 rounded-xl border border-blue-500 bg-blue-50 text-blue-700 text-xs font-bold flex items-center gap-2">
                     <UserCheck className="w-4 h-4" />
-                    <span>Verified Contributor (TOPIK Teacher / Mentor)</span>
+                    <span>Verified Contributor (TOPIK Contributor / Mentor)</span>
                   </div>
                 </div>
 

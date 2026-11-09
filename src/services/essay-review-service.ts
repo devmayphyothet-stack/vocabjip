@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+import { accountKey } from '@/lib/account-storage';
+import { createDraftId, isUuid } from '@/lib/draft-utils';
 
-const LOCAL_ESSAY_REVIEWS_KEY = 'vocabjip_teacher_essay_reviews_v1';
-
-export interface TeacherEssaySubmission {
+const CACHE_KEY = 'contributor_essay_reviews_v2';
+export interface ContributorEssaySubmission {
   id: string;
   student_id?: string | null;
   student_name: string;
@@ -12,6 +13,7 @@ export interface TeacherEssaySubmission {
   content: string;
   char_count: number;
   status: 'pending' | 'in_review' | 'reviewed';
+  deliveryStatus?: 'queued' | 'sent' | 'local_only';
   score?: number | null;
   max_score: number;
   strengths?: string | null;
@@ -24,116 +26,127 @@ export interface TeacherEssaySubmission {
   reviewed_at?: string | null;
   created_at: string;
 }
-
+const queues = new Map<string, Promise<unknown>>();
+function serial<T>(userId: string | undefined, operation: () => Promise<T>): Promise<T> {
+  const key = accountKey(CACHE_KEY, userId);
+  const result = (queues.get(key) || Promise.resolve()).then(operation);
+  queues.set(
+    key,
+    result.catch(() => {}),
+  );
+  return result;
+}
+async function readCache(userId?: string): Promise<ContributorEssaySubmission[]> {
+  const raw = await AsyncStorage.getItem(accountKey(CACHE_KEY, userId));
+  if (raw) return JSON.parse(raw);
+  const legacy = await AsyncStorage.getItem(
+    accountKey('vocabjip_teacher_essay_reviews_v1', userId),
+  );
+  const list: ContributorEssaySubmission[] = legacy ? JSON.parse(legacy) : [];
+  // Never surface another account's cached submissions. Old local-only items require a new explicit submission.
+  return list
+    .filter((item) => (item.student_id || undefined) === userId)
+    .map((item) => ({
+      ...item,
+      deliveryStatus: item.id.startsWith('local-') ? 'local_only' : 'sent',
+    }));
+}
+async function writeCache(items: ContributorEssaySubmission[], userId?: string) {
+  await AsyncStorage.setItem(accountKey(CACHE_KEY, userId), JSON.stringify(items));
+}
+async function deliver(
+  item: ContributorEssaySubmission,
+  userId?: string,
+): Promise<ContributorEssaySubmission> {
+  if (!userId || !isUuid(item.id)) return item;
+  try {
+    const { data: existing, error: lookupError } = await supabase
+      .from('essay_submissions')
+      .select('*')
+      .eq('id', item.id)
+      .eq('student_id', userId)
+      .maybeSingle();
+    if (lookupError) return item;
+    if (existing) return { ...existing, deliveryStatus: 'sent' };
+    const { data, error } = await supabase
+      .from('essay_submissions')
+      .insert({
+        id: item.id,
+        student_id: userId,
+        student_name: item.student_name,
+        question_type: item.question_type,
+        prompt_title: item.prompt_title,
+        content: item.content,
+        char_count: item.char_count,
+        status: 'pending',
+        max_score: item.max_score,
+      })
+      .select()
+      .single();
+    if (!error && data) return { ...data, deliveryStatus: 'sent' };
+  } catch {
+    /* Keep the local copy queued. */
+  }
+  return item;
+}
 export const EssayReviewService = {
-  async getMySubmissions(userId?: string): Promise<TeacherEssaySubmission[]> {
-    let localItems: TeacherEssaySubmission[] = [];
-    try {
-      const raw = await AsyncStorage.getItem(LOCAL_ESSAY_REVIEWS_KEY);
-      if (raw) {
-        localItems = JSON.parse(raw);
-      }
-    } catch (e) {
-      console.warn('Failed reading local essay reviews:', e);
-    }
-
-    let remoteItems: TeacherEssaySubmission[] = [];
-    try {
-      let query = supabase
-        .from('essay_submissions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(30);
-
+  getMySubmissions(userId?: string): Promise<ContributorEssaySubmission[]> {
+    return serial(userId, async () => {
+      let items = await readCache(userId);
       if (userId) {
-        // Show the student's own submissions plus public mentor-reviewed showcase submissions
-        query = query.or(`student_id.eq.${userId},student_id.is.null`);
+        for (let index = 0; index < items.length; index++) {
+          if (items[index].deliveryStatus === 'queued')
+            items[index] = await deliver(items[index], userId);
+        }
+        try {
+          const { data, error } = await supabase
+            .from('essay_submissions')
+            .select('*')
+            .eq('student_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (!error && data) {
+            const map = new Map(items.map((item) => [item.id, item]));
+            data.forEach((item) => map.set(item.id, { ...item, deliveryStatus: 'sent' }));
+            items = [...map.values()];
+          }
+        } catch {
+          /* Cached results remain available offline. */
+        }
       }
-
-      const { data, error } = await query;
-      if (!error && data) {
-        remoteItems = data as TeacherEssaySubmission[];
-      }
-    } catch (e) {
-      // Fallback to local cache if table is not yet created or offline
-    }
-
-    // Merge remote and local by ID (prefer remote as it has latest teacher grading)
-    const map = new Map<string, TeacherEssaySubmission>();
-    for (const item of localItems) {
-      map.set(item.id, item);
-    }
-    for (const item of remoteItems) {
-      map.set(item.id, item);
-    }
-
-    return Array.from(map.values()).sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+      items.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+      await writeCache(items, userId);
+      return items;
+    });
   },
-
-  async submitEssayForTeacherReview(params: {
+  submitEssayForContributorReview(params: {
     userId?: string;
     studentName?: string;
     questionType: 'Q53' | 'Q54';
     promptTopic: string;
     essayText: string;
-  }): Promise<TeacherEssaySubmission> {
-    const maxScore = params.questionType === 'Q53' ? 30 : 50;
-    const cleanText = params.essayText.trim();
-    const newLocalSubmission: TeacherEssaySubmission = {
-      id: `local-sub-${Date.now()}`,
-      student_id: params.userId || null,
-      student_name: params.studentName || 'TOPIK Learner',
-      question_type: params.questionType,
-      prompt_title: params.promptTopic,
-      content: cleanText,
-      char_count: cleanText.length,
-      status: 'pending',
-      max_score: maxScore,
-      created_at: new Date().toISOString(),
-    };
-
-    // Try inserting into Supabase cloud first
-    if (params.userId) {
-      try {
-        const { data, error } = await supabase
-          .from('essay_submissions')
-          .insert({
-            student_id: params.userId,
-            student_name: params.studentName || 'TOPIK Learner',
-            question_type: params.questionType,
-            prompt_title: params.promptTopic,
-            content: cleanText,
-            char_count: cleanText.length,
-            status: 'pending',
-            max_score: maxScore,
-          })
-          .select()
-          .single();
-
-        if (!error && data) {
-          await this.saveToLocalCache(data as TeacherEssaySubmission);
-          return data as TeacherEssaySubmission;
-        }
-      } catch (e) {
-        console.warn('Cloud essay submission fallback to local:', e);
-      }
-    }
-
-    await this.saveToLocalCache(newLocalSubmission);
-    return newLocalSubmission;
-  },
-
-  async saveToLocalCache(submission: TeacherEssaySubmission): Promise<void> {
-    try {
-      const raw = await AsyncStorage.getItem(LOCAL_ESSAY_REVIEWS_KEY);
-      const list: TeacherEssaySubmission[] = raw ? JSON.parse(raw) : [];
-      const filtered = list.filter((item) => item.id !== submission.id);
-      const updated = [submission, ...filtered];
-      await AsyncStorage.setItem(LOCAL_ESSAY_REVIEWS_KEY, JSON.stringify(updated));
-    } catch (e) {
-      console.warn('Error saving local essay submission:', e);
-    }
+  }): Promise<ContributorEssaySubmission> {
+    return serial(params.userId, async () => {
+      const content = params.essayText.trim();
+      if (!content) throw new Error('Write your essay before submitting.');
+      const item: ContributorEssaySubmission = {
+        id: createDraftId(),
+        student_id: params.userId || null,
+        student_name: params.studentName || 'TOPIK Learner',
+        question_type: params.questionType,
+        prompt_title: params.promptTopic,
+        content,
+        char_count: content.length,
+        status: 'pending',
+        deliveryStatus: 'queued',
+        max_score: params.questionType === 'Q53' ? 30 : 50,
+        created_at: new Date().toISOString(),
+      };
+      const items = await readCache(params.userId);
+      await writeCache([item, ...items], params.userId);
+      const result = await deliver(item, params.userId);
+      await writeCache([result, ...items], params.userId);
+      return result;
+    });
   },
 };

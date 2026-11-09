@@ -1,27 +1,41 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { AppState, ActivityIndicator, View, Text, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
+import { accountKey } from '@/lib/account-storage';
+import { createDraftId, Draft, isUuid, mergeDrafts } from '@/lib/draft-utils';
 
-const STORAGE_KEYS = {
-  SAVED_VOCAB_IDS: '@vocabjip/saved_vocab_ids',
-  SAVED_PATTERN_IDS: '@vocabjip/saved_pattern_ids',
-  DRAFTS: '@vocabjip/saved_drafts',
-};
-
-export interface SavedDraft {
-  id: string;
-  type: 'Q53' | 'Q54' | 'statement';
-  title: string;
-  content: string;
-  charCount: number;
-  updatedAt: string;
-}
-
-interface SavedContextType {
+export type SavedDraft = Draft;
+type SyncStatus = 'local' | 'pending' | 'syncing' | 'synced' | 'error';
+interface SavedState {
+  revision: number;
   savedVocabIds: string[];
   savedPatternIds: string[];
   drafts: SavedDraft[];
+  vocabChanges: Record<string, boolean>;
+  patternChanges: Record<string, boolean>;
+  pendingDraftIds: string[];
+  deletedDraftIds: string[];
+}
+const emptyState = (): SavedState => ({
+  revision: 0,
+  savedVocabIds: [],
+  savedPatternIds: [],
+  drafts: [],
+  vocabChanges: {},
+  patternChanges: {},
+  pendingDraftIds: [],
+  deletedDraftIds: [],
+});
+interface SavedContextType extends Pick<
+  SavedState,
+  'savedVocabIds' | 'savedPatternIds' | 'drafts'
+> {
+  syncStatus: SyncStatus;
+  hasGuestItems: boolean;
+  importGuestItems: () => Promise<void>;
+  retrySync: () => Promise<void>;
   isVocabSaved: (id: string) => boolean;
   toggleSaveVocab: (id: string) => Promise<void>;
   isPatternSaved: (id: string) => boolean;
@@ -29,243 +43,318 @@ interface SavedContextType {
   saveDraft: (draft: Omit<SavedDraft, 'updatedAt'>) => Promise<void>;
   deleteDraft: (id: string) => Promise<void>;
 }
-
 const SavedContext = createContext<SavedContextType | undefined>(undefined);
+
+async function loadState(userId?: string): Promise<SavedState> {
+  const raw = await AsyncStorage.getItem(accountKey('collection_v1', userId));
+  if (raw) return { ...emptyState(), ...JSON.parse(raw) };
+  const keys = [
+    '@vocabjip/saved_vocab_ids',
+    '@vocabjip/saved_pattern_ids',
+    '@vocabjip/saved_drafts',
+  ];
+  const [vocabs, patterns, drafts] = await Promise.all(
+    keys.map((key) => AsyncStorage.getItem(accountKey(key, userId))),
+  );
+  const state = emptyState();
+  state.savedVocabIds = vocabs ? JSON.parse(vocabs) : [];
+  state.savedPatternIds = patterns ? JSON.parse(patterns) : [];
+  state.drafts = (drafts ? JSON.parse(drafts) : []).map((draft: Draft) => ({
+    ...draft,
+    id: isUuid(draft.id) ? draft.id : createDraftId(),
+  }));
+  state.pendingDraftIds = state.drafts.map((d) => d.id);
+  state.vocabChanges = Object.fromEntries(state.savedVocabIds.map((id) => [id, true]));
+  state.patternChanges = Object.fromEntries(state.savedPatternIds.map((id) => [id, true]));
+  await AsyncStorage.setItem(accountKey('collection_v1', userId), JSON.stringify(state));
+  return state;
+}
+const hasPending = (s: SavedState) =>
+  s.pendingDraftIds.length +
+    s.deletedDraftIds.length +
+    Object.keys(s.vocabChanges).length +
+    Object.keys(s.patternChanges).length >
+  0;
 
 export function SavedProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [savedVocabIds, setSavedVocabIds] = useState<string[]>(['v-1', 'v-2']);
-  const [savedPatternIds, setSavedPatternIds] = useState<string[]>(['p-1']);
-  const [drafts, setDrafts] = useState<SavedDraft[]>([
-    {
-      id: 'd-1',
-      type: 'Q53',
-      title: '인터넷 사용 통계 (Internet Usage)',
-      content:
-        '조사 결과에 따르면 2020년 65%에서 2024년 85%로 크게 증가하였다. 이러한 변화의 원인으로는 스마트폰 보급 확대를 들 수 있다.',
-      charCount: 78,
-      updatedAt: new Date().toISOString(),
-    },
-  ]);
-
-  // Initial load from local AsyncStorage
-  useEffect(() => {
-    (async () => {
+  const userId = user?.id;
+  const storageKey = accountKey('collection_v1', userId);
+  const [state, setState] = useState<SavedState>(emptyState);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadError, setLoadError] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('local');
+  const [hasGuestItems, setHasGuestItems] = useState(false);
+  const current = useRef(state);
+  const mounted = useRef(true);
+  const syncInFlight = useRef<Promise<void> | null>(null);
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = queue.current.then(operation);
+    queue.current = result.catch(() => {});
+    return result;
+  }
+  async function persist(next: SavedState) {
+    await AsyncStorage.setItem(storageKey, JSON.stringify(next));
+    current.current = next;
+    if (mounted.current) setState(next);
+  }
+  const retrySync = (): Promise<void> => {
+    if (!userId || !isSupabaseConfigured || !mounted.current) return Promise.resolve();
+    if (syncInFlight.current) return syncInFlight.current;
+    let changedDuringSync = false;
+    const work = async () => {
+      setSyncStatus('syncing');
+      const next: SavedState = await enqueue(async () =>
+        JSON.parse(JSON.stringify(current.current)),
+      );
+      const baselineRevision = next.revision;
       try {
-        const [vocabsJson, patternsJson, draftsJson] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEYS.SAVED_VOCAB_IDS),
-          AsyncStorage.getItem(STORAGE_KEYS.SAVED_PATTERN_IDS),
-          AsyncStorage.getItem(STORAGE_KEYS.DRAFTS),
+        for (const [table, changes, column] of [
+          ['saved_vocabs', next.vocabChanges, 'vocab_id'],
+          ['saved_patterns', next.patternChanges, 'pattern_id'],
+        ] as const) {
+          for (const [id, saved] of Object.entries(changes)) {
+            const result = saved
+              ? await supabase
+                  .from(table)
+                  .upsert({ user_id: userId, [column]: id }, { onConflict: `user_id,${column}` })
+              : await supabase.from(table).delete().eq('user_id', userId).eq(column, id);
+            if (result.error) throw result.error;
+            delete changes[id];
+          }
+        }
+        for (const id of [...next.deletedDraftIds]) {
+          const { error } = await supabase
+            .from('drafts')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId);
+          if (error) throw error;
+          next.deletedDraftIds = next.deletedDraftIds.filter((value) => value !== id);
+        }
+        for (const id of [...next.pendingDraftIds]) {
+          const draft = next.drafts.find((d) => d.id === id);
+          if (!draft) continue;
+          const { data, error } = await supabase.rpc('save_draft_if_newer', {
+            draft_id: id,
+            draft_type: draft.type,
+            draft_title: draft.title,
+            draft_content: draft.content,
+            draft_char_count: draft.charCount,
+            draft_updated_at: draft.updatedAt,
+          });
+          if (error) throw error;
+          next.pendingDraftIds = next.pendingDraftIds.filter((value) => value !== id);
+          if (data === false) {
+            // Keep a separate copy rather than discard writing when another device saved a newer version.
+            const recovered = {
+              ...draft,
+              id: createDraftId(),
+              title: `${draft.title} (Recovered copy)`,
+              updatedAt: new Date().toISOString(),
+            };
+            next.drafts = [...next.drafts.filter((d) => d.id !== id), recovered];
+            next.pendingDraftIds.push(recovered.id);
+          }
+        }
+        const [vocabs, patterns, drafts] = await Promise.all([
+          supabase.from('saved_vocabs').select('vocab_id').eq('user_id', userId),
+          supabase.from('saved_patterns').select('pattern_id').eq('user_id', userId),
+          supabase.from('drafts').select('*').eq('user_id', userId),
         ]);
-        if (vocabsJson) setSavedVocabIds(JSON.parse(vocabsJson));
-        if (patternsJson) setSavedPatternIds(JSON.parse(patternsJson));
-        if (draftsJson) setDrafts(JSON.parse(draftsJson));
-      } catch (e) {
-        console.warn('Failed to load local saved items:', e);
-      }
-    })();
-  }, []);
-
-  // Sync with Supabase whenever authenticated user changes
-  const syncWithSupabase = useCallback(async () => {
-    if (!user || !isSupabaseConfigured) return;
-
-    try {
-      // 1. Fetch cloud saved vocabs
-      const { data: cloudVocabs } = await supabase
-        .from('saved_vocabs')
-        .select('vocab_id')
-        .eq('user_id', user.id);
-
-      // 2. Fetch cloud saved patterns
-      const { data: cloudPatterns } = await supabase
-        .from('saved_patterns')
-        .select('pattern_id')
-        .eq('user_id', user.id);
-
-      // 3. Fetch cloud drafts
-      const { data: cloudDrafts } = await supabase
-        .from('drafts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
-
-      // Merge cloud vocabs with any local vocabs
-      const cloudVocabIds = (cloudVocabs || []).map((r: any) => r.vocab_id);
-      const mergedVocabIds = Array.from(new Set([...savedVocabIds, ...cloudVocabIds]));
-      setSavedVocabIds(mergedVocabIds);
-      AsyncStorage.setItem(STORAGE_KEYS.SAVED_VOCAB_IDS, JSON.stringify(mergedVocabIds));
-
-      // Upload local vocabs that are missing in cloud
-      const missingInCloudVocabs = savedVocabIds.filter((id) => !cloudVocabIds.includes(id));
-      if (missingInCloudVocabs.length > 0) {
-        await supabase.from('saved_vocabs').upsert(
-          missingInCloudVocabs.map((vocab_id) => ({
-            user_id: user.id,
-            vocab_id,
-          }))
+        if (vocabs.error || patterns.error || drafts.error)
+          throw vocabs.error || patterns.error || drafts.error;
+        next.savedVocabIds = vocabs.data.map((row) => row.vocab_id);
+        next.savedPatternIds = patterns.data.map((row) => row.pattern_id);
+        next.drafts = mergeDrafts(
+          next.drafts.filter((d) => next.pendingDraftIds.includes(d.id)),
+          drafts.data.map((row) => ({
+            id: row.id,
+            type: row.type,
+            title: row.title,
+            content: row.content || '',
+            charCount: row.char_count || 0,
+            updatedAt: row.updated_at,
+          })),
+          next.deletedDraftIds,
         );
+        await enqueue(async () => {
+          changedDuringSync = current.current.revision !== baselineRevision;
+          if (!changedDuringSync) await persist(next);
+          if (mounted.current)
+            setSyncStatus(changedDuringSync || hasPending(next) ? 'pending' : 'synced');
+        });
+      } catch {
+        // Persist successful operations and leave the rest queued for retry.
+        await enqueue(async () => {
+          changedDuringSync = current.current.revision !== baselineRevision;
+          try {
+            if (!changedDuringSync) await persist(next);
+          } catch {
+            /* Keep the previous local snapshot. */
+          }
+          if (mounted.current) setSyncStatus('error');
+        });
       }
-
-      // Merge patterns
-      const cloudPatternIds = (cloudPatterns || []).map((r: any) => r.pattern_id);
-      const mergedPatternIds = Array.from(new Set([...savedPatternIds, ...cloudPatternIds]));
-      setSavedPatternIds(mergedPatternIds);
-      AsyncStorage.setItem(STORAGE_KEYS.SAVED_PATTERN_IDS, JSON.stringify(mergedPatternIds));
-
-      // Upload local patterns missing in cloud
-      const missingInCloudPatterns = savedPatternIds.filter((id) => !cloudPatternIds.includes(id));
-      if (missingInCloudPatterns.length > 0) {
-        await supabase.from('saved_patterns').upsert(
-          missingInCloudPatterns.map((pattern_id) => ({
-            user_id: user.id,
-            pattern_id,
-          }))
-        );
-      }
-
-      // Merge drafts
-      if (cloudDrafts && cloudDrafts.length > 0) {
-        const formattedCloudDrafts: SavedDraft[] = cloudDrafts.map((d: any) => ({
-          id: d.id,
-          type: d.type,
-          title: d.title,
-          content: d.content || '',
-          charCount: d.char_count || 0,
-          updatedAt: d.updated_at,
-        }));
-        setDrafts(formattedCloudDrafts);
-        AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(formattedCloudDrafts));
-      }
-    } catch (e) {
-      console.warn('Failed background Supabase sync:', e);
-    }
-  }, [user, savedVocabIds, savedPatternIds]);
+    };
+    syncInFlight.current = work().finally(() => {
+      syncInFlight.current = null;
+      if (changedDuringSync && mounted.current) void retrySync();
+    });
+    return syncInFlight.current;
+  };
 
   useEffect(() => {
-    if (user) {
-      syncWithSupabase();
-    }
-  }, [user?.id]);
-
-  const toggleSaveVocab = async (id: string) => {
-    const isCurrentlySaved = savedVocabIds.includes(id);
-    const next = isCurrentlySaved
-      ? savedVocabIds.filter((i) => i !== id)
-      : [...savedVocabIds, id];
-
-    setSavedVocabIds(next);
-    await AsyncStorage.setItem(STORAGE_KEYS.SAVED_VOCAB_IDS, JSON.stringify(next));
-
-    // Background sync to Supabase
-    if (user && isSupabaseConfigured) {
-      if (isCurrentlySaved) {
-        await supabase
-          .from('saved_vocabs')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('vocab_id', id);
-      } else {
-        await supabase
-          .from('saved_vocabs')
-          .upsert({ user_id: user.id, vocab_id: id });
+    mounted.current = true;
+    void enqueue(async () => {
+      try {
+        await persist(await loadState(userId));
+        if (userId) {
+          const guest = await loadState();
+          if (mounted.current)
+            setHasGuestItems(
+              guest.drafts.length + guest.savedVocabIds.length + guest.savedPatternIds.length > 0,
+            );
+        }
+        if (mounted.current) setReady(true);
+      } catch {
+        if (mounted.current) {
+          setLoadError(true);
+          setSyncStatus('error');
+        }
       }
-    }
-  };
-
-  const isVocabSaved = (id: string) => savedVocabIds.includes(id);
-
-  const toggleSavePattern = async (id: string) => {
-    const isCurrentlySaved = savedPatternIds.includes(id);
-    const next = isCurrentlySaved
-      ? savedPatternIds.filter((i) => i !== id)
-      : [...savedPatternIds, id];
-
-    setSavedPatternIds(next);
-    await AsyncStorage.setItem(STORAGE_KEYS.SAVED_PATTERN_IDS, JSON.stringify(next));
-
-    // Background sync to Supabase
-    if (user && isSupabaseConfigured) {
-      if (isCurrentlySaved) {
-        await supabase
-          .from('saved_patterns')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('pattern_id', id);
-      } else {
-        await supabase
-          .from('saved_patterns')
-          .upsert({ user_id: user.id, pattern_id: id });
-      }
-    }
-  };
-
-  const isPatternSaved = (id: string) => savedPatternIds.includes(id);
-
-  const saveDraft = async (draft: Omit<SavedDraft, 'updatedAt'>) => {
-    const updatedDraft: SavedDraft = {
-      ...draft,
-      updatedAt: new Date().toISOString(),
+    }).then(() => retrySync());
+    const subscription = AppState.addEventListener('change', (value) => {
+      if (value === 'active') void retrySync();
+    });
+    const interval = setInterval(() => {
+      if (hasPending(current.current)) void retrySync();
+    }, 30000);
+    return () => {
+      mounted.current = false;
+      subscription.remove();
+      clearInterval(interval);
     };
-    setDrafts((prevDrafts) => {
-      const next = [updatedDraft, ...prevDrafts.filter((d) => d.id !== draft.id)];
-      AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
+    // Provider is remounted when the account changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadAttempt]);
 
-    // Background sync to Supabase
-    if (user && isSupabaseConfigured) {
-      await supabase.from('drafts').upsert({
-        id: draft.id,
-        user_id: user.id,
-        type: draft.type,
-        title: draft.title,
-        content: draft.content,
-        char_count: draft.charCount,
-        updated_at: updatedDraft.updatedAt,
+  const change = async (update: (previous: SavedState) => SavedState) => {
+    try {
+      await enqueue(async () => {
+        await persist({ ...update(current.current), revision: current.current.revision + 1 });
+        if (mounted.current) setSyncStatus(userId ? 'pending' : 'local');
       });
+    } catch {
+      setSyncStatus('error');
+      throw new Error('Could not save on this device. Please try again before closing.');
     }
+    void retrySync();
   };
-
-  const deleteDraft = async (id: string) => {
-    setDrafts((prevDrafts) => {
-      const next = prevDrafts.filter((d) => d.id !== id);
-      AsyncStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(next)).catch(() => {});
-      return next;
+  const toggle = (id: string, kind: 'vocab' | 'pattern') =>
+    change((previous) => {
+      const list = kind === 'vocab' ? 'savedVocabIds' : 'savedPatternIds';
+      const changes = kind === 'vocab' ? 'vocabChanges' : 'patternChanges';
+      const saved = !previous[list].includes(id);
+      return {
+        ...previous,
+        [list]: saved ? [...previous[list], id] : previous[list].filter((value) => value !== id),
+        [changes]: { ...previous[changes], [id]: saved },
+      };
     });
-
-    // Background delete from Supabase
-    if (user && isSupabaseConfigured) {
-      await supabase
-        .from('drafts')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('id', id);
-    }
+  const saveDraft = (draft: Omit<SavedDraft, 'updatedAt'>) =>
+    change((previous) => {
+      if (!isUuid(draft.id)) throw new Error('Invalid draft ID');
+      const updated = { ...draft, updatedAt: new Date().toISOString() };
+      return {
+        ...previous,
+        drafts: [updated, ...previous.drafts.filter((d) => d.id !== draft.id)],
+        pendingDraftIds: [...new Set([...previous.pendingDraftIds, draft.id])],
+        deletedDraftIds: previous.deletedDraftIds.filter((id) => id !== draft.id),
+      };
+    });
+  const deleteDraft = (id: string) =>
+    change((previous) => ({
+      ...previous,
+      drafts: previous.drafts.filter((d) => d.id !== id),
+      pendingDraftIds: previous.pendingDraftIds.filter((value) => value !== id),
+      deletedDraftIds: [...new Set([...previous.deletedDraftIds, id])],
+    }));
+  const importGuestItems = async () => {
+    if (!userId) return;
+    const guest = await loadState();
+    await change((previous) => ({
+      ...previous,
+      savedVocabIds: [...new Set([...previous.savedVocabIds, ...guest.savedVocabIds])],
+      savedPatternIds: [...new Set([...previous.savedPatternIds, ...guest.savedPatternIds])],
+      drafts: mergeDrafts(previous.drafts, guest.drafts),
+      vocabChanges: {
+        ...previous.vocabChanges,
+        ...Object.fromEntries(guest.savedVocabIds.map((id) => [id, true])),
+      },
+      patternChanges: {
+        ...previous.patternChanges,
+        ...Object.fromEntries(guest.savedPatternIds.map((id) => [id, true])),
+      },
+      pendingDraftIds: [
+        ...new Set([...previous.pendingDraftIds, ...guest.drafts.map((d) => d.id)]),
+      ],
+    }));
+    await AsyncStorage.setItem(accountKey('collection_v1'), JSON.stringify(emptyState()));
+    setHasGuestItems(false);
   };
-
+  if (!ready)
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        {loadError ? (
+          <>
+            <Text>Could not open your saved items. Your data has not been replaced.</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => {
+                setLoadError(false);
+                setLoadAttempt((value) => value + 1);
+              }}
+              style={{ padding: 16 }}
+            >
+              <Text>Retry</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <ActivityIndicator accessibilityLabel="Loading your saved items" />
+        )}
+      </View>
+    );
   return (
     <SavedContext.Provider
       value={{
-        savedVocabIds,
-        savedPatternIds,
-        drafts,
-        isVocabSaved,
-        toggleSaveVocab,
-        isPatternSaved,
-        toggleSavePattern,
+        ...state,
+        syncStatus,
+        hasGuestItems,
+        importGuestItems,
+        retrySync,
+        isVocabSaved: (id) => state.savedVocabIds.includes(id),
+        isPatternSaved: (id) => state.savedPatternIds.includes(id),
+        toggleSaveVocab: (id) =>
+          toggle(id, 'vocab').catch((error) =>
+            Alert.alert('Could not save bookmark', error.message),
+          ),
+        toggleSavePattern: (id) =>
+          toggle(id, 'pattern').catch((error) =>
+            Alert.alert('Could not save bookmark', error.message),
+          ),
         saveDraft,
         deleteDraft,
-      }}>
+      }}
+    >
       {children}
     </SavedContext.Provider>
   );
 }
-
-export function useSaved(): SavedContextType {
+export function useSaved() {
   const context = useContext(SavedContext);
-  if (!context) {
-    throw new Error('useSaved must be used within a SavedProvider');
-  }
+  if (!context) throw new Error('useSaved must be used within a SavedProvider');
   return context;
 }

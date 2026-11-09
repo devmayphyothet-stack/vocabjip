@@ -87,7 +87,7 @@ export default function HomeScreen() {
                 Guest Mode
               </Text>
               <Text style={[styles.guestBannerSubtitle, { color: colors.textSecondary }]}>
-                Sign up with 6-digit OTP to sync your drafts and streak.
+                Sign up to save drafts and bookmarks to your account.
               </Text>
             </View>
             <TouchableOpacity

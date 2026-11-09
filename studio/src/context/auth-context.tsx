@@ -50,8 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('Error fetching profile:', e);
     }
 
-    // Fallback if profile row is not yet created
-    const fallbackRole = (email.toLowerCase() === 'admin@vocabjip.com' || email.toLowerCase() === 'dev.mayphyothet@gmail.com') ? 'admin' : 'contributor';
+    // Fail closed when the profile cannot be loaded.
+    const fallbackRole = 'user';
     setUser({
       id: userId,
       email,
@@ -88,189 +88,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (error) return { error: error.message };
     if (data.user) {
+      try { await redeemInvitation(); } catch (failure: any) { return { error: failure.message || 'Could not redeem invitation.' }; }
       await fetchProfile(data.user.id, data.user.email || email);
     }
     return {};
   };
 
+  const redeemInvitation = async () => {
+    const code = sessionStorage.getItem('vocabjip_pending_invite');
+    if (!code) return;
+    const { error } = await supabase.rpc('redeem_contributor_invitation', { invite_code: code });
+    if (error) throw error;
+    sessionStorage.removeItem('vocabjip_pending_invite');
+  };
+
   const signUp = async (email: string, pass: string, displayName: string, inviteCode?: string) => {
-    const isDirectAdmin = email.trim().toLowerCase() === 'admin@vocabjip.com' || email.trim().toLowerCase() === 'dev.mayphyothet@gmail.com';
-
-    if (!isDirectAdmin && (!inviteCode || !inviteCode.trim())) {
-      return {
-        error: 'Registration is invite-only. A valid invitation code from an Admin is required.'
-      };
-    }
-
-    let targetRole: UserRole = isDirectAdmin ? 'admin' : 'contributor';
-    let validInviteId: string | null = null;
-
-    if (inviteCode && inviteCode.trim()) {
-      try {
-        const { data: inv, error: invErr } = await supabase
-          .from('invitations')
-          .select('*')
-          .eq('code', inviteCode.trim().toUpperCase())
-          .eq('is_used', false)
-          .maybeSingle();
-
-        if (invErr || !inv) {
-          return { error: 'Invalid or already used invitation code.' };
-        }
-
-        if (inv.expires_at && new Date(inv.expires_at) < new Date()) {
-          return { error: 'This invitation code has expired.' };
-        }
-
-        targetRole = (inv.role as UserRole) || 'contributor';
-        validInviteId = inv.id;
-      } catch (err) {
-        console.warn('Error validating invite code:', err);
-      }
-    }
-
+    const code = inviteCode?.trim().toUpperCase();
+    if (!code) return { error: 'A valid invitation code from an administrator is required.' };
+    sessionStorage.setItem('vocabjip_pending_invite', code);
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password: pass,
-      options: {
-        data: {
-          display_name: displayName.trim(),
-          requested_role: targetRole,
-          invite_code: inviteCode?.trim().toUpperCase() || null,
-        },
-      },
+      email: email.trim(), password: pass,
+      options: { data: { display_name: displayName.trim() } },
     });
-    if (error) {
-      // If user already exists or rate-limited on signup, try signing in or sending a login OTP
-      if (error.message.toLowerCase().includes('already registered')) {
-        const signInAttempt = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: pass,
-        });
-        if (!signInAttempt.error && signInAttempt.data.user) {
-          if (validInviteId) {
-            await supabase
-              .from('invitations')
-              .update({
-                is_used: true,
-                used_by: signInAttempt.data.user.id,
-                used_at: new Date().toISOString(),
-              })
-              .eq('id', validInviteId);
-          }
-          await supabase
-            .from('profiles')
-            .update({ role: targetRole, display_name: displayName.trim() })
-            .eq('id', signInAttempt.data.user.id);
-          await fetchProfile(signInAttempt.data.user.id, email.trim());
-          return {};
-        }
-        const otpFallback = await supabase.auth.signInWithOtp({
-          email: email.trim(),
-          options: { shouldCreateUser: false },
-        });
-        if (!otpFallback.error) {
-          return { requiresOtp: true, email: email.trim() };
-        }
-      }
-      return { error: error.message };
+    if (error) return { error: error.message };
+    if (!data.session) return { requiresOtp: true, email: email.trim() };
+    try {
+      await redeemInvitation();
+      await fetchProfile(data.session.user.id, data.session.user.email || email);
+      return {};
+    } catch (failure: any) {
+      return { error: failure.message || 'Could not redeem invitation.' };
     }
-
-    if (data.user) {
-      // Check if Supabase returned a fake/obfuscated user (identities.length === 0) because the email is already registered!
-      const isAlreadyRegistered =
-        Array.isArray(data.user.identities) && data.user.identities.length === 0;
-
-      if (isAlreadyRegistered) {
-        // 1. Try signing in with the password they entered
-        const existingSignIn = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: pass,
-        });
-
-        if (!existingSignIn.error && existingSignIn.data.user) {
-          if (validInviteId) {
-            try {
-              await supabase
-                .from('invitations')
-                .update({
-                  is_used: true,
-                  used_by: existingSignIn.data.user.id,
-                  used_at: new Date().toISOString(),
-                })
-                .eq('id', validInviteId);
-            } catch (_) {}
-          }
-          try {
-            await supabase
-              .from('profiles')
-              .update({ role: targetRole, display_name: displayName.trim() })
-              .eq('id', existingSignIn.data.user.id);
-          } catch (_) {}
-          await fetchProfile(existingSignIn.data.user.id, email.trim());
-          return {};
-        }
-
-        // 2. Otherwise, explicitly send a 6-digit OTP via signInWithOtp (since signUp silently skips sending email for existing users)
-        const otpRes = await supabase.auth.signInWithOtp({
-          email: email.trim(),
-          options: {
-            shouldCreateUser: false,
-            data: {
-              display_name: displayName.trim(),
-              requested_role: targetRole,
-              invite_code: inviteCode?.trim().toUpperCase() || null,
-            },
-          },
-        });
-
-        if (otpRes.error) {
-          return { error: otpRes.error.message };
-        }
-
-        return {
-          requiresOtp: true,
-          email: email.trim(),
-        };
-      }
-
-      // Mark invitation used if possible (anyone can redeem unused invitation)
-      if (validInviteId) {
-        try {
-          await supabase
-            .from('invitations')
-            .update({
-              is_used: true,
-              used_by: data.user.id,
-              used_at: new Date().toISOString(),
-            })
-            .eq('id', validInviteId);
-        } catch (invErr) {
-          console.warn('Error marking invite used:', invErr);
-        }
-      }
-
-      // If Email Confirmation is ON in Supabase, data.session will be null until OTP / Link is verified
-      if (!data.session) {
-        return {
-          requiresOtp: true,
-          email: email.trim(),
-        };
-      }
-
-      // If auto-confirmed, ensure role is updated and load profile immediately
-      try {
-        await supabase
-          .from('profiles')
-          .update({ role: targetRole, display_name: displayName.trim() })
-          .eq('id', data.user.id);
-      } catch (profileErr) {
-        console.warn('Error updating profile on signup:', profileErr);
-      }
-
-      await fetchProfile(data.user.id, data.user.email || email);
-    }
-    return {};
   };
 
   const verifySignupOtp = async (email: string, token: string) => {
@@ -310,18 +158,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) return { error: error.message };
 
     if (data.user) {
-      const metaRole =
-        (data.user.user_metadata?.requested_role as UserRole | undefined) || 'contributor';
-      const metaName = data.user.user_metadata?.display_name as string | undefined;
       try {
-        await supabase
-          .from('profiles')
-          .update({
-            role: metaRole,
-            ...(metaName ? { display_name: metaName } : {}),
-          })
-          .eq('id', data.user.id);
-      } catch (_) {}
+        await redeemInvitation();
+      } catch (failure: any) {
+        return { error: failure.message || 'Could not redeem invitation.' };
+      }
       await fetchProfile(data.user.id, data.user.email || trimmedEmail);
     }
 

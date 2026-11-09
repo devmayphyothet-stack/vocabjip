@@ -39,10 +39,7 @@ export function AdminUsersView() {
     setUpdatingId(targetUserId);
     setSuccessNote(null);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', targetUserId);
+      const { error } = await supabase.rpc('set_profile_role', { target_user_id: targetUserId, new_role: newRole });
 
       if (error) throw error;
       setSuccessNote(`User role updated to ${newRole.toUpperCase()} successfully.`);

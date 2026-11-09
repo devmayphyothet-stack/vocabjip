@@ -9,7 +9,7 @@ export async function fetchContributorRankLabel(userId?: string | null): Promise
         supabase.from('sentence_patterns').select('id, created_by, status'),
         supabase.from('quiz_steps').select('id, created_by, status'),
         supabase.from('essay_submissions').select('id, reviewed_by, status'),
-        supabase.from('profiles').select('id, role'),
+        supabase.from('contributor_directory').select('id, role'),
       ]);
 
     if (!profData) return 'Contributor';

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -23,6 +24,7 @@ export default function SavedScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const {
+    syncStatus, retrySync, hasGuestItems, importGuestItems,
     savedVocabIds,
     savedPatternIds,
     drafts,
@@ -46,7 +48,7 @@ export default function SavedScreen() {
     if (!draftToDelete) return;
     const id = draftToDelete.id;
     setDraftToDelete(null);
-    await deleteDraft(id);
+    try { await deleteDraft(id); } catch (error: any) { Alert.alert('Could not delete draft', error.message); }
   };
 
   return (
@@ -57,6 +59,11 @@ export default function SavedScreen() {
           Keep what helps you grow • Offline-ready
         </Text>
 
+        <Text accessibilityLiveRegion="polite" style={{ color: colors.textSecondary, marginVertical: 8 }}>
+          {syncStatus === 'synced' ? 'Synced with your account' : syncStatus === 'syncing' ? 'Syncing…' : syncStatus === 'pending' ? 'Saved on device · Waiting to sync' : syncStatus === 'error' ? 'Cloud sync could not finish. Your saved items are on this device.' : 'Saved on this device'}
+        </Text>
+        {(syncStatus === 'error' || syncStatus === 'pending') && <TouchableOpacity accessibilityRole="button" onPress={() => { void retrySync(); }} style={{ paddingVertical: 10 }}><Text style={{ color: colors.accent }}>Retry cloud sync</Text></TouchableOpacity>}
+        {hasGuestItems && <TouchableOpacity accessibilityRole="button" onPress={() => Alert.alert('Import guest items?', 'Move this device’s guest drafts and bookmarks into your current account?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Import', onPress: () => { importGuestItems().catch(() => Alert.alert('Import failed', 'Guest items remain available. Please retry.')); } }])} style={{ paddingVertical: 10 }}><Text style={{ color: colors.accent }}>Import guest drafts and bookmarks</Text></TouchableOpacity>}
         {/* Tab Switcher */}
         <View style={[styles.tabContainer, { backgroundColor: colors.cardMuted }]}>
           <TouchableOpacity

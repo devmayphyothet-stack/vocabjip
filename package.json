@@ -9,6 +9,7 @@
     "@supabase/supabase-js": "^2.118.0",
     "expo": "~58.0.22",
     "expo-constants": "~58.0.14",
+    "expo-crypto": "~58.0.7",
     "expo-device": "~58.0.5",
     "expo-font": "~58.0.11",
     "expo-glass-effect": "~58.0.5",
@@ -34,7 +35,11 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@types/react": "~19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~58.0.4",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -47,7 +52,10 @@
     "build:web": "expo export -p web",
     "build:studio": "cd studio && npm install && npm run build",
     "studio": "cd studio && npm run dev",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node --test tests/*.test.cjs",
+    "typecheck": "tsc --noEmit",
+    "lint:studio": "eslint studio/src"
   },
   "private": true
 }
