@@ -1,6 +1,12 @@
+import { useWritingRecovery } from '@/hooks/use-writing-recovery';
+import {
+  restoreStatement,
+  restoreStatementStep,
+  statementDocument,
+  SECTION_IDS,
+} from '@/lib/statement-document';
 import { createDraftId } from '@/lib/draft-utils';
-import { useRef } from 'react';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,78 +26,70 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { STATEMENT_SECTIONS } from '@/data/statement-sections';
 import { useSaved } from '@/context/saved-context';
 import { useAi } from '@/context/ai-context';
-import { useAuth } from '@/context/auth-context';
-import { StreakService } from '@/services/streak-service';
 
 export default function StatementEditorModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
-  const { saveDraft } = useSaved();
+  const { drafts } = useSaved();
+  const recovery = useWritingRecovery();
   const { isConnected } = useAi();
-  const { user } = useAuth();
-  const params = useLocalSearchParams<{ university?: string; major?: string }>();
+  const params = useLocalSearchParams<{ university?: string; major?: string; draftId?: string }>();
 
-  const targetUniversity = params.university || 'Korean University';
-  const targetMajor = params.major || 'Selected Major';
-
-  const draftIds = useRef<Record<string, string>>({});
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-
-  // Store contents of the 4 sections
-  const [sectionTexts, setSectionTexts] = useState<Record<string, string>>({
-    background:
-      '저는 고등학교 시절부터 한국어와 한국 문화에 깊은 관심을 가지게 되었습니다. 특히 언어를 통해 새로운 세상을 배울 수 있다는 점에 매료되었으며, 어려운 환경 속에서도 주도적으로 학습을 지속해 왔습니다.',
-    motivation:
-      '귀교의 탁월한 학문적 성과와 세계적인 연구 역량에 깊은 인상을 받아 지원하게 되었습니다. 본 학과에서 심도 있는 학업을 이어가며 글로벌 인재로 성장하고자 합니다.',
-    study_plan: '',
-    future_goals: '',
-  });
+  const existing = drafts.find((draft) => draft.id === params.draftId);
+  const targetUniversity =
+    existing?.metadata?.university || params.university || 'Korean University';
+  const targetMajor = existing?.metadata?.major || params.major || 'Selected Major';
+  const draftId = useRef(existing?.id || createDraftId());
+  const [currentStepIndex, setCurrentStepIndex] = useState(restoreStatementStep(existing));
+  const [sectionTexts, setSectionTexts] = useState<Record<string, string>>(() =>
+    restoreStatement(existing),
+  );
+  const document = (sections = sectionTexts, step = currentStepIndex) => {
+    const draft = statementDocument(draftId.current, targetUniversity, targetMajor, sections, step);
+    return { ...draft, title: existing?.title || draft.title };
+  };
 
   const currentSection = STATEMENT_SECTIONS[currentStepIndex];
   const currentContent = sectionTexts[currentSection.id] || '';
 
   const handleTextChange = (text: string) => {
-    setSectionTexts((prev) => ({
-      ...prev,
-      [currentSection.id]: text,
-    }));
+    const next = { ...sectionTexts, [currentSection.id]: text };
+    setSectionTexts(next);
+    recovery.update(document(next));
   };
-
-  const handleAppendPhrase = (phrase: string) => {
-    setSectionTexts((prev) => {
-      const existing = prev[currentSection.id] || '';
-      const separator = existing.endsWith('.') || existing.length === 0 ? ' ' : '\n';
-      return {
-        ...prev,
-        [currentSection.id]: existing ? `${existing}${separator}${phrase}` : phrase,
-      };
-    });
-  };
-
+  const handleAppendPhrase = (phrase: string) =>
+    handleTextChange(currentContent ? `${currentContent} ${phrase}` : phrase);
   const handleSaveDraft = async () => {
-    const id = draftIds.current[currentSection.id] ||= createDraftId();
-    try { await saveDraft({
-      id,
-      type: 'statement',
-      title: `${targetUniversity} - ${targetMajor} (${currentSection.title})`,
-      content: currentContent,
-      charCount: currentContent.length,
-    });
-    } catch (error: any) { Alert.alert('Could not save draft', error.message); return; }
-    if (currentContent.trim().length > 10) {
-      StreakService.recordActivity(user?.id);
+    try {
+      recovery.update(document());
+      await recovery.flush();
+    } catch {
+      Alert.alert('Could not save draft', 'Please retry before leaving.');
+      return false;
     }
-    Alert.alert('Draft Saved', 'Your statement draft is saved on this device. Check Your Collection for cloud sync status.');
+    return true;
   };
-
-  const handleGetAiFeedback = () => {
+  const handleClose = async () => {
+    if (!existing && !document().content.trim()) {
+      router.back();
+      return;
+    }
+    if (await handleSaveDraft()) router.back();
+  };
+  const goToSection = (index: number) => {
+    setCurrentStepIndex(index);
+    if (SECTION_IDS.some((id) => sectionTexts[id].trim()))
+      recovery.update(document(sectionTexts, index));
+  };
+  const handleGetAiFeedback = async () => {
     if (!currentContent.trim()) {
       Alert.alert('Empty Section', 'Please write a few sentences before requesting AI coaching.');
       return;
     }
 
+    if (!(await handleSaveDraft())) return;
     if (!isConnected) {
       router.push('/modal/ai-connect');
     } else {
@@ -108,28 +106,30 @@ export default function StatementEditorModal() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStepIndex < STATEMENT_SECTIONS.length - 1) {
-      setCurrentStepIndex((prev) => prev + 1);
-    } else {
-      handleSaveDraft();
-      Alert.alert('Congratulations!', 'You have drafted all 4 sections of your personal statement.');
+      goToSection(currentStepIndex + 1);
+      return;
     }
+    if (!(await handleSaveDraft())) return;
+    const missing = SECTION_IDS.filter((id) => !sectionTexts[id].trim()).length;
+    Alert.alert(
+      missing ? 'Draft saved' : 'Statement saved',
+      missing
+        ? `${missing} section(s) still need your writing. All sections are saved together.`
+        : 'All four sections are saved together.',
+    );
   };
-
-  const handlePrev = () => {
-    if (currentStepIndex > 0) {
-      setCurrentStepIndex((prev) => prev - 1);
-    }
-  };
+  const handlePrev = () => goToSection(Math.max(0, currentStepIndex - 1));
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Bar */}
       <View style={[styles.topBar, { paddingTop: topInset }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          onPress={handleClose}
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>
@@ -137,11 +137,22 @@ export default function StatementEditorModal() {
         </Text>
         <TouchableOpacity
           onPress={handleSaveDraft}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons name="save-outline" size={18} color={colors.text} />
         </TouchableOpacity>
       </View>
 
+      <Text
+        accessibilityLiveRegion="polite"
+        style={{ textAlign: 'center', color: colors.textSecondary }}
+      >
+        {recovery.status === 'saved'
+          ? 'Changes save automatically on this device'
+          : recovery.status === 'saving'
+            ? 'Saving…'
+            : 'Could not save · Tap Save to retry'}
+      </Text>
       {/* Step Indicator Tabs */}
       <View style={styles.stepTabsRow}>
         {STATEMENT_SECTIONS.map((sec, idx) => {
@@ -150,17 +161,18 @@ export default function StatementEditorModal() {
           return (
             <TouchableOpacity
               key={sec.id}
-              onPress={() => setCurrentStepIndex(idx)}
+              onPress={() => goToSection(idx)}
               style={[
                 styles.stepTab,
                 {
                   backgroundColor: isActive
                     ? colors.primary
                     : isDone
-                    ? colors.successLight
-                    : colors.cardMuted,
+                      ? colors.successLight
+                      : colors.cardMuted,
                 },
-              ]}>
+              ]}
+            >
               <Text
                 style={[
                   styles.stepTabText,
@@ -168,10 +180,11 @@ export default function StatementEditorModal() {
                     color: isActive
                       ? colors.primaryContrast
                       : isDone
-                      ? colors.success
-                      : colors.textSecondary,
+                        ? colors.success
+                        : colors.textSecondary,
                   },
-                ]}>
+                ]}
+              >
                 0{idx + 1}
               </Text>
             </TouchableOpacity>
@@ -185,9 +198,7 @@ export default function StatementEditorModal() {
           <Text style={[styles.koreanTitle, { color: colors.textSecondary }]}>
             {currentSection.koreanTitle}
           </Text>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>
-            {currentSection.title}
-          </Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>{currentSection.title}</Text>
           <Text style={[styles.myanmarGuidance, { color: colors.textSecondary }]}>
             {currentSection.guidance}
           </Text>
@@ -198,7 +209,8 @@ export default function StatementEditorModal() {
           style={[
             styles.guidanceCard,
             { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          ]}
+        >
           <Text style={[styles.guidanceCardTitle, { color: colors.textSecondary }]}>
             KEY POINTS TO COVER
           </Text>
@@ -215,12 +227,20 @@ export default function StatementEditorModal() {
           <Text style={[styles.sampleHeading, { color: colors.textSecondary }]}>
             TAP TO INSERT SAMPLE SENTENCE STARTER
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.phrasesScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.phrasesScroll}
+          >
             {currentSection.samplePhrases.map((phrase, idx) => (
               <TouchableOpacity
                 key={idx}
                 onPress={() => handleAppendPhrase(phrase)}
-                style={[styles.phraseChip, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                style={[
+                  styles.phraseChip,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
                 <Ionicons name="add" size={14} color={colors.accent} />
                 <Text numberOfLines={1} style={[styles.phraseChipText, { color: colors.text }]}>
                   {phrase}
@@ -258,7 +278,11 @@ export default function StatementEditorModal() {
         {/* AI Coaching Button for this section */}
         <TouchableOpacity
           onPress={handleGetAiFeedback}
-          style={[styles.aiCoachBtn, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}>
+          style={[
+            styles.aiCoachBtn,
+            { backgroundColor: colors.accentLight, borderColor: colors.accent },
+          ]}
+        >
           <Ionicons name="sparkles" size={18} color={colors.accent} />
           <Text style={[styles.aiCoachBtnText, { color: colors.accent }]}>
             Review Section with Admissions AI
@@ -270,17 +294,26 @@ export default function StatementEditorModal() {
           {currentStepIndex > 0 ? (
             <TouchableOpacity
               onPress={handlePrev}
-              style={[styles.navBtnPrev, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              style={[
+                styles.navBtnPrev,
+                { borderColor: colors.border, backgroundColor: colors.card },
+              ]}
+            >
               <Ionicons name="arrow-back" size={16} color={colors.text} />
               <Text style={[styles.navBtnPrevText, { color: colors.text }]}>Previous</Text>
             </TouchableOpacity>
-          ) : <View style={{ flex: 1 }} />}
+          ) : (
+            <View style={{ flex: 1 }} />
+          )}
 
           <TouchableOpacity
             onPress={handleNext}
-            style={[styles.navBtnNext, { backgroundColor: colors.primary }]}>
+            style={[styles.navBtnNext, { backgroundColor: colors.primary }]}
+          >
             <Text style={[styles.navBtnNextText, { color: colors.primaryContrast }]}>
-              {currentStepIndex === STATEMENT_SECTIONS.length - 1 ? 'Finish & Save' : 'Next Section'}
+              {currentStepIndex === STATEMENT_SECTIONS.length - 1
+                ? 'Finish & Save'
+                : 'Next Section'}
             </Text>
             <Ionicons name="arrow-forward" size={16} color={colors.primaryContrast} />
           </TouchableOpacity>
@@ -470,4 +503,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

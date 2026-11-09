@@ -3,7 +3,12 @@ import { AppState, ActivityIndicator, View, Text, TouchableOpacity, Alert } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
-import { accountKey } from '@/lib/account-storage';
+import {
+  accountKey,
+  setAccountItem,
+  pauseAccountWrites,
+  resumeAccountWrites,
+} from '@/lib/account-storage';
 import { createDraftId, Draft, isUuid, mergeDrafts } from '@/lib/draft-utils';
 
 export type SavedDraft = Draft;
@@ -40,7 +45,12 @@ interface SavedContextType extends Pick<
   toggleSaveVocab: (id: string) => Promise<void>;
   isPatternSaved: (id: string) => boolean;
   toggleSavePattern: (id: string) => Promise<void>;
-  saveDraft: (draft: Omit<SavedDraft, 'updatedAt'>) => Promise<void>;
+  saveDraft: (
+    draft: Omit<SavedDraft, 'updatedAt'>,
+    options?: { deferSync?: boolean },
+  ) => Promise<void>;
+  pauseWrites: () => Promise<void>;
+  resumeWrites: () => void;
   deleteDraft: (id: string) => Promise<void>;
 }
 const SavedContext = createContext<SavedContextType | undefined>(undefined);
@@ -66,7 +76,7 @@ async function loadState(userId?: string): Promise<SavedState> {
   state.pendingDraftIds = state.drafts.map((d) => d.id);
   state.vocabChanges = Object.fromEntries(state.savedVocabIds.map((id) => [id, true]));
   state.patternChanges = Object.fromEntries(state.savedPatternIds.map((id) => [id, true]));
-  await AsyncStorage.setItem(accountKey('collection_v1', userId), JSON.stringify(state));
+  await setAccountItem('collection_v1', JSON.stringify(state), userId);
   return state;
 }
 const hasPending = (s: SavedState) =>
@@ -88,6 +98,7 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
   const [hasGuestItems, setHasGuestItems] = useState(false);
   const current = useRef(state);
   const mounted = useRef(true);
+  const writesPaused = useRef(false);
   const syncInFlight = useRef<Promise<void> | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   function enqueue<T>(operation: () => Promise<T>): Promise<T> {
@@ -96,12 +107,15 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
     return result;
   }
   async function persist(next: SavedState) {
-    await AsyncStorage.setItem(storageKey, JSON.stringify(next));
+    if (writesPaused.current)
+      throw new Error('Account changes are in progress. Please retry shortly.');
+    await setAccountItem('collection_v1', JSON.stringify(next), userId);
     current.current = next;
     if (mounted.current) setState(next);
   }
   const retrySync = (): Promise<void> => {
-    if (!userId || !isSupabaseConfigured || !mounted.current) return Promise.resolve();
+    if (!userId || !isSupabaseConfigured || !mounted.current || writesPaused.current)
+      return Promise.resolve();
     if (syncInFlight.current) return syncInFlight.current;
     let changedDuringSync = false;
     const work = async () => {
@@ -137,14 +151,18 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
         for (const id of [...next.pendingDraftIds]) {
           const draft = next.drafts.find((d) => d.id === id);
           if (!draft) continue;
-          const { data, error } = await supabase.rpc('save_draft_if_newer', {
-            draft_id: id,
-            draft_type: draft.type,
-            draft_title: draft.title,
-            draft_content: draft.content,
-            draft_char_count: draft.charCount,
-            draft_updated_at: draft.updatedAt,
-          });
+          const { data, error } = await supabase.rpc(
+            draft.metadata ? 'save_draft_document' : 'save_draft_if_newer',
+            {
+              draft_id: id,
+              draft_type: draft.type,
+              draft_title: draft.title,
+              draft_content: draft.content,
+              draft_char_count: draft.charCount,
+              draft_updated_at: draft.updatedAt,
+              ...(draft.metadata ? { draft_metadata: draft.metadata } : {}),
+            },
+          );
           if (error) throw error;
           next.pendingDraftIds = next.pendingDraftIds.filter((value) => value !== id);
           if (data === false) {
@@ -177,6 +195,7 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
             content: row.content || '',
             charCount: row.char_count || 0,
             updatedAt: row.updated_at,
+            metadata: row.metadata || undefined,
           })),
           next.deletedDraftIds,
         );
@@ -241,7 +260,7 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadAttempt]);
 
-  const change = async (update: (previous: SavedState) => SavedState) => {
+  const change = async (update: (previous: SavedState) => SavedState, sync = true) => {
     try {
       await enqueue(async () => {
         await persist({ ...update(current.current), revision: current.current.revision + 1 });
@@ -251,7 +270,7 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
       setSyncStatus('error');
       throw new Error('Could not save on this device. Please try again before closing.');
     }
-    void retrySync();
+    if (sync) void retrySync();
   };
   const toggle = (id: string, kind: 'vocab' | 'pattern') =>
     change((previous) => {
@@ -264,7 +283,7 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
         [changes]: { ...previous[changes], [id]: saved },
       };
     });
-  const saveDraft = (draft: Omit<SavedDraft, 'updatedAt'>) =>
+  const saveDraft = (draft: Omit<SavedDraft, 'updatedAt'>, options?: { deferSync?: boolean }) =>
     change((previous) => {
       if (!isUuid(draft.id)) throw new Error('Invalid draft ID');
       const updated = { ...draft, updatedAt: new Date().toISOString() };
@@ -274,7 +293,7 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
         pendingDraftIds: [...new Set([...previous.pendingDraftIds, draft.id])],
         deletedDraftIds: previous.deletedDraftIds.filter((id) => id !== draft.id),
       };
-    });
+    }, !options?.deferSync);
   const deleteDraft = (id: string) =>
     change((previous) => ({
       ...previous,
@@ -345,6 +364,15 @@ export function SavedProvider({ children }: { children: React.ReactNode }) {
           toggle(id, 'pattern').catch((error) =>
             Alert.alert('Could not save bookmark', error.message),
           ),
+        pauseWrites: async () => {
+          writesPaused.current = true;
+          await pauseAccountWrites(userId);
+          await queue.current;
+        },
+        resumeWrites: () => {
+          writesPaused.current = false;
+          resumeAccountWrites(userId);
+        },
         saveDraft,
         deleteDraft,
       }}

@@ -36,6 +36,7 @@ export default function RootLayout() {
         <AuthProvider>
           <AccountProviders>
             <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="modal/edit-profile" options={{ presentation: 'modal' }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/sign-up" options={{ headerShown: false }} />

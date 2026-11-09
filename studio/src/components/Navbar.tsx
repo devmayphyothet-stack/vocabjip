@@ -1,3 +1,4 @@
+import { AVATARS } from '../../../src/lib/profile-fields';
 import React from 'react';
 import { useAuth } from '../context/auth-context';
 import { LogOut, ShieldCheck, PenTool, ExternalLink } from 'lucide-react';
@@ -65,6 +66,7 @@ export function Navbar({ activeView, setActiveView, pendingReviewCount = 0 }: Na
           )}
         </div>
 
+        <button onClick={() => setActiveView('profile')} className="p-2 rounded-xl border border-slate-200" aria-label="Edit my profile">{AVATARS[user?.avatar_key as keyof typeof AVATARS] || AVATARS.learner} <span className="hidden sm:inline">My profile</span></button>
         {/* User Info & Logout */}
         <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
           <div className="text-right hidden md:block">

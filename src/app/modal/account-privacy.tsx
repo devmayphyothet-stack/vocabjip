@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   Share,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -20,9 +21,13 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 export default function AccountPrivacyModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
-  const { user, isGuest } = useAuth();
-  const { drafts, savedVocabIds, savedPatternIds } = useSaved();
+  const { user, isGuest, deleteAccount } = useAuth();
+  const { drafts, savedVocabIds, savedPatternIds, pauseWrites, resumeWrites } = useSaved();
 
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExportData = async () => {
@@ -48,7 +53,33 @@ export default function AccountPrivacyModal() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert('Account deletion is not available yet', 'Signing out does not delete your account or cloud data. Account deletion will be added in a future update.');
+    if (!user || confirmation !== 'DELETE' || !password || deleting) return;
+    Alert.alert(
+      'Permanently delete your account?',
+      'This deletes your account, drafts, bookmarks, published essays, and private submissions. Existing curriculum and reviews for other learners stay available with your name removed. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete account',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            setDeleteError('');
+            try {
+              await pauseWrites();
+              await deleteAccount(password, confirmation);
+              setPassword('');
+              router.replace('/(tabs)');
+            } catch (error: any) {
+              if (!error.remoteDeleted) resumeWrites();
+              setDeleteError(error.message || 'Deletion did not finish. Please retry.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -57,12 +88,11 @@ export default function AccountPrivacyModal() {
       <View style={styles.topBar}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>
-          Account & Privacy
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>Account & Privacy</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -76,11 +106,7 @@ export default function AccountPrivacyModal() {
         </View>
 
         {/* Export Card */}
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardTopRow}>
             <View style={[styles.iconBox, { backgroundColor: colors.accentLight }]}>
               <Ionicons name="download-outline" size={20} color={colors.accent} />
@@ -88,7 +114,8 @@ export default function AccountPrivacyModal() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardTitle, { color: colors.text }]}>Export your writing</Text>
               <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
-                Download or share a plain text copy of all your Wongoji drafts, personal statements, and bookmarked vocabulary.
+                Download or share a plain text copy of all your Wongoji drafts, personal statements,
+                and bookmarked vocabulary.
               </Text>
             </View>
           </View>
@@ -96,7 +123,11 @@ export default function AccountPrivacyModal() {
           <TouchableOpacity
             onPress={handleExportData}
             disabled={isExporting}
-            style={[styles.actionBtn, { backgroundColor: colors.cardMuted, borderColor: colors.border }]}>
+            style={[
+              styles.actionBtn,
+              { backgroundColor: colors.cardMuted, borderColor: colors.border },
+            ]}
+          >
             <Ionicons name="share-outline" size={16} color={colors.text} />
             <Text style={[styles.actionBtnText, { color: colors.text }]}>
               {isExporting ? 'Exporting...' : `Export All Data (${drafts.length} drafts)`}
@@ -105,11 +136,7 @@ export default function AccountPrivacyModal() {
         </View>
 
         {/* Cloud Data Status */}
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardTopRow}>
             <View style={[styles.iconBox, { backgroundColor: colors.streakLight }]}>
               <Ionicons name="cloud-done-outline" size={20} color={colors.streak} />
@@ -130,18 +157,71 @@ export default function AccountPrivacyModal() {
           style={[
             styles.dangerCard,
             { backgroundColor: colors.card, borderColor: colors.errorLight },
-          ]}>
+          ]}
+        >
           <Text style={[styles.dangerTitle, { color: colors.error }]}>ACCOUNT DELETION</Text>
           <Text style={[styles.dangerDesc, { color: colors.textSecondary }]}>
-            Account deletion is not available in this version. Signing out keeps your account and cloud data.
+            Delete your account and private data permanently. Export your writing first if you want
+            to keep a copy. Published curriculum and reviews for other learners remain with your
+            name removed.
           </Text>
 
+          {user && user.role !== 'admin' ? (
+            <>
+              <Text>Current password</Text>
+              <TextInput
+                accessibilityLabel="Current password for deletion"
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={password}
+                onChangeText={setPassword}
+                editable={!deleting}
+                style={{
+                  padding: 12,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 10,
+                }}
+              />
+              <Text>Type DELETE to confirm</Text>
+              <TextInput
+                accessibilityLabel="Type DELETE to confirm"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                value={confirmation}
+                onChangeText={setConfirmation}
+                editable={!deleting}
+                style={{
+                  padding: 12,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 10,
+                }}
+              />
+              {deleteError ? (
+                <Text accessibilityRole="alert" style={{ color: colors.error }}>
+                  {deleteError}
+                </Text>
+              ) : null}
+            </>
+          ) : (
+            <Text>
+              {user?.role === 'admin'
+                ? 'Ask another administrator to change your role before deleting this account.'
+                : 'Sign in to delete an account. Guest writing stays on this device.'}
+            </Text>
+          )}
           <TouchableOpacity
+            disabled={
+              !user || user.role === 'admin' || deleting || confirmation !== 'DELETE' || !password
+            }
             onPress={handleDeleteAccount}
-            style={[styles.deleteBtn, { borderColor: colors.error }]}>
+            style={[styles.deleteBtn, { borderColor: colors.error }]}
+          >
             <Ionicons name="trash-outline" size={16} color={colors.error} />
             <Text style={[styles.deleteBtnText, { color: colors.error }]}>
-              Account deletion unavailable
+              {deleting ? 'Deleting…' : 'Delete account permanently'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -261,4 +341,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

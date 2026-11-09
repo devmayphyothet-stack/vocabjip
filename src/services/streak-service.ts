@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
-import { accountKey } from '@/lib/account-storage';
+import { accountKey, setAccountItem } from '@/lib/account-storage';
 
 const KEYS = {
   STREAK_DAYS: '@vocabjip:streak_days',
@@ -45,7 +45,7 @@ function publish(state: StreakState, userId?: string) {
   states.set(scope(userId), state);
   listeners.get(scope(userId))?.forEach((listener) => listener(state));
 }
-async function persist(state: StreakState, userId?: string) {
+async function persist(state: StreakState, userId?: string, syncGoal = false) {
   await Promise.all(
     [
       [KEYS.STREAK_DAYS, String(state.streakDays)],
@@ -53,7 +53,7 @@ async function persist(state: StreakState, userId?: string) {
       [KEYS.DAILY_GOAL, String(state.dailyGoal)],
       [KEYS.DAILY_COMPLETED, String(state.dailyCompleted)],
       [KEYS.DAILY_COMPLETED_DATE, todayString()],
-    ].map(([key, value]) => AsyncStorage.setItem(accountKey(key, userId), value)),
+    ].map(([key, value]) => setAccountItem(key, value, userId)),
   );
   publish(state, userId);
   if (userId) {
@@ -62,7 +62,7 @@ async function persist(state: StreakState, userId?: string) {
         .from('profiles')
         .update({
           streak_days: state.streakDays,
-          daily_goal: state.dailyGoal,
+          ...(syncGoal ? { daily_goal: state.dailyGoal } : {}),
           daily_completed: state.dailyCompleted,
         })
         .eq('id', userId),
@@ -75,7 +75,7 @@ async function persist(state: StreakState, userId?: string) {
       });
   }
 }
-async function initialize(userId?: string): Promise<StreakState> {
+async function initialize(userId?: string, preferredGoal?: number): Promise<StreakState> {
   const today = todayString();
   const [streak, last, goal, completed, completedDate] = await Promise.all(
     Object.values(KEYS).map((key) => AsyncStorage.getItem(accountKey(key, userId))),
@@ -83,7 +83,7 @@ async function initialize(userId?: string): Promise<StreakState> {
   const difference = last
     ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${last}T00:00:00Z`)) / 86400000)
     : 0;
-  const dailyGoal = Math.max(1, Number(goal) || 3);
+  const dailyGoal = Math.max(1, preferredGoal || Number(goal) || 3);
   const dailyCompleted = completedDate === today ? Math.max(0, Number(completed) || 0) : 0;
   const state = {
     streakDays: difference > 1 ? 1 : Math.max(1, Number(streak) || 1) + (difference === 1 ? 1 : 0),
@@ -108,10 +108,10 @@ export const StreakService = {
   getState(userId?: string) {
     return states.get(scope(userId)) || defaults();
   },
-  initStreak(userId?: string) {
+  initStreak(userId?: string, preferredGoal?: number) {
     return serial(userId, async () => {
       try {
-        return await initialize(userId);
+        return await initialize(userId, preferredGoal);
       } catch {
         return this.getState(userId);
       }
@@ -141,6 +141,7 @@ export const StreakService = {
       await persist(
         { ...state, dailyGoal: newGoal, isGoalAchieved: state.dailyCompleted >= newGoal },
         userId,
+        true,
       );
     });
   },

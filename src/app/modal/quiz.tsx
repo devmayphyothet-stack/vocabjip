@@ -1,4 +1,4 @@
-import { accountKey } from '@/lib/account-storage';
+import { accountKey, setAccountItem } from '@/lib/account-storage';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -76,7 +76,7 @@ export default function QuizModal() {
         ...prev,
         [stepId]: { bestScore: nextBest, passed: nextPassed },
       };
-      AsyncStorage.setItem(accountKey(QUIZ_PROGRESS_KEY, user?.id), JSON.stringify(updated)).catch(() => { });
+      setAccountItem(QUIZ_PROGRESS_KEY, JSON.stringify(updated), user?.id).catch(() => { });
       return updated;
     });
   };

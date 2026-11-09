@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
-import { accountKey } from '@/lib/account-storage';
+import { accountKey, setAccountItem } from '@/lib/account-storage';
 import { createDraftId, isUuid } from '@/lib/draft-utils';
 
 const CACHE_KEY = 'contributor_essay_reviews_v2';
@@ -52,7 +52,7 @@ async function readCache(userId?: string): Promise<ContributorEssaySubmission[]>
     }));
 }
 async function writeCache(items: ContributorEssaySubmission[], userId?: string) {
-  await AsyncStorage.setItem(accountKey(CACHE_KEY, userId), JSON.stringify(items));
+  await setAccountItem(CACHE_KEY, JSON.stringify(items), userId);
 }
 async function deliver(
   item: ContributorEssaySubmission,

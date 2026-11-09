@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, AUTH_STORAGE_KEY } from '../lib/supabase';
 import { UserProfile, UserRole } from '../types';
 
 interface AuthContextType {
@@ -20,6 +20,7 @@ interface AuthContextType {
   sendLoginOtp: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  finishDeletedAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,6 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: data.id,
           email: data.email || email,
           display_name: data.display_name || 'TOPIK Contributor',
+          avatar_key: data.avatar_key || 'learner',
+          bio: data.bio || '', korean_background: data.korean_background || '',
+          target_level: data.target_level || 'TOPIK II Level 4', daily_goal: data.daily_goal || 3,
           role: (data.role as UserRole) || 'user',
           created_at: data.created_at,
         });
@@ -204,6 +208,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const finishDeletedAccount = async () => {
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* The server has already deleted the account. */ }
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(`${AUTH_STORAGE_KEY}-code-verifier`);
+    localStorage.removeItem(`${AUTH_STORAGE_KEY}-user`);
+    sessionStorage.removeItem('vocabjip_pending_invite');
+    setUser(null);
+  };
+
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id, user.email);
@@ -228,7 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resendSignupOtp,
         sendLoginOtp,
         signOut,
-        refreshProfile,
+        refreshProfile, finishDeletedAccount,
       }}>
       {children}
     </AuthContext.Provider>

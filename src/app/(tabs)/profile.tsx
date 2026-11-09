@@ -1,3 +1,4 @@
+import { AVATARS } from '@/lib/profile-fields';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -59,6 +60,7 @@ export default function ProfileScreen() {
   };
 
   const handleCycleDailyGoal = () => {
+    if (user) { router.push('/modal/edit-profile'); return; }
     const goals = [3, 5, 10];
     const currentIndex = goals.indexOf(dailyGoal);
     const nextGoal = goals[(currentIndex + 1) % goals.length];
@@ -92,6 +94,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        {user && <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/modal/edit-profile')} style={{ paddingVertical: 14 }}><Text style={{ color: colors.accent, fontWeight: '700' }}>Edit profile</Text></TouchableOpacity>}
         {/* User Card */}
         <View
           style={[
@@ -100,7 +103,7 @@ export default function ProfileScreen() {
           ]}>
           <View style={styles.userCardTop}>
             <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
-              <Ionicons name="person" size={24} color={colors.accent} />
+              <Text style={{ fontSize: 28 }}>{AVATARS[user?.avatarKey as keyof typeof AVATARS] || AVATARS.learner}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.userName, { color: colors.text }]}>

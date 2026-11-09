@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { accountKey } from '@/lib/account-storage';
+import { accountKey, setAccountItem } from '@/lib/account-storage';
 import { useAuth } from '@/context/auth-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { validateGeminiKey, requestEssayEvaluation } from '@/services/gemini-service';
@@ -21,7 +21,7 @@ interface AiContextType {
   evaluateEssay: (
     essayText: string,
     questionType: 'Q53' | 'Q54',
-    promptTopic: string
+    promptTopic: string,
   ) => Promise<AiEvaluationResponse>;
   setLatestEvaluation: (res: AiEvaluationResult | null) => void;
 }
@@ -56,14 +56,14 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
         console.warn('Failed to load saved AI key:', e);
       }
     })();
-    return () => { active.current = false; };
+    return () => {
+      active.current = false;
+    };
     // AccountProviders remounts this provider on an account change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const maskedKey = apiKey
-    ? `Key ending in ....${apiKey.slice(-4).toUpperCase()}`
-    : null;
+  const maskedKey = apiKey ? `Key ending in ....${apiKey.slice(-4).toUpperCase()}` : null;
 
   const connectKey = async (rawKey: string): Promise<{ success: boolean; error?: string }> => {
     const trimmed = rawKey.trim();
@@ -80,7 +80,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
       if (!active.current) return { success: false, error: 'Account changed. Please reconnect.' };
       setApiKey(trimmed);
-      await AsyncStorage.setItem(storageKey(STORAGE_KEYS.GEMINI_API_KEY), trimmed);
+      await setAccountItem(STORAGE_KEYS.GEMINI_API_KEY, trimmed, user?.id);
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message || 'Verification failed.' };
@@ -97,7 +97,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
   const evaluateEssay = async (
     essayText: string,
     questionType: 'Q53' | 'Q54',
-    promptTopic: string
+    promptTopic: string,
   ): Promise<AiEvaluationResponse> => {
     if (!apiKey) {
       return {
@@ -107,19 +107,11 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    const response = await requestEssayEvaluation(
-      apiKey,
-      essayText,
-      questionType,
-      promptTopic
-    );
+    const response = await requestEssayEvaluation(apiKey, essayText, questionType, promptTopic);
 
     if (active.current && response.success && response.result) {
       setLatestEvaluation(response.result);
-      await AsyncStorage.setItem(
-        storageKey(STORAGE_KEYS.LAST_EVALUATION),
-        JSON.stringify(response.result)
-      );
+      await setAccountItem(STORAGE_KEYS.LAST_EVALUATION, JSON.stringify(response.result), user?.id);
     }
 
     return response;
@@ -137,7 +129,8 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
         removeKey,
         evaluateEssay,
         setLatestEvaluation,
-      }}>
+      }}
+    >
       {children}
     </AiContext.Provider>
   );
@@ -150,4 +143,3 @@ export function useAi(): AiContextType {
   }
   return context;
 }
-

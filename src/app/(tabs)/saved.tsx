@@ -239,12 +239,11 @@ export default function SavedScreen() {
                 activeOpacity={0.75}
                 onPress={() =>
                   router.push({
-                    pathname: '/modal/wongoji-editor',
+                    pathname: item.type === 'statement' ? '/modal/statement-editor' : '/modal/wongoji-editor',
                     params: {
                       draftId: item.id,
                       type: item.type,
                       promptTitle: item.title,
-                      initialContent: item.content,
                     },
                   })
                 }

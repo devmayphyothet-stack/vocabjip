@@ -1,3 +1,4 @@
+import { useWritingRecovery } from '@/hooks/use-writing-recovery';
 import { createDraftId, isUuid } from '@/lib/draft-utils';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -18,8 +19,6 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSaved } from '@/context/saved-context';
 import { useAi } from '@/context/ai-context';
-import { useAuth } from '@/context/auth-context';
-import { StreakService } from '@/services/streak-service';
 import { PracticePausedModal, PracticeTimeUpModal } from '@/components/timer-modals';
 
 type ViewMode = 'text' | 'grid';
@@ -27,12 +26,12 @@ type ViewMode = 'text' | 'grid';
 export default function WongojiEditorModal() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
-  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
 
   const { saveDraft, syncStatus, drafts } = useSaved();
   const { isConnected } = useAi();
+  const recovery = useWritingRecovery();
   const params = useLocalSearchParams<{
     draftId?: string;
     type?: string;
@@ -43,27 +42,18 @@ export default function WongojiEditorModal() {
 
   // Keep a stable draft ID for this editor session so saving/closing updates the same draft instead of duplicating
   const sessionDraftIdRef = useRef<string>(params.draftId && isUuid(params.draftId) ? params.draftId : createDraftId());
-  const initialContentRef = useRef<string>(
-    params.initialContent ||
-      ((params.type || 'Q53') === 'Q53'
-        ? '인터넷 사용 통계에 따르면 2020년 65%에서 2024년 85%로 크게 증가하였다. 이러한 변화의 원인으로는 스마트폰 보급 확대를 들 수 있다.'
-        : '')
-  );
-  const hasManuallySavedRef = useRef<boolean>(false);
-
-  const type = (params.type as 'Q53' | 'Q54') || 'Q53';
-  const promptTitle =
-    params.promptTitle ||
-    (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
+  const existing = drafts.find(draft => draft.id === params.draftId);
+  const initialContentRef = useRef(existing?.content ?? params.initialContent ?? '');
+  const hasManuallySavedRef = useRef(false);
+  const type = existing?.type === 'Q54' || params.type === 'Q54' ? 'Q54' : 'Q53';
+  const promptTitle = existing?.title || params.promptTitle || (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
   const charTarget = params.charTarget || (type === 'Q53' ? '200 – 300' : '600 – 700');
-
   const [viewMode, setViewMode] = useState<ViewMode>('text');
-  const [content, setContent] = useState(
-    params.initialContent ||
-      (type === 'Q53'
-        ? '인터넷 사용 통계에 따르면 2020년 65%에서 2024년 85%로 크게 증가하였다. 이러한 변화의 원인으로는 스마트폰 보급 확대를 들 수 있다.'
-        : '')
-  );
+  const [content, setContent] = useState(initialContentRef.current);
+  const handleTextChange = (text: string) => {
+    setContent(text);
+    recovery.update({ id: sessionDraftIdRef.current, type, title: promptTitle, content: text, charCount: text.length });
+  };
 
   // Timer State (20 minutes = 1200 seconds)
   const [secondsLeft, setSecondsLeft] = useState(1200);
@@ -118,9 +108,7 @@ export default function WongojiEditorModal() {
       Alert.alert('Could not save draft', error.message);
       return;
     }
-    if (content.trim().length > 10) {
-      StreakService.recordActivity(user?.id);
-    }
+
     setIsSavedFeedback(true);
     setTimeout(() => setIsSavedFeedback(false), 2000);
   };
@@ -311,7 +299,7 @@ export default function WongojiEditorModal() {
           </TouchableOpacity>
       </View>
       <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: colors.textSecondary, fontSize: 12 }}>
-        {!drafts.some(draft => draft.id === sessionDraftIdRef.current && draft.content === content) ? 'Unsaved changes · Tap Save' : syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing…' : syncStatus === 'pending' ? 'Saved on device · Sync pending' : syncStatus === 'error' ? 'Saved on device · Cloud sync needs retry' : 'Drafts save on this device'}
+        {recovery.status === 'error' ? 'Could not save · Tap Save to retry' : recovery.status === 'saving' ? 'Saving on this device…' : syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing…' : syncStatus === 'pending' ? 'Saved on device · Sync pending' : syncStatus === 'error' ? 'Saved on device · Cloud sync needs retry' : 'Drafts save on this device'}
       </Text>
 
       {/* Title & Target Bar */}
@@ -321,7 +309,7 @@ export default function WongojiEditorModal() {
             {promptTitle}
           </Text>
           <Text style={[styles.targetInfo, { color: colors.textSecondary }]}>
-            Target: {charTarget} characters • Save to keep your changes
+            Target: {charTarget} characters • Saves automatically
           </Text>
         </View>
 
@@ -402,7 +390,7 @@ export default function WongojiEditorModal() {
             placeholder="원고지 형식에 맞추어 글을 작성해 보세요..."
             placeholderTextColor={colors.textMuted}
             value={content}
-            onChangeText={setContent}
+            onChangeText={handleTextChange}
             multiline
             textAlignVertical="top"
             autoFocus

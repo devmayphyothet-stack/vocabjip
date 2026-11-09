@@ -18,6 +18,7 @@ const supabaseAnonKey =
     ? DEFAULT_SUPABASE_ANON_KEY
     : rawKey;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const AUTH_STORAGE_KEY = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { storageKey: AUTH_STORAGE_KEY } });
 
 

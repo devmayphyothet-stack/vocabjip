@@ -23,6 +23,7 @@ test('database enforces privacy, role assignment, invitations, draft conflicts, 
     `);
     const schema = fs
       .readFileSync('supabase/schema.sql', 'utf8')
+      .split('-- Phase 2 profiles and complete writing documents.')[0]
       .replace('create extension if not exists "uuid-ossp";', '')
       .replaceAll('uuid_generate_v4()', 'gen_random_uuid()');
     await db.exec(schema);

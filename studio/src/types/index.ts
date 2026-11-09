@@ -4,6 +4,11 @@ export interface UserProfile {
   id: string;
   email: string;
   display_name: string;
+  avatar_key?: string;
+  bio?: string;
+  korean_background?: string;
+  target_level?: string;
+  daily_goal?: number;
   role: UserRole;
   created_at: string;
 }

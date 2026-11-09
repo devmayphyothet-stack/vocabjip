@@ -1,3 +1,4 @@
+import { useSaved } from '@/context/saved-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -21,6 +22,8 @@ export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { user, isGuest } = useAuth();
+  const { drafts } = useSaved();
+  const latestDraft = drafts[0];
   const { vocabularies, syncNow } = useCurriculum();
   const { streakDays, dailyGoal, dailyCompleted, isGoalAchieved } = useDailyStreak();
 
@@ -215,6 +218,9 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {latestDraft && <TouchableOpacity accessibilityRole="button" onPress={() => router.push({ pathname: latestDraft.type === 'statement' ? '/modal/statement-editor' : '/modal/wongoji-editor', params: { draftId: latestDraft.id } })} style={[styles.tipCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={{ color: colors.accent, fontWeight: '700' }}>Continue writing</Text><Text style={{ color: colors.text, marginTop: 6 }}>{latestDraft.title}</Text><Text style={{ color: colors.textSecondary, marginTop: 4 }}>Your latest saved writing is ready to resume.</Text>
+        </TouchableOpacity>}
         {/* Quick Actions Grid */}
         <Text style={[styles.sectionHeading, { color: colors.text }]}>
           Quick Practice

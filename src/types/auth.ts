@@ -3,6 +3,10 @@ export type AuthMode = 'signin' | 'signup' | 'recovery';
 export interface UserProfile {
   id: string;
   email: string;
+  avatarKey?: string;
+  bio?: string;
+  koreanBackground?: string;
+  role?: 'user' | 'contributor' | 'admin';
   displayName: string;
   targetLevel: string; // e.g. "TOPIK II Level 4"
   streakDays: number;

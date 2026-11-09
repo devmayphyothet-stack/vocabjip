@@ -4,6 +4,13 @@ export const createDraftId = () => Crypto.randomUUID();
 export const isUuid = (id: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
+export interface DraftMetadata {
+  university?: string;
+  major?: string;
+  sections?: Record<string, string>;
+  currentStep?: number;
+}
+
 export interface Draft {
   id: string;
   type: 'Q53' | 'Q54' | 'statement';
@@ -11,6 +18,7 @@ export interface Draft {
   content: string;
   charCount: number;
   updatedAt: string;
+  metadata?: DraftMetadata;
 }
 
 export function mergeDrafts(local: Draft[], remote: Draft[], deleted: string[] = []) {

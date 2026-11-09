@@ -1,3 +1,4 @@
+import { AVATARS } from '@/lib/profile-fields';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -22,6 +23,9 @@ import { supabase } from '@/lib/supabase';
 interface ContributorSummary {
   id: string;
   displayName: string;
+  avatarKey?: string;
+  bio?: string;
+  koreanBackground?: string;
   vocabCount: number;
   patternCount: number;
   quizStepCount: number;
@@ -99,7 +103,7 @@ export default function ContributorsScreen() {
       ] = await Promise.all([
         supabase
           .from('contributor_directory')
-          .select('id, display_name, role, created_at')
+          .select('id, display_name, role, created_at, avatar_key, bio, korean_background')
           .eq('role', 'contributor')
           .order('created_at', { ascending: true }),
         supabase
@@ -126,7 +130,8 @@ export default function ContributorsScreen() {
         (profileRows || []).forEach((p: any) => {
           if (p.display_name) {
             idToName.set(p.id, p.display_name);
-            getOrCreateByName(p.display_name, p.id, p.created_at);
+            const entry = getOrCreateByName(p.display_name, p.id, p.created_at);
+            if (entry) { entry.avatarKey = p.avatar_key; entry.bio = p.bio; entry.koreanBackground = p.korean_background; }
           }
         });
 
@@ -396,7 +401,7 @@ export default function ContributorsScreen() {
                           { backgroundColor: colors.accentLight },
                         ]}>
                         <Text style={[styles.avatarText, { color: colors.accent }]}>
-                          {initial}
+                          {AVATARS[contributor.avatarKey as keyof typeof AVATARS] || initial}
                         </Text>
                       </View>
 
@@ -417,11 +422,13 @@ export default function ContributorsScreen() {
                             styles.contributorSubtitle,
                             { color: colors.textSecondary },
                           ]}>
-                          Verified VocabJip Educator & Curriculum Author
+                          Contributors · Curriculum author
                         </Text>
                       </View>
                     </View>
 
+                    {contributor.bio ? <Text style={{ color: colors.text }}>{contributor.bio}</Text> : null}
+                    {contributor.koreanBackground ? <Text style={{ color: colors.textSecondary }}>Korean background (self-reported): {contributor.koreanBackground}</Text> : null}
                     {/* Contribution Pills */}
                     <View
                       style={[

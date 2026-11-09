@@ -1,3 +1,4 @@
+import { ProfileView } from './views/ProfileView';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/auth-context';
 import { supabase } from './lib/supabase';
@@ -116,6 +117,7 @@ export function AppContent() {
         />
 
         <main className="flex-1 overflow-y-auto min-h-[calc(100vh-4rem)]">
+          {activeView === 'profile' && <ProfileView key={user.id} />}
           {activeView === 'vocab' && <VocabStudioView onSubmitted={fetchPendingCount} />}
           {activeView === 'patterns' && <PatternStudioView onSubmitted={fetchPendingCount} />}
           {activeView === 'quizzes' && <QuizStudioView onSubmitted={fetchPendingCount} />}

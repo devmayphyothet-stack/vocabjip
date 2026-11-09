@@ -32,3 +32,27 @@ export async function migrateLegacyStorage() {
   }
   await AsyncStorage.setItem('@vocabjip/account_storage_v1', 'true');
 }
+
+const pausedAccounts = new Set<string>();
+const activeWrites = new Map<string, Set<Promise<void>>>();
+export async function setAccountItem(key: string, value: string, userId?: string) {
+  const scope = userId || 'guest';
+  if (pausedAccounts.has(scope)) throw new Error('Account changes are in progress.');
+  const pending = AsyncStorage.setItem(accountKey(key, userId), value);
+  const writes = activeWrites.get(scope) || new Set<Promise<void>>();
+  activeWrites.set(scope, writes);
+  writes.add(pending);
+  try {
+    await pending;
+  } finally {
+    writes.delete(pending);
+  }
+}
+export async function pauseAccountWrites(userId?: string) {
+  const scope = userId || 'guest';
+  pausedAccounts.add(scope);
+  await Promise.allSettled([...(activeWrites.get(scope) || [])]);
+}
+export function resumeAccountWrites(userId?: string) {
+  pausedAccounts.delete(userId || 'guest');
+}

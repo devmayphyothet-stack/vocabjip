@@ -8,7 +8,7 @@ export function useDailyStreak() {
 
   useEffect(() => {
     // 1. Initialize streak with user id if available
-    StreakService.initStreak(user?.id);
+    StreakService.initStreak(user?.id, user?.dailyGoal);
 
     // 2. Subscribe to real-time updates
     const unsubscribe = StreakService.subscribe((newState) => {
@@ -16,7 +16,7 @@ export function useDailyStreak() {
     }, user?.id);
 
     return unsubscribe;
-  }, [user?.id]);
+  }, [user?.id, user?.dailyGoal]);
 
   const recordActivity = useCallback(() => {
     return StreakService.recordActivity(user?.id);
@@ -26,7 +26,7 @@ export function useDailyStreak() {
     (newGoal: number) => {
       return StreakService.setDailyGoal(newGoal, user?.id);
     },
-    [user?.id]
+    [user?.id],
   );
 
   return {
@@ -39,4 +39,3 @@ export function useDailyStreak() {
     setDailyGoal,
   };
 }
-
