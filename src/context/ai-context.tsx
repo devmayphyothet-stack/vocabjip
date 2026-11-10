@@ -1,3 +1,4 @@
+import { LearningLogService } from '@/services/learning-log-service';
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { accountKey, setAccountItem } from '@/lib/account-storage';
 import { useAuth } from '@/context/auth-context';
@@ -110,8 +111,19 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
     const response = await requestEssayEvaluation(apiKey, essayText, questionType, promptTopic);
 
     if (active.current && response.success && response.result) {
-      setLatestEvaluation(response.result);
-      await setAccountItem(STORAGE_KEYS.LAST_EVALUATION, JSON.stringify(response.result), user?.id);
+      try {
+        const review = await LearningLogService.recordAiFeedback(response.result, user?.id);
+        response.result.historyId = review.id;
+        await setAccountItem(
+          STORAGE_KEYS.LAST_EVALUATION,
+          JSON.stringify(response.result),
+          user?.id,
+        );
+      } catch {
+        response.storageWarning =
+          'Feedback is ready, but could not be saved on this device. Keep this screen open and retry saving before leaving.';
+      }
+      if (active.current) setLatestEvaluation(response.result);
     }
 
     return response;

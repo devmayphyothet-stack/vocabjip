@@ -38,14 +38,15 @@ export interface AiEvaluationResult {
   grammarCorrections: GrammarCorrection[];
   vocabularySuggestions: VocabularySuggestion[];
   evaluatedAt: string;
+  historyId?: string;
 }
 
 export type AiErrorType = 'QUOTA' | 'INVALID_KEY' | 'NETWORK' | 'UNKNOWN';
 
 export interface AiEvaluationResponse {
   success: boolean;
+  storageWarning?: string;
   result?: AiEvaluationResult;
   error?: string;
   errorType?: AiErrorType;
 }
-

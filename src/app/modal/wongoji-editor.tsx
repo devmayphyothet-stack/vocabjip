@@ -45,23 +45,41 @@ export default function WongojiEditorModal() {
   }>();
 
   // Keep a stable draft ID for this editor session so saving/closing updates the same draft instead of duplicating
-  const sessionDraftIdRef = useRef<string>(params.draftId && isUuid(params.draftId) ? params.draftId : createDraftId());
-  const existing = drafts.find(draft => draft.id === params.draftId);
+  const sessionDraftIdRef = useRef<string>(
+    params.draftId && isUuid(params.draftId) ? params.draftId : createDraftId(),
+  );
+  const existing = drafts.find((draft) => draft.id === params.draftId);
   const initialContentRef = useRef(existing?.content ?? params.initialContent ?? '');
   const hasManuallySavedRef = useRef(false);
   const type = existing?.type === 'Q54' || params.type === 'Q54' ? 'Q54' : 'Q53';
-  const promptTitle = existing?.title || params.promptTitle || (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
-  const writingPrompt = essayPrompts.find(prompt => params.promptId ? prompt.id === params.promptId : prompt.title === promptTitle);
+  const promptTitle =
+    existing?.title ||
+    params.promptTitle ||
+    (type === 'Q53' ? '인터넷 이용 현황 (Q53)' : '평생 교육의 필요성 (Q54)');
+  const writingPrompt = essayPrompts.find((prompt) =>
+    params.promptId ? prompt.id === params.promptId : prompt.title === promptTitle,
+  );
   const charTarget = params.charTarget || (type === 'Q53' ? '200 – 300' : '600 – 700');
   const [viewMode, setViewMode] = useState<ViewMode>('text');
   const [content, setContent] = useState(initialContentRef.current);
   const handleTextChange = (text: string) => {
     setContent(text);
-    recovery.update({ id: sessionDraftIdRef.current, type, title: promptTitle, content: text, charCount: text.length });
+    recovery.update({
+      id: sessionDraftIdRef.current,
+      type,
+      title: promptTitle,
+      content: text,
+      metadata: existing?.metadata,
+      charCount: text.length,
+    });
   };
 
   // Timer State (20 minutes = 1200 seconds)
-  const [secondsLeft, setSecondsLeft] = useState([5, 10, 15, 20].includes(Number(params.durationMinutes)) ? Number(params.durationMinutes) * 60 : 1200);
+  const [secondsLeft, setSecondsLeft] = useState(
+    [5, 10, 15, 20].includes(Number(params.durationMinutes))
+      ? Number(params.durationMinutes) * 60
+      : 1200,
+  );
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [isSavedFeedback, setIsSavedFeedback] = useState(false);
   const [showPausedModal, setShowPausedModal] = useState(false);
@@ -102,13 +120,15 @@ export default function WongojiEditorModal() {
 
   const handleManualSave = async () => {
     hasManuallySavedRef.current = true;
-    try { await saveDraft({
-      id: sessionDraftIdRef.current,
-      type,
-      title: promptTitle,
-      content,
-      charCount: content.length,
-    });
+    try {
+      await saveDraft({
+        id: sessionDraftIdRef.current,
+        type,
+        title: promptTitle,
+        content,
+        metadata: existing?.metadata,
+        charCount: content.length,
+      });
     } catch (error: any) {
       Alert.alert('Could not save draft', error.message);
       return;
@@ -125,13 +145,19 @@ export default function WongojiEditorModal() {
     }
     hasManuallySavedRef.current = true;
     // Auto save draft before navigating using the stable session draft ID
-    try { await saveDraft({
-      id: sessionDraftIdRef.current,
-      type,
-      title: promptTitle,
-      content,
-      charCount: content.length,
-    }); } catch (error: any) { Alert.alert('Could not save draft', error.message); return; }
+    try {
+      await saveDraft({
+        id: sessionDraftIdRef.current,
+        type,
+        title: promptTitle,
+        content,
+        metadata: existing?.metadata,
+        charCount: content.length,
+      });
+    } catch (error: any) {
+      Alert.alert('Could not save draft', error.message);
+      return;
+    }
 
     if (!isConnected) {
       router.push('/modal/ai-connect');
@@ -139,7 +165,7 @@ export default function WongojiEditorModal() {
       router.push({
         pathname: '/modal/ai-feedback',
         params: {
-          essayText: content,
+          draftId: sessionDraftIdRef.current,
           questionType: type,
           promptTopic: promptTitle,
         },
@@ -149,22 +175,31 @@ export default function WongojiEditorModal() {
 
   const handleContributorReview = async () => {
     if (!content.trim()) {
-      Alert.alert('Empty Draft', 'Please write some sentences before requesting a contributor review.');
+      Alert.alert(
+        'Empty Draft',
+        'Please write some sentences before requesting a contributor review.',
+      );
       return;
     }
     hasManuallySavedRef.current = true;
-    try { await saveDraft({
-      id: sessionDraftIdRef.current,
-      type,
-      title: promptTitle,
-      content,
-      charCount: content.length,
-    }); } catch (error: any) { Alert.alert('Could not save draft', error.message); return; }
+    try {
+      await saveDraft({
+        id: sessionDraftIdRef.current,
+        type,
+        title: promptTitle,
+        content,
+        metadata: existing?.metadata,
+        charCount: content.length,
+      });
+    } catch (error: any) {
+      Alert.alert('Could not save draft', error.message);
+      return;
+    }
 
     router.push({
       pathname: '/modal/contributor-review',
       params: {
-        essayText: content,
+        draftId: sessionDraftIdRef.current,
         questionType: type,
         promptTopic: promptTitle,
       },
@@ -175,7 +210,14 @@ export default function WongojiEditorModal() {
     const isModified = content !== initialContentRef.current;
     if (isModified || hasManuallySavedRef.current) {
       try {
-        await saveDraft({ id: sessionDraftIdRef.current, type, title: promptTitle, content, charCount: content.length });
+        await saveDraft({
+          id: sessionDraftIdRef.current,
+          type,
+          title: promptTitle,
+          content,
+          metadata: existing?.metadata,
+          charCount: content.length,
+        });
       } catch (error: any) {
         Alert.alert('Could not save draft', error.message);
         return;
@@ -216,7 +258,8 @@ export default function WongojiEditorModal() {
                         styles.gridCell,
                         { borderColor: '#E8E2D8' },
                         isFilled && { backgroundColor: '#FDFCF7' },
-                      ]}>
+                      ]}
+                    >
                       <Text style={styles.gridCellText}>{cellChar}</Text>
                     </View>
                   );
@@ -236,30 +279,30 @@ export default function WongojiEditorModal() {
         <TouchableOpacity
           onPress={handleClose}
           style={[styles.closeBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-          accessibilityLabel="Close Editor">
+          accessibilityLabel="Close Editor"
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
 
         {/* Timer Pill */}
         <TouchableOpacity
           onPress={handleToggleTimer}
-          style={[styles.timerPill, { backgroundColor: colors.cardMuted }]}>
-          <Ionicons
-            name={isTimerRunning ? 'pause' : 'play'}
-            size={13}
-            color={colors.accent}
-          />
-          <Text style={[styles.timerText, { color: colors.text }]}>
-            {formatTime(secondsLeft)}
-          </Text>
+          style={[styles.timerPill, { backgroundColor: colors.cardMuted }]}
+        >
+          <Ionicons name={isTimerRunning ? 'pause' : 'play'} size={13} color={colors.accent} />
+          <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(secondsLeft)}</Text>
         </TouchableOpacity>
 
         {/* Action Buttons: Scan, Save & AI Review */}
         <View style={styles.topActionGroup}>
           <TouchableOpacity
             onPress={() => router.push('/modal/scan-handwriting')}
-            style={[styles.actionIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
-            accessibilityLabel="Scan Handwriting">
+            style={[
+              styles.actionIconBtn,
+              { borderColor: colors.border, backgroundColor: colors.card },
+            ]}
+            accessibilityLabel="Scan Handwriting"
+          >
             <Ionicons name="camera-outline" size={17} color={colors.text} />
           </TouchableOpacity>
 
@@ -270,44 +313,61 @@ export default function WongojiEditorModal() {
               { backgroundColor: isSavedFeedback ? colors.successLight : colors.card },
               { borderColor: isSavedFeedback ? colors.success : colors.border },
             ]}
-            accessibilityLabel="Save Draft">
+            accessibilityLabel="Save Draft"
+          >
             <Ionicons
               name={isSavedFeedback ? 'checkmark' : 'save-outline'}
               size={17}
               color={isSavedFeedback ? colors.success : colors.text}
             />
           </TouchableOpacity>
-
         </View>
       </View>
 
       <View style={styles.reviewActions}>
-          <TouchableOpacity
-            onPress={handleContributorReview}
-            style={[
-              styles.aiReviewBtn,
-              { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' },
-            ]}>
-            <Ionicons name="school" size={14} color="#B45309" />
-            <Text style={[styles.aiReviewBtnText, { color: '#B45309' }]}>
-              Contributors
-            </Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleContributorReview}
+          style={[styles.aiReviewBtn, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}
+        >
+          <Ionicons name="school" size={14} color="#B45309" />
+          <Text style={[styles.aiReviewBtnText, { color: '#B45309' }]}>Contributors</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleAiReview}
-            style={[styles.aiReviewBtn, { backgroundColor: colors.accentLight, borderColor: colors.accent }]}>
-            <Ionicons name="sparkles" size={14} color={colors.accent} />
-            <Text style={[styles.aiReviewBtnText, { color: colors.accent }]}>
-              AI Review
-            </Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleAiReview}
+          style={[
+            styles.aiReviewBtn,
+            { backgroundColor: colors.accentLight, borderColor: colors.accent },
+          ]}
+        >
+          <Ionicons name="sparkles" size={14} color={colors.accent} />
+          <Text style={[styles.aiReviewBtnText, { color: colors.accent }]}>AI Review</Text>
+        </TouchableOpacity>
       </View>
-      <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: colors.textSecondary, fontSize: 12 }}>
-        {recovery.status === 'error' ? 'Could not save · Tap Save to retry' : recovery.status === 'saving' ? 'Saving on this device…' : syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing…' : syncStatus === 'pending' ? 'Saved on device · Sync pending' : syncStatus === 'error' ? 'Saved on device · Cloud sync needs retry' : 'Drafts save on this device'}
+      <Text
+        accessibilityLiveRegion="polite"
+        style={{ textAlign: 'center', color: colors.textSecondary, fontSize: 12 }}
+      >
+        {recovery.status === 'error'
+          ? 'Could not save · Tap Save to retry'
+          : recovery.status === 'saving'
+            ? 'Saving on this device…'
+            : syncStatus === 'synced'
+              ? 'Synced'
+              : syncStatus === 'syncing'
+                ? 'Syncing…'
+                : syncStatus === 'pending'
+                  ? 'Saved on device · Sync pending'
+                  : syncStatus === 'error'
+                    ? 'Saved on device · Cloud sync needs retry'
+                    : 'Drafts save on this device'}
       </Text>
 
-      {writingPrompt && <Text style={{ paddingHorizontal: 24, paddingVertical: 12, color: colors.textSecondary }}>{writingPrompt.promptText}</Text>}
+      {writingPrompt && (
+        <Text style={{ paddingHorizontal: 24, paddingVertical: 12, color: colors.textSecondary }}>
+          {writingPrompt.promptText}
+        </Text>
+      )}
       {/* Title & Target Bar */}
       <View style={styles.metaBar}>
         <View style={{ flex: 1 }}>
@@ -321,9 +381,7 @@ export default function WongojiEditorModal() {
 
         {/* Character Count Badge */}
         <View style={[styles.charCountPill, { backgroundColor: colors.cardMuted }]}>
-          <Text style={[styles.charCountText, { color: colors.accent }]}>
-            {content.length}
-          </Text>
+          <Text style={[styles.charCountText, { color: colors.accent }]}>{content.length}</Text>
           <Text style={[styles.charCountTotal, { color: colors.textMuted }]}>
             /{type === 'Q53' ? '300' : '700'}
           </Text>
@@ -337,11 +395,9 @@ export default function WongojiEditorModal() {
             onPress={() => setViewMode('text')}
             style={[
               styles.segmentBtn,
-              viewMode === 'text' && [
-                styles.segmentBtnActive,
-                { backgroundColor: colors.card },
-              ],
-            ]}>
+              viewMode === 'text' && [styles.segmentBtnActive, { backgroundColor: colors.card }],
+            ]}
+          >
             <Ionicons
               name="create-outline"
               size={15}
@@ -351,7 +407,8 @@ export default function WongojiEditorModal() {
               style={[
                 styles.segmentText,
                 { color: viewMode === 'text' ? colors.text : colors.textSecondary },
-              ]}>
+              ]}
+            >
               Text Input
             </Text>
           </TouchableOpacity>
@@ -360,11 +417,9 @@ export default function WongojiEditorModal() {
             onPress={() => setViewMode('grid')}
             style={[
               styles.segmentBtn,
-              viewMode === 'grid' && [
-                styles.segmentBtnActive,
-                { backgroundColor: colors.card },
-              ],
-            ]}>
+              viewMode === 'grid' && [styles.segmentBtnActive, { backgroundColor: colors.card }],
+            ]}
+          >
             <Ionicons
               name="grid-outline"
               size={15}
@@ -374,7 +429,8 @@ export default function WongojiEditorModal() {
               style={[
                 styles.segmentText,
                 { color: viewMode === 'grid' ? colors.text : colors.textSecondary },
-              ]}>
+              ]}
+            >
               Grid Preview (원고지)
             </Text>
           </TouchableOpacity>

@@ -1,3 +1,7 @@
+import { LearningPage, LearningText, useLearningCopy } from '@/components/LearningUI';
+import { LearningLogService } from '@/services/learning-log-service';
+import { useAuth } from '@/context/auth-context';
+import { useSaved } from '@/context/saved-context';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -20,34 +24,39 @@ import { AiEvaluationResult, AiErrorType } from '@/types/ai';
 type ScreenStage = 'consent' | 'processing' | 'result' | 'error';
 
 export default function AiFeedbackModal() {
+  const copy = useLearningCopy();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16);
   const { isConnected, evaluateEssay, latestEvaluation } = useAi();
   const params = useLocalSearchParams<{
+    draftId?: string;
     essayText?: string;
     questionType?: string;
     promptTopic?: string;
   }>();
 
-  const essayText = params.essayText || '';
+  const { drafts } = useSaved();
+  const incomingDraft = drafts.find((draft) => draft.id === params.draftId);
+  const essayText = incomingDraft?.content || params.essayText || '';
   const questionType = (params.questionType as 'Q53' | 'Q54') || 'Q53';
   const promptTopic = params.promptTopic || 'TOPIK II Essay';
 
+  const { user } = useAuth();
+  const [historyWarning, setHistoryWarning] = useState('');
+  const [savingReview, setSavingReview] = useState(false);
   const [stage, setStage] = useState<ScreenStage>(
-    latestEvaluation && !essayText ? 'result' : 'consent'
+    latestEvaluation && !essayText ? 'result' : 'consent',
   );
-  const [evaluation, setEvaluation] = useState<AiEvaluationResult | null>(
-    latestEvaluation
-  );
+  const [evaluation, setEvaluation] = useState<AiEvaluationResult | null>(latestEvaluation);
   const [errorInfo, setErrorInfo] = useState<{ message: string; type?: AiErrorType }>({
     message: '',
   });
 
   // If not connected to Gemini, prompt user to connect key first
   useEffect(() => {
-    if (!isConnected) {
+    if (!isConnected && !latestEvaluation && (!params.draftId || incomingDraft)) {
       router.replace('/modal/ai-connect');
     }
   }, [isConnected]);
@@ -60,9 +69,17 @@ export default function AiFeedbackModal() {
     }
 
     setStage('processing');
-    const response = await evaluateEssay(essayText, questionType, promptTopic);
+    let response;
+    try {
+      response = await evaluateEssay(essayText, questionType, promptTopic);
+    } catch {
+      setErrorInfo({ message: 'Feedback could not be completed. Please retry.', type: 'UNKNOWN' });
+      setStage('error');
+      return;
+    }
 
     if (response.success && response.result) {
+      setHistoryWarning(response.storageWarning || '');
       setEvaluation(response.result);
       setStage('result');
     } else {
@@ -74,18 +91,28 @@ export default function AiFeedbackModal() {
     }
   };
 
+  if (params.draftId && !incomingDraft)
+    return (
+      <LearningPage title={copy('Writing feedback', 'စာရေးသုံးသပ်ချက်')}>
+        <LearningText>
+          {copy(
+            'This draft is no longer available. Open a saved draft to request feedback.',
+            'ဤစာမူ မရရှိတော့ပါ။ Saved မှ စာမူတစ်ခုကို ဖွင့်ပါ။',
+          )}
+        </LearningText>
+      </LearningPage>
+    );
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Bar */}
       <View style={[styles.topBar, { paddingTop: topInset }]}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={[styles.closeBtn, { borderColor: colors.border }]}>
+          style={[styles.closeBtn, { borderColor: colors.border }]}
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>
-          AI Writing Coach
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.textSecondary }]}>AI Writing Coach</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -105,25 +132,23 @@ export default function AiFeedbackModal() {
             style={[
               styles.draftSummaryCard,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <View style={styles.summaryBadgeRow}>
               <View style={[styles.qTag, { backgroundColor: colors.accentLight }]}>
-                <Text style={[styles.qTagText, { color: colors.accent }]}>
-                  {questionType}
-                </Text>
+                <Text style={[styles.qTagText, { color: colors.accent }]}>{questionType}</Text>
               </View>
               <Text style={[styles.charCountText, { color: colors.textSecondary }]}>
                 {essayText.length} characters
               </Text>
             </View>
 
-            <Text style={[styles.summaryTopic, { color: colors.text }]}>
-              {promptTopic}
-            </Text>
+            <Text style={[styles.summaryTopic, { color: colors.text }]}>{promptTopic}</Text>
 
             <Text
               numberOfLines={4}
-              style={[styles.summarySnippet, { color: colors.textSecondary }]}>
+              style={[styles.summarySnippet, { color: colors.textSecondary }]}
+            >
               {essayText || 'No text written yet.'}
             </Text>
           </View>
@@ -142,7 +167,8 @@ export default function AiFeedbackModal() {
               styles.primaryBtn,
               { backgroundColor: colors.primary },
               !essayText.trim() && { opacity: 0.5 },
-            ]}>
+            ]}
+          >
             <Ionicons name="sparkles" size={18} color={colors.primaryContrast} />
             <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
               Start AI Review
@@ -164,7 +190,8 @@ export default function AiFeedbackModal() {
               Good writing takes a moment
             </Text>
             <Text style={[styles.processingTipText, { color: colors.textSecondary }]}>
-              Gemini is evaluating your paragraph structure, academic vocabulary usage, and TOPIK II scoring alignment in Myanmar language...
+              Gemini is evaluating your paragraph structure, academic vocabulary usage, and TOPIK II
+              scoring alignment in Myanmar language...
             </Text>
           </View>
         </View>
@@ -172,13 +199,49 @@ export default function AiFeedbackModal() {
 
       {/* STAGE 3: RESULTS & SCORE */}
       {stage === 'result' && evaluation && (
-        <ScrollView contentContainerStyle={styles.resultScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.resultScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {stage === 'result' && evaluation ? (
+            <View style={{ padding: 16, gap: 8 }}>
+              {historyWarning ? (
+                <Text accessibilityRole="alert" style={{ color: colors.error }}>
+                  {historyWarning}
+                </Text>
+              ) : null}
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={savingReview}
+                style={{ padding: 14, backgroundColor: colors.accentLight, borderRadius: 12 }}
+                onPress={async () => {
+                  if (savingReview) return;
+                  setSavingReview(true);
+                  try {
+                    const review = await LearningLogService.recordAiFeedback(evaluation, user?.id);
+                    setHistoryWarning('');
+                    router.push({
+                      pathname: '/modal/writing-revision',
+                      params: { reviewId: review.id },
+                    });
+                  } catch {
+                    setHistoryWarning('Could not save feedback. Please retry.');
+                  } finally {
+                    setSavingReview(false);
+                  }
+                }}
+              >
+                <Text style={{ color: colors.accent }}>
+                  {copy('Save feedback & revise writing', 'သုံးသပ်ချက် သိမ်း၍ စာပြင်ဆင်ရန်')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Estimated Score Card */}
           <View
-            style={[
-              styles.scoreCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
             <View style={styles.scoreHeaderRow}>
               <Text style={[styles.scoreTag, { color: colors.textSecondary }]}>
                 ESTIMATED {evaluation.questionType} SCORE
@@ -208,7 +271,8 @@ export default function AiFeedbackModal() {
               style={[
                 styles.dimensionCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
+              ]}
+            >
               <Text style={[styles.dimensionLabel, { color: colors.textSecondary }]}>
                 STRUCTURE
               </Text>
@@ -221,10 +285,9 @@ export default function AiFeedbackModal() {
               style={[
                 styles.dimensionCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
-              <Text style={[styles.dimensionLabel, { color: colors.textSecondary }]}>
-                CONTENT
-              </Text>
+              ]}
+            >
+              <Text style={[styles.dimensionLabel, { color: colors.textSecondary }]}>CONTENT</Text>
               <Text style={[styles.dimensionScore, { color: colors.text }]}>
                 {evaluation.contentRating.score}/{evaluation.contentRating.max}
               </Text>
@@ -234,10 +297,9 @@ export default function AiFeedbackModal() {
               style={[
                 styles.dimensionCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
-              <Text style={[styles.dimensionLabel, { color: colors.textSecondary }]}>
-                LANGUAGE
-              </Text>
+              ]}
+            >
+              <Text style={[styles.dimensionLabel, { color: colors.textSecondary }]}>LANGUAGE</Text>
               <Text style={[styles.dimensionScore, { color: colors.text }]}>
                 {evaluation.languageRating.score}/{evaluation.languageRating.max}
               </Text>
@@ -249,7 +311,8 @@ export default function AiFeedbackModal() {
             style={[
               styles.sectionCard,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <Text style={[styles.sectionHeading, { color: colors.text }]}>
               Key Insights (အဓိက သုံးသပ်ချက်များ)
             </Text>
@@ -285,7 +348,8 @@ export default function AiFeedbackModal() {
               style={[
                 styles.sectionCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
+              ]}
+            >
               <Text style={[styles.sectionHeading, { color: colors.text }]}>
                 Sentence Corrections (ဝါကျ ပြင်ဆင်ချက်)
               </Text>
@@ -293,7 +357,8 @@ export default function AiFeedbackModal() {
               {evaluation.grammarCorrections.map((item, idx) => (
                 <View
                   key={idx}
-                  style={[styles.correctionBox, { backgroundColor: colors.cardMuted }]}>
+                  style={[styles.correctionBox, { backgroundColor: colors.cardMuted }]}
+                >
                   <View style={styles.diffRow}>
                     <Text style={[styles.diffOriginal, { color: colors.error }]}>
                       - {item.original}
@@ -316,7 +381,8 @@ export default function AiFeedbackModal() {
               style={[
                 styles.sectionCard,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
+              ]}
+            >
               <Text style={[styles.sectionHeading, { color: colors.text }]}>
                 Everyday → Academic Upgrades (အဆင့်မြင့် ဝေါဟာရ)
               </Text>
@@ -342,7 +408,8 @@ export default function AiFeedbackModal() {
 
           <TouchableOpacity
             onPress={() => router.back()}
-            style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 10 }]}>
+            style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 10 }]}
+          >
             <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
               Back to Editor
             </Text>
@@ -352,7 +419,10 @@ export default function AiFeedbackModal() {
 
       {/* STAGE 4: ERROR STATE (figma/quota and figma/reviewFailure) */}
       {stage === 'error' && (
-        <ScrollView contentContainerStyle={styles.quotaScrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.quotaScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Header Title */}
           <View style={styles.quotaHeader}>
             <Text style={[styles.quotaTitle, { color: colors.text }]}>
@@ -367,10 +437,8 @@ export default function AiFeedbackModal() {
 
           {/* Draft is Safe Card */}
           <View
-            style={[
-              styles.safeCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            style={[styles.safeCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
             <View style={styles.safeTitleRow}>
               <Ionicons name="shield-checkmark" size={20} color={colors.accent} />
               <Text style={[styles.safeTitle, { color: colors.text }]}>Your draft is safe</Text>
@@ -385,27 +453,29 @@ export default function AiFeedbackModal() {
             style={[
               styles.whyCard,
               { backgroundColor: colors.streakLight, borderColor: colors.borderLight },
-            ]}>
-            <Text style={[styles.whyTitle, { color: colors.streak }]}>
-              Why this happened
-            </Text>
+            ]}
+          >
+            <Text style={[styles.whyTitle, { color: colors.streak }]}>Why this happened</Text>
             <Text style={[styles.whyDesc, { color: colors.textSecondary }]}>
               {errorInfo.type === 'QUOTA'
                 ? 'Your Google project has reached a request or usage limit. Limits vary by model and plan.'
-                : errorInfo.message || 'The network connection was interrupted or the key is invalid.'}
+                : errorInfo.message ||
+                  'The network connection was interrupted or the key is invalid.'}
             </Text>
           </View>
 
           {/* Notice text */}
           <Text style={[styles.quotaNoticeText, { color: colors.textMuted }]}>
-            Check quota in Google AI Studio, then retry when available. VocabJip cannot reset Google limits.
+            Check quota in Google AI Studio, then retry when available. VocabJip cannot reset Google
+            limits.
           </Text>
 
           {/* Buttons */}
           <View style={styles.quotaBtnStack}>
             <TouchableOpacity
               onPress={handleStartReview}
-              style={[styles.primaryBtn, { backgroundColor: colors.primary }]}>
+              style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+            >
               <Text style={[styles.primaryBtnText, { color: colors.primaryContrast }]}>
                 Try again
               </Text>
@@ -416,10 +486,9 @@ export default function AiFeedbackModal() {
               style={[
                 styles.secondaryBtn,
                 { backgroundColor: colors.card, borderColor: colors.border },
-              ]}>
-              <Text style={[styles.secondaryBtnText, { color: colors.text }]}>
-                Keep writing
-              </Text>
+              ]}
+            >
+              <Text style={[styles.secondaryBtnText, { color: colors.text }]}>Keep writing</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -755,4 +824,3 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
 });
-

@@ -1,3 +1,4 @@
+import { LearningHubCard } from '@/components/LearningHubCard';
 import { useLearningPreferences } from '@/context/learning-preferences-context';
 import { AVATARS } from '@/lib/profile-fields';
 import React, { useState, useEffect } from 'react';
@@ -45,14 +46,14 @@ export default function ProfileScreen() {
         if (Platform.OS !== 'web') {
           Alert.alert(
             'Study Reminder Set! ⏰',
-            'နေ့စဉ် ည ၈:၀၀ နာရီတိုင်း TOPIK လေ့ကျင့်ရန် သတိပေးချက် ပို့ပေးပါမည်။'
+            'နေ့စဉ် ည ၈:၀၀ နာရီတိုင်း TOPIK လေ့ကျင့်ရန် သတိပေးချက် ပို့ပေးပါမည်။',
           );
         }
       } else {
         setReminderEnabled(false);
         Alert.alert(
           'Notification Permission',
-          'Notification ခွင့်ပြုချက် မရရှိပါခင်ဗျာ။ ဖုန်း Settings ထဲတွင် Notification ဖွင့်ပေးပါ။'
+          'Notification ခွင့်ပြုချက် မရရှိပါခင်ဗျာ။ ဖုန်း Settings ထဲတွင် Notification ဖွင့်ပေးပါ။',
         );
       }
     } else {
@@ -62,7 +63,10 @@ export default function ProfileScreen() {
   };
 
   const handleCycleDailyGoal = () => {
-    if (user) { router.push('/modal/edit-profile'); return; }
+    if (user) {
+      router.push('/modal/edit-profile');
+      return;
+    }
     const goals = [3, 5, 10];
     const currentIndex = goals.indexOf(dailyGoal);
     const nextGoal = goals[(currentIndex + 1) % goals.length];
@@ -84,10 +88,12 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <LearningHubCard />
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>{t('learningSpace')}</Text>
@@ -96,17 +102,31 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {user && <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/modal/edit-profile')} style={{ paddingVertical: 14 }}><Text style={{ color: colors.accent, fontWeight: '700' }}>{t('editProfile')}</Text></TouchableOpacity>}
-        <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/modal/get-started')} style={{ minHeight: 48, justifyContent: 'center' }}><Text style={{ color: colors.accent }}>{t('preferences')}</Text></TouchableOpacity>
+        {user && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => router.push('/modal/edit-profile')}
+            style={{ paddingVertical: 14 }}
+          >
+            <Text style={{ color: colors.accent, fontWeight: '700' }}>{t('editProfile')}</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => router.push('/modal/get-started')}
+          style={{ minHeight: 48, justifyContent: 'center' }}
+        >
+          <Text style={{ color: colors.accent }}>{t('preferences')}</Text>
+        </TouchableOpacity>
         {/* User Card */}
         <View
-          style={[
-            styles.userCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <View style={styles.userCardTop}>
             <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
-              <Text style={{ fontSize: 28 }}>{AVATARS[user?.avatarKey as keyof typeof AVATARS] || AVATARS.learner}</Text>
+              <Text style={{ fontSize: 28 }}>
+                {AVATARS[user?.avatarKey as keyof typeof AVATARS] || AVATARS.learner}
+              </Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.userName, { color: colors.text }]}>
@@ -135,18 +155,17 @@ export default function ProfileScreen() {
               <View style={styles.authBtnRow}>
                 <TouchableOpacity
                   onPress={() => router.push('/(auth)/sign-up')}
-                  style={[styles.authBtn, { backgroundColor: colors.primary }]}>
-                  <Text
-                    style={[styles.authBtnText, { color: colors.primaryContrast }]}>
+                  style={[styles.authBtn, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={[styles.authBtnText, { color: colors.primaryContrast }]}>
                     Sign Up with OTP
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => router.push('/(auth)/sign-in')}
-                  style={[styles.authBtnSecondary, { borderColor: colors.border }]}>
-                  <Text style={[styles.authBtnSecondaryText, { color: colors.text }]}>
-                    Sign In
-                  </Text>
+                  style={[styles.authBtnSecondary, { borderColor: colors.border }]}
+                >
+                  <Text style={[styles.authBtnSecondaryText, { color: colors.text }]}>Sign In</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -154,19 +173,13 @@ export default function ProfileScreen() {
         </View>
 
         {/* Settings & Privacy Section */}
-        <Text style={[styles.sectionHeading, { color: colors.text }]}>
-          Settings & Preferences
-        </Text>
+        <Text style={[styles.sectionHeading, { color: colors.text }]}>Settings & Preferences</Text>
 
         <View
-          style={[
-            styles.menuGroup,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           {/* Daily Goal Target */}
-          <TouchableOpacity
-            onPress={handleCycleDailyGoal}
-            style={styles.menuRow}>
+          <TouchableOpacity onPress={handleCycleDailyGoal} style={styles.menuRow}>
             <View style={[styles.menuIconBox, { backgroundColor: colors.streakLight }]}>
               <Ionicons name="flame-outline" size={18} color={colors.streak} />
             </View>
@@ -177,11 +190,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <View style={styles.badgeRow}>
-              <Text
-                style={[
-                  styles.badgeValue,
-                  { color: colors.streak, fontWeight: '700' },
-                ]}>
+              <Text style={[styles.badgeValue, { color: colors.streak, fontWeight: '700' }]}>
                 {dailyGoal} / day
               </Text>
               <Ionicons name="swap-vertical-outline" size={16} color={colors.textMuted} />
@@ -212,14 +221,13 @@ export default function ProfileScreen() {
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
           {/* AI Connection */}
-          <TouchableOpacity
-            onPress={() => router.push('/modal/ai-connect')}
-            style={styles.menuRow}>
+          <TouchableOpacity onPress={() => router.push('/modal/ai-connect')} style={styles.menuRow}>
             <View
               style={[
                 styles.menuIconBox,
                 { backgroundColor: isConnected ? colors.successLight : colors.accentLight },
-              ]}>
+              ]}
+            >
               <Ionicons
                 name="hardware-chip-outline"
                 size={18}
@@ -237,7 +245,8 @@ export default function ProfileScreen() {
                 style={[
                   styles.badgeValue,
                   { color: isConnected ? colors.success : colors.accent, fontWeight: '700' },
-                ]}>
+                ]}
+              >
                 {isConnected ? 'Active' : 'Setup'}
               </Text>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -252,16 +261,12 @@ export default function ProfileScreen() {
               <Ionicons name="language-outline" size={18} color={colors.streak} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.menuTitle, { color: colors.text }]}>
-                Explanation Language
-              </Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Explanation Language</Text>
               <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
                 Myanmar (မြန်မာစာ)
               </Text>
             </View>
-            <Text style={[styles.badgeValue, { color: colors.textSecondary }]}>
-              Default
-            </Text>
+            <Text style={[styles.badgeValue, { color: colors.textSecondary }]}>Default</Text>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
@@ -269,7 +274,8 @@ export default function ProfileScreen() {
           {/* Account, Privacy & Export */}
           <TouchableOpacity
             onPress={() => router.push('/modal/account-privacy')}
-            style={styles.menuRow}>
+            style={styles.menuRow}
+          >
             <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
               <Ionicons name="shield-checkmark-outline" size={18} color={colors.accent} />
             </View>
@@ -287,14 +293,13 @@ export default function ProfileScreen() {
           {/* Our Contributors & Gratitude */}
           <TouchableOpacity
             onPress={() => router.push('/modal/contributors' as any)}
-            style={styles.menuRow}>
+            style={styles.menuRow}
+          >
             <View style={[styles.menuIconBox, { backgroundColor: colors.streakLight }]}>
               <Ionicons name="heart-outline" size={18} color={colors.streak} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.menuTitle, { color: colors.text }]}>
-                Our Contributors
-              </Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Our Contributors</Text>
               <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
                 Educators & mentors who make VocabJip possible
               </Text>
@@ -305,9 +310,7 @@ export default function ProfileScreen() {
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
           {/* About VocabJip */}
-          <TouchableOpacity
-            onPress={() => router.push('/modal/about')}
-            style={styles.menuRow}>
+          <TouchableOpacity onPress={() => router.push('/modal/about')} style={styles.menuRow}>
             <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
               <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
             </View>
@@ -323,9 +326,7 @@ export default function ProfileScreen() {
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
           {/* Send Feedback */}
-          <TouchableOpacity
-            onPress={() => router.push('/modal/feedback')}
-            style={styles.menuRow}>
+          <TouchableOpacity onPress={() => router.push('/modal/feedback')} style={styles.menuRow}>
             <View style={[styles.menuIconBox, { backgroundColor: colors.accentLight }]}>
               <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.accent} />
             </View>
@@ -346,7 +347,8 @@ export default function ProfileScreen() {
             style={[
               styles.signOutBtn,
               { backgroundColor: colors.card, borderColor: colors.border },
-            ]}>
+            ]}
+          >
             <Ionicons name="log-out-outline" size={18} color={colors.error} />
             <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
           </TouchableOpacity>
@@ -356,7 +358,8 @@ export default function ProfileScreen() {
         <TouchableOpacity
           onPress={() => router.push('/modal/about')}
           activeOpacity={0.7}
-          style={styles.brandingFooter}>
+          style={styles.brandingFooter}
+        >
           <BrandLogo size={46} containerStyle={{ marginBottom: 6 }} />
           <Text style={[styles.versionText, { color: colors.textMuted }]}>
             VocabJip v1.0.0 • About & Colophon →
@@ -527,4 +530,3 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 });
-

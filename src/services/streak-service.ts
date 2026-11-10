@@ -15,6 +15,8 @@ export interface StreakState {
   dailyCompleted: number;
   lastActiveDate: string;
   isGoalAchieved: boolean;
+  activityIds?: string[];
+  completedDate?: string;
 }
 type StreakListener = (state: StreakState) => void;
 const states = new Map<string, StreakState>();
@@ -26,10 +28,10 @@ function todayString() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 const defaults = (): StreakState => ({
-  streakDays: 1,
+  streakDays: 0,
   dailyGoal: 3,
   dailyCompleted: 0,
-  lastActiveDate: todayString(),
+  lastActiveDate: '',
   isGoalAchieved: false,
 });
 function serial<T>(userId: string | undefined, operation: () => Promise<T>) {
@@ -46,6 +48,11 @@ function publish(state: StreakState, userId?: string) {
   listeners.get(scope(userId))?.forEach((listener) => listener(state));
 }
 async function persist(state: StreakState, userId?: string, syncGoal = false) {
+  await setAccountItem(
+    'progress_v2',
+    JSON.stringify({ ...state, completedDate: todayString() }),
+    userId,
+  );
   await Promise.all(
     [
       [KEYS.STREAK_DAYS, String(state.streakDays)],
@@ -54,7 +61,9 @@ async function persist(state: StreakState, userId?: string, syncGoal = false) {
       [KEYS.DAILY_COMPLETED, String(state.dailyCompleted)],
       [KEYS.DAILY_COMPLETED_DATE, todayString()],
     ].map(([key, value]) => setAccountItem(key, value, userId)),
-  );
+  ).catch(() => {
+    /* The atomic snapshot above remains authoritative. */
+  });
   publish(state, userId);
   if (userId) {
     void Promise.resolve(
@@ -80,16 +89,26 @@ async function initialize(userId?: string, preferredGoal?: number): Promise<Stre
   const [streak, last, goal, completed, completedDate] = await Promise.all(
     Object.values(KEYS).map((key) => AsyncStorage.getItem(accountKey(key, userId))),
   );
-  const difference = last
-    ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${last}T00:00:00Z`)) / 86400000)
+  const raw = await AsyncStorage.getItem(accountKey('progress_v2', userId));
+  const stored = raw ? (JSON.parse(raw) as StreakState) : null;
+  const dailyGoal = Math.max(1, preferredGoal || stored?.dailyGoal || Number(goal) || 3);
+  const sameDay = (stored?.completedDate || completedDate) === today;
+  const dailyCompleted = sameDay
+    ? Math.max(0, stored?.dailyCompleted ?? (Number(completed) || 0))
     : 0;
-  const dailyGoal = Math.max(1, preferredGoal || Number(goal) || 3);
-  const dailyCompleted = completedDate === today ? Math.max(0, Number(completed) || 0) : 0;
-  const state = {
-    streakDays: difference > 1 ? 1 : Math.max(1, Number(streak) || 1) + (difference === 1 ? 1 : 0),
+  const lastActiveDate = stored?.lastActiveDate ?? last ?? '';
+  const difference = lastActiveDate
+    ? Math.round(
+        (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${lastActiveDate}T00:00:00Z`)) / 86400000,
+      )
+    : Infinity;
+  const state: StreakState = {
+    streakDays: difference > 1 ? 0 : Math.max(0, stored?.streakDays ?? (Number(streak) || 0)),
     dailyGoal,
     dailyCompleted,
-    lastActiveDate: today,
+    lastActiveDate,
+    completedDate: today,
+    activityIds: sameDay ? stored?.activityIds || [] : [],
     isGoalAchieved: dailyCompleted >= dailyGoal,
   };
   await persist(state, userId);
@@ -117,14 +136,32 @@ export const StreakService = {
       }
     });
   },
-  recordActivity(userId?: string) {
+  recordActivity(userId?: string, activityId?: string) {
     return serial(userId, async () => {
       try {
         const state = await initialize(userId);
+        if (activityId && state.activityIds?.includes(activityId)) return state;
         const dailyCompleted = state.dailyCompleted + 1;
+        const today = todayString();
+        const difference = state.lastActiveDate
+          ? Math.round(
+              (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${state.lastActiveDate}T00:00:00Z`)) /
+                86400000,
+            )
+          : Infinity;
         const next = {
           ...state,
           dailyCompleted,
+          lastActiveDate: today,
+          streakDays:
+            difference === 0
+              ? Math.max(1, state.streakDays)
+              : difference === 1
+                ? state.streakDays + 1
+                : 1,
+          activityIds: activityId
+            ? [...(state.activityIds || []), activityId]
+            : state.activityIds || [],
           isGoalAchieved: dailyCompleted >= state.dailyGoal,
         };
         await persist(next, userId);

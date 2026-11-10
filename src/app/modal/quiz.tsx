@@ -1,3 +1,6 @@
+import { fingerprintText } from '@/lib/review-scheduling';
+import { createDraftId } from '@/lib/draft-utils';
+import { LearningLogService } from '@/services/learning-log-service';
 import { useLearningPreferences } from '@/context/learning-preferences-context';
 import { CurriculumStatus } from '@/components/CurriculumStatus';
 import { createQuizSession, restoreQuizSession, QuizSession } from '@/lib/quiz-session';
@@ -42,6 +45,7 @@ export default function QuizModal() {
   const resumeAttempted = useRef(false);
   const answersRef = useRef<number[]>([]);
   const finishing = useRef(false);
+  const attemptId = useRef(createDraftId());
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
   const { quizTopics, isSyncing, isLoading, syncNow } = useCurriculum();
@@ -131,7 +135,7 @@ export default function QuizModal() {
   };
 
   const persistSession = (step: QuizStepItem, index: number, answers: number[]) => {
-    const next = createQuizSession(step, index, answers);
+    const next = createQuizSession(step, index, answers, attemptId.current);
     setPausedSession(next);
     void LearningSessionService.write(next, user?.id).catch(() => setNotice(t('progressFailed')));
   };
@@ -158,9 +162,13 @@ export default function QuizModal() {
     setIsAnswerSubmitted(restored.submitted);
     setScore(restored.score);
     answersRef.current = restored.answers;
+    attemptId.current =
+      session.attemptId ||
+      `legacy:${fingerprintText(session.stepId + session.updatedAt + session.fingerprint)}`;
     setViewMode('playing');
   }
   const startFreshStep = (step: QuizStepItem) => {
+    attemptId.current = createDraftId();
     answersRef.current = [];
     finishing.current = false;
     persistSession(step, 0, []);
@@ -220,7 +228,16 @@ export default function QuizModal() {
     if (selectedOption === null || !currentQ || isAnswerSubmitted) return;
     setIsAnswerSubmitted(true);
     answersRef.current = [...answersRef.current.slice(0, currentIndex), selectedOption];
-    if (selectedStep) persistSession(selectedStep, currentIndex, answersRef.current);
+    if (selectedStep) {
+      persistSession(selectedStep, currentIndex, answersRef.current);
+      void LearningLogService.recordQuizAnswer(
+        selectedStep,
+        currentIndex,
+        selectedOption,
+        attemptId.current,
+        user?.id,
+      ).catch(() => setNotice(t('progressFailed')));
+    }
     setScore(
       answersRef.current.reduce(
         (total, answer, index) =>
@@ -241,10 +258,26 @@ export default function QuizModal() {
       const required = selectedStep.passingScore || 3;
       finishing.current = true;
       try {
+        // Replay answers on completion too, so a failed notebook write can be retried safely.
+        for (let index = 0; index < answersRef.current.length; index++) {
+          await LearningLogService.recordQuizAnswer(
+            selectedStep,
+            index,
+            answersRef.current[index],
+            attemptId.current,
+            user?.id,
+          );
+        }
+        await LearningLogService.completeQuiz(
+          selectedStep,
+          answersRef.current,
+          attemptId.current,
+          user?.id,
+        );
         await saveStepResult(selectedStep.id, score, required);
         await LearningSessionService.write(null, user?.id);
         setPausedSession(null);
-        void StreakService.recordActivity(user?.id);
+        void StreakService.recordActivity(user?.id, `quiz:${selectedStep.id}`);
         setViewMode('result');
       } catch {
         finishing.current = false;

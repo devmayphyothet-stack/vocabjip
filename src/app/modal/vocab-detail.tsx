@@ -1,6 +1,7 @@
+import { LearningButton, useLearningCopy } from '@/components/LearningUI';
 import { useLearningPreferences } from '@/context/learning-preferences-context';
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +13,7 @@ import { SpeechService } from '@/services/speech-service';
 import { useCurriculum } from '@/hooks/use-curriculum';
 
 export default function VocabDetailModal() {
+  const copy = useLearningCopy();
   const { preferences, t } = useLearningPreferences();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
@@ -227,6 +229,20 @@ export default function VocabDetailModal() {
             {item.exampleSentence.myanmar}
           </Text>
         </View>
+        <LearningButton
+          label={copy('Review saved words', 'သိမ်းထားသော စကားလုံးများ လေ့ကျင့်ရန်')}
+          onPress={async () => {
+            try {
+              if (!saved) await toggleSaveVocab(item.id);
+              router.push('/modal/vocab-review');
+            } catch {
+              Alert.alert(
+                copy('Could not save word', 'စကားလုံး သိမ်း၍မရပါ'),
+                copy('Please retry.', 'ပြန်ကြိုးစားပါ။'),
+              );
+            }
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );

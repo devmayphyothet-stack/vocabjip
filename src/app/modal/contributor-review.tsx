@@ -1,3 +1,6 @@
+import { LearningButton, useLearningCopy } from '@/components/LearningUI';
+import { LearningLogService } from '@/services/learning-log-service';
+import { useSaved } from '@/context/saved-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -16,10 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import {
-  EssayReviewService,
-  ContributorEssaySubmission,
-} from '@/services/essay-review-service';
+import { EssayReviewService, ContributorEssaySubmission } from '@/services/essay-review-service';
 
 export default function ContributorReviewModal() {
   const scheme = useColorScheme() ?? 'light';
@@ -27,14 +27,18 @@ export default function ContributorReviewModal() {
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'ios' ? 48 : 16);
   const { user } = useAuth();
+  const copy = useLearningCopy();
 
   const params = useLocalSearchParams<{
+    draftId?: string;
     essayText?: string;
     questionType?: string;
     promptTopic?: string;
   }>();
 
-  const incomingEssay = params.essayText?.trim() || '';
+  const { drafts } = useSaved();
+  const incomingDraft = drafts.find((draft) => draft.id === params.draftId);
+  const incomingEssay = incomingDraft?.content.trim() || params.essayText?.trim() || '';
   const incomingType = (params.questionType as 'Q53' | 'Q54') || 'Q53';
   const incomingTopic =
     params.promptTopic ||
@@ -44,20 +48,25 @@ export default function ContributorReviewModal() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [hasSubmittedCurrent, setHasSubmittedCurrent] = useState(false);
-  const [selectedSubmission, setSelectedSubmission] =
-    useState<ContributorEssaySubmission | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<ContributorEssaySubmission | null>(
+    null,
+  );
   const [bannerMsg, setBannerMsg] = useState<string | null>(null);
 
-  const studentDisplayName =
-    user?.displayName ||
-    user?.email?.split('@')[0] ||
-    'TOPIK Learner';
+  const studentDisplayName = user?.displayName || user?.email?.split('@')[0] || 'TOPIK Learner';
 
   const loadSubmissions = async () => {
     setLoading(true);
     try {
       const list = await EssayReviewService.getMySubmissions(user?.id);
       setSubmissions(list);
+      try {
+        await LearningLogService.importContributorReviews(list, user?.id);
+      } catch {
+        setBannerMsg(
+          'Submissions loaded. Learning history could not be saved; retry to import feedback.',
+        );
+      }
       if (!selectedSubmission && !incomingEssay && list.length > 0) {
         setSelectedSubmission(list[0]);
       }
@@ -87,11 +96,18 @@ export default function ContributorReviewModal() {
       setHasSubmittedCurrent(true);
       setSubmissions((prev) => [created, ...prev.filter((i) => i.id !== created.id)]);
       setSelectedSubmission(created);
-      setBannerMsg(created.deliveryStatus === 'sent'
-        ? 'Your essay was sent to Contributors. Feedback will appear here after review.'
-        : user ? 'Saved on this device, waiting to send. Refresh when you are online to retry.' : 'Saved on this device only. Sign in and submit from your draft to send it to Contributors.');
+      setBannerMsg(
+        created.deliveryStatus === 'sent'
+          ? 'Your essay was sent to Contributors. Feedback will appear here after review.'
+          : user
+            ? 'Saved on this device, waiting to send. Refresh when you are online to retry.'
+            : 'Saved on this device only. Sign in and submit from your draft to send it to Contributors.',
+      );
     } catch {
-      Alert.alert('Could not save submission', 'Please retry. Your editor draft is still available.');
+      Alert.alert(
+        'Could not save submission',
+        'Please retry. Your editor draft is still available.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -100,17 +116,11 @@ export default function ContributorReviewModal() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Bar */}
-      <View
-        style={[
-          styles.topBar,
-          { paddingTop: topInset, borderBottomColor: colors.border },
-        ]}>
+      <View style={[styles.topBar, { paddingTop: topInset, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={[
-            styles.closeBtn,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.closeBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
 
@@ -125,24 +135,21 @@ export default function ContributorReviewModal() {
 
         <TouchableOpacity
           onPress={loadSubmissions}
-          style={[
-            styles.closeBtn,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.closeBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <Ionicons name="refresh" size={18} color={colors.text} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* If navigated from Wongoji Editor with a draft, show Submit Card */}
         {Boolean(incomingEssay) && !hasSubmittedCurrent && (
           <View
             style={[
               styles.submitCard,
               { backgroundColor: colors.card, borderColor: colors.accent },
-            ]}>
+            ]}
+          >
             <View style={styles.submitCardHeader}>
               <View style={[styles.qBadge, { backgroundColor: colors.accentLight }]}>
                 <Text style={[styles.qBadgeText, { color: colors.accent }]}>
@@ -154,38 +161,35 @@ export default function ContributorReviewModal() {
               </Text>
             </View>
 
-            <Text style={[styles.submitTopicTitle, { color: colors.text }]}>
-              {incomingTopic}
-            </Text>
+            <Text style={[styles.submitTopicTitle, { color: colors.text }]}>{incomingTopic}</Text>
 
             <View
               style={[
                 styles.manuscriptPreview,
                 { backgroundColor: colors.cardMuted, borderColor: colors.border },
-              ]}>
-              <Text
-                numberOfLines={4}
-                style={[styles.manuscriptText, { color: colors.text }]}>
+              ]}
+            >
+              <Text numberOfLines={4} style={[styles.manuscriptText, { color: colors.text }]}>
                 {incomingEssay}
               </Text>
             </View>
 
             <Text style={[styles.submitHint, { color: colors.textSecondary }]}>
-              VocabJip မှ TOPIK Contributors များက သင့်စာမူကို ဖတ်ရှုပြီး အမှတ်ပေးခြင်း၊ အားသာချက်/အားနည်းချက်နှင့် အဆင့်မြင့်ဝါကျ ပြင်ဆင်ချက်များကို ပြန်လည်ပေးပို့ပေးပါမည်။
+              VocabJip မှ TOPIK Contributors များက သင့်စာမူကို ဖတ်ရှုပြီး အမှတ်ပေးခြင်း၊
+              အားသာချက်/အားနည်းချက်နှင့် အဆင့်မြင့်ဝါကျ ပြင်ဆင်ချက်များကို ပြန်လည်ပေးပို့ပေးပါမည်။
             </Text>
 
             <TouchableOpacity
               onPress={handleSubmitToContributor}
               disabled={submitting}
-              style={[styles.submitBtn, { backgroundColor: colors.accent }]}>
+              style={[styles.submitBtn, { backgroundColor: colors.accent }]}
+            >
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
                   <Ionicons name="paper-plane" size={16} color="#FFFFFF" />
-                  <Text style={styles.submitBtnText}>
-                    Submit to Contributors for Grading
-                  </Text>
+                  <Text style={styles.submitBtnText}>Submit to Contributors for Grading</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -198,11 +202,10 @@ export default function ContributorReviewModal() {
             style={[
               styles.successBanner,
               { backgroundColor: colors.successLight, borderColor: colors.success },
-            ]}>
+            ]}
+          >
             <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-            <Text style={[styles.successBannerText, { color: colors.text }]}>
-              {bannerMsg}
-            </Text>
+            <Text style={[styles.successBannerText, { color: colors.text }]}>{bannerMsg}</Text>
           </View>
         )}
 
@@ -231,9 +234,7 @@ export default function ContributorReviewModal() {
                 <TouchableOpacity
                   key={item.id}
                   activeOpacity={0.85}
-                  onPress={() =>
-                    setSelectedSubmission(isSelected ? null : item)
-                  }
+                  onPress={() => setSelectedSubmission(isSelected ? null : item)}
                   style={[
                     styles.submissionItemCard,
                     {
@@ -241,7 +242,8 @@ export default function ContributorReviewModal() {
                       borderColor: isSelected ? colors.accent : colors.border,
                       borderWidth: isSelected ? 1.8 : 1,
                     },
-                  ]}>
+                  ]}
+                >
                   {/* Top Row: Question Type + Status Badge */}
                   <View style={styles.itemTopRow}>
                     <View style={styles.itemLeftTags}>
@@ -254,64 +256,54 @@ export default function ContributorReviewModal() {
                                 ? colors.accentLight
                                 : colors.streakLight,
                           },
-                        ]}>
+                        ]}
+                      >
                         <Text
                           style={[
                             styles.typeTagText,
                             {
-                              color:
-                                item.question_type === 'Q53'
-                                  ? colors.accent
-                                  : colors.streak,
+                              color: item.question_type === 'Q53' ? colors.accent : colors.streak,
                             },
-                          ]}>
+                          ]}
+                        >
                           {item.question_type}
                         </Text>
                       </View>
                       <Text
                         numberOfLines={1}
-                        style={[styles.itemTopicTitle, { color: colors.text }]}>
-                        {item.deliveryStatus === 'local_only' ? `Saved locally · Resubmit from your draft · ${item.prompt_title}` : item.deliveryStatus === 'queued' ? `Waiting to send · ${item.prompt_title}` : item.prompt_title}
+                        style={[styles.itemTopicTitle, { color: colors.text }]}
+                      >
+                        {item.deliveryStatus === 'local_only'
+                          ? `Saved locally · Resubmit from your draft · ${item.prompt_title}`
+                          : item.deliveryStatus === 'queued'
+                            ? `Waiting to send · ${item.prompt_title}`
+                            : item.prompt_title}
                       </Text>
                     </View>
 
                     {item.status === 'pending' && (
-                      <View
-                        style={[
-                          styles.statusPill,
-                          { backgroundColor: '#FEF3C7' },
-                        ]}>
+                      <View style={[styles.statusPill, { backgroundColor: '#FEF3C7' }]}>
                         <Ionicons name="time-outline" size={12} color="#B45309" />
                         <Text style={[styles.statusPillText, { color: '#B45309' }]}>
-                          {item.deliveryStatus === 'local_only' ? 'Saved only' : item.deliveryStatus === 'queued' ? 'Waiting to send' : 'Pending'}
+                          {item.deliveryStatus === 'local_only'
+                            ? 'Saved only'
+                            : item.deliveryStatus === 'queued'
+                              ? 'Waiting to send'
+                              : 'Pending'}
                         </Text>
                       </View>
                     )}
 
                     {item.status === 'in_review' && (
-                      <View
-                        style={[
-                          styles.statusPill,
-                          { backgroundColor: '#E0E7FF' },
-                        ]}>
+                      <View style={[styles.statusPill, { backgroundColor: '#E0E7FF' }]}>
                         <Ionicons name="create-outline" size={12} color="#4338CA" />
-                        <Text style={[styles.statusPillText, { color: '#4338CA' }]}>
-                          In Review
-                        </Text>
+                        <Text style={[styles.statusPillText, { color: '#4338CA' }]}>In Review</Text>
                       </View>
                     )}
 
                     {item.status === 'reviewed' && (
-                      <View
-                        style={[
-                          styles.statusPill,
-                          { backgroundColor: '#D1FAE5' },
-                        ]}>
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={13}
-                          color="#047857"
-                        />
+                      <View style={[styles.statusPill, { backgroundColor: '#D1FAE5' }]}>
+                        <Ionicons name="checkmark-circle" size={13} color="#047857" />
                         <Text style={[styles.statusPillText, { color: '#047857' }]}>
                           {item.score}/{item.max_score} pts
                         </Text>
@@ -319,10 +311,34 @@ export default function ContributorReviewModal() {
                     )}
                   </View>
 
+                  {isSelected && item.status === 'reviewed' && user ? (
+                    <LearningButton
+                      label={copy('Revise this writing', 'ဤစာကို ပြန်လည်ပြင်ဆင်ရန်')}
+                      onPress={async () => {
+                        try {
+                          await LearningLogService.importContributorReviews([item], user.id);
+                          const log = await LearningLogService.read(user.id);
+                          const review = log.reviews.find(
+                            (review) =>
+                              review.sourceId ===
+                              `contributors:${item.id}:${item.reviewed_at || item.created_at}`,
+                          );
+                          if (!review) throw new Error('Review is incomplete.');
+                          router.push({
+                            pathname: '/modal/writing-revision',
+                            params: { reviewId: review.id },
+                          });
+                        } catch {
+                          setBannerMsg('Could not save this feedback. Please retry.');
+                        }
+                      }}
+                    />
+                  ) : null}
                   {/* Essay Snippet */}
                   <Text
                     numberOfLines={isSelected ? undefined : 2}
-                    style={[styles.essaySnippet, { color: colors.textSecondary }]}>
+                    style={[styles.essaySnippet, { color: colors.textSecondary }]}
+                  >
                     {item.content}
                   </Text>
 
@@ -335,9 +351,7 @@ export default function ContributorReviewModal() {
                     {item.reviewer_name ? (
                       <View style={styles.reviewerBadge}>
                         <Ionicons name="school" size={12} color="#B45309" />
-                        <Text style={styles.reviewerNameText}>
-                          {item.reviewer_name}
-                        </Text>
+                        <Text style={styles.reviewerNameText}>{item.reviewer_name}</Text>
                         {/* {item.reviewer_rank ? (
                           <View style={styles.reviewerRankPill}>
                             <Text style={styles.reviewerRankText}>
@@ -355,17 +369,11 @@ export default function ContributorReviewModal() {
 
                   {/* Expanded Evaluation Details */}
                   {isSelected && (
-                    <View
-                      style={[
-                        styles.evaluationDetailBox,
-                        { borderTopColor: colors.border },
-                      ]}>
+                    <View style={[styles.evaluationDetailBox, { borderTopColor: colors.border }]}>
                       {item.status !== 'reviewed' ? (
                         <View
-                          style={[
-                            styles.pendingNoticeBox,
-                            { backgroundColor: colors.cardMuted },
-                          ]}>
+                          style={[styles.pendingNoticeBox, { backgroundColor: colors.cardMuted }]}
+                        >
                           <Ionicons
                             name={
                               item.status === 'in_review'
@@ -376,22 +384,17 @@ export default function ContributorReviewModal() {
                             color={colors.accent}
                           />
                           <View style={{ flex: 1 }}>
-                            <Text
-                              style={[
-                                styles.pendingNoticeTitle,
-                                { color: colors.text },
-                              ]}>
+                            <Text style={[styles.pendingNoticeTitle, { color: colors.text }]}>
                               {item.status === 'in_review'
                                 ? `${item.reviewer_name || 'Contributor'} မှ သင့်စာမူကို လက်ရှိ စစ်ဆေးပေးနေပါသည်`
                                 : 'Contributors များ စစ်ဆေးရန် စောင့်ဆိုင်းနေပါသည်'}
                               {/* (${item.reviewer_rank || 'Mentor'}) */}
                             </Text>
                             <Text
-                              style={[
-                                styles.pendingNoticeDesc,
-                                { color: colors.textSecondary },
-                              ]}>
-                              စစ်ဆေးပြီးပါက အမှတ်နှင့် အသေးစိတ် အကြံပြုချက်များကို ဤနေရာတွင် ဖတ်ရှုနိုင်ပါမည်။
+                              style={[styles.pendingNoticeDesc, { color: colors.textSecondary }]}
+                            >
+                              စစ်ဆေးပြီးပါက အမှတ်နှင့် အသေးစိတ် အကြံပြုချက်များကို ဤနေရာတွင်
+                              ဖတ်ရှုနိုင်ပါမည်။
                             </Text>
                           </View>
                         </View>
@@ -405,22 +408,15 @@ export default function ContributorReviewModal() {
                                 backgroundColor: colors.accentLight,
                                 borderColor: colors.accent,
                               },
-                            ]}>
-
-
+                            ]}
+                          >
                             <View style={styles.scoreCircle}>
-                              <Text
-                                style={[
-                                  styles.scoreBigNumber,
-                                  { color: colors.accent },
-                                ]}>
+                              <Text style={[styles.scoreBigNumber, { color: colors.accent }]}>
                                 {item.score}
                               </Text>
                               <Text
-                                style={[
-                                  styles.scoreMaxNumber,
-                                  { color: colors.textSecondary },
-                                ]}>
+                                style={[styles.scoreMaxNumber, { color: colors.textSecondary }]}
+                              >
                                 /{item.max_score}
                               </Text>
                             </View>
@@ -432,19 +428,12 @@ export default function ContributorReviewModal() {
                               style={[
                                 styles.feedbackBlock,
                                 { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
-                              ]}>
-                              <Text
-                                style={[
-                                  styles.feedbackBlockTitle,
-                                  { color: '#065F46' },
-                                ]}>
+                              ]}
+                            >
+                              <Text style={[styles.feedbackBlockTitle, { color: '#065F46' }]}>
                                 ✅ အားသာချက်များ (Strengths)
                               </Text>
-                              <Text
-                                style={[
-                                  styles.feedbackBlockBody,
-                                  { color: '#064E3B' },
-                                ]}>
+                              <Text style={[styles.feedbackBlockBody, { color: '#064E3B' }]}>
                                 {item.strengths}
                               </Text>
                             </View>
@@ -456,19 +445,12 @@ export default function ContributorReviewModal() {
                               style={[
                                 styles.feedbackBlock,
                                 { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-                              ]}>
-                              <Text
-                                style={[
-                                  styles.feedbackBlockTitle,
-                                  { color: '#92400E' },
-                                ]}>
+                              ]}
+                            >
+                              <Text style={[styles.feedbackBlockTitle, { color: '#92400E' }]}>
                                 🛠️ ပြင်ဆင်သင့်သည့် အချက်များ (Areas to Improve)
                               </Text>
-                              <Text
-                                style={[
-                                  styles.feedbackBlockBody,
-                                  { color: '#78350F' },
-                                ]}>
+                              <Text style={[styles.feedbackBlockBody, { color: '#78350F' }]}>
                                 {item.improvements}
                               </Text>
                             </View>
@@ -480,19 +462,17 @@ export default function ContributorReviewModal() {
                               style={[
                                 styles.feedbackBlock,
                                 { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
-                              ]}>
-                              <Text
-                                style={[
-                                  styles.feedbackBlockTitle,
-                                  { color: '#3730A3' },
-                                ]}>
+                              ]}
+                            >
+                              <Text style={[styles.feedbackBlockTitle, { color: '#3730A3' }]}>
                                 ✨ Contributor ပြင်ဆင်ပေးထားသော အဆင့်မြင့်ဝါကျ (Model Rewrite)
                               </Text>
                               <Text
                                 style={[
                                   styles.feedbackBlockBody,
                                   { color: '#1E1B4B', fontWeight: '600' },
-                                ]}>
+                                ]}
+                              >
                                 {item.corrected_sample}
                               </Text>
                             </View>
@@ -507,19 +487,14 @@ export default function ContributorReviewModal() {
                                   backgroundColor: colors.cardMuted,
                                   borderColor: colors.border,
                                 },
-                              ]}>
-                              <Text
-                                style={[
-                                  styles.feedbackBlockTitle,
-                                  { color: colors.text },
-                                ]}>
+                              ]}
+                            >
+                              <Text style={[styles.feedbackBlockTitle, { color: colors.text }]}>
                                 💬 Contributor ၏ အထွေထွေ သုံးသပ်ချက် (Notes)
                               </Text>
                               <Text
-                                style={[
-                                  styles.feedbackBlockBody,
-                                  { color: colors.textSecondary },
-                                ]}>
+                                style={[styles.feedbackBlockBody, { color: colors.textSecondary }]}
+                              >
                                 {item.overall_comment}
                               </Text>
                             </View>

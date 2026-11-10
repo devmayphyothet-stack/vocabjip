@@ -1,14 +1,9 @@
+import { LearningHubCard } from '@/components/LearningHubCard';
 import { useLearningPreferences } from '@/context/learning-preferences-context';
 import { CurriculumStatus } from '@/components/CurriculumStatus';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Spacing } from '@/constants/theme';
@@ -33,11 +28,13 @@ export default function PracticeScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <CurriculumStatus />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <LearningHubCard />
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>{t('practice')}</Text>
@@ -49,7 +46,8 @@ export default function PracticeScreen() {
         {/* Focus Mode Banner */}
         <TouchableOpacity
           onPress={() => handleStartPractice('Q53', '인터넷 사용 통계 (Internet Usage)', '200-300')}
-          style={[styles.focusCard, { backgroundColor: colors.primary }]}>
+          style={[styles.focusCard, { backgroundColor: colors.primary }]}
+        >
           <View style={styles.focusCardTop}>
             <View style={[styles.focusIconPill, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
               <Ionicons name="timer-outline" size={20} color="#FFFFFF" />
@@ -69,22 +67,23 @@ export default function PracticeScreen() {
         {/* Handwriting Scan Feature Card */}
         <TouchableOpacity
           onPress={() => router.push('/modal/scan-handwriting')}
-          style={[
-            styles.scanCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.scanCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <View style={[styles.scanIconBox, { backgroundColor: colors.accentLight }]}>
             <Ionicons name="camera" size={24} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.scanBadgeRow}>
-              <Text style={[styles.scanBadge, { backgroundColor: colors.cardMuted, color: colors.accent }]}>
+              <Text
+                style={[
+                  styles.scanBadge,
+                  { backgroundColor: colors.cardMuted, color: colors.accent },
+                ]}
+              >
                 HANDWRITING → TEXT
               </Text>
             </View>
-            <Text style={[styles.scanCardTitle, { color: colors.text }]}>
-              Scan Paper Wongoji
-            </Text>
+            <Text style={[styles.scanCardTitle, { color: colors.text }]}>Scan Paper Wongoji</Text>
             <Text style={[styles.scanCardDesc, { color: colors.textSecondary }]}>
               မိမိကိုရီးယားလက်ရေးစာမူကို ဓာတ်ပုံရိုက်ပြီး App ထဲမှာ တိုက်ရိုက် edit လုပ်ပါ။
             </Text>
@@ -93,27 +92,19 @@ export default function PracticeScreen() {
         </TouchableOpacity>
 
         {/* Practice Topics Section */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Choose Question Type
-        </Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Choose Question Type</Text>
 
         {/* Contributors Essay Review Banner Card */}
         <TouchableOpacity
           onPress={() => router.push('/modal/contributor-review')}
-          style={[
-            styles.scanCard,
-            { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-          ]}>
+          style={[styles.scanCard, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}
+        >
           <View style={[styles.scanIconBox, { backgroundColor: '#FEF3C7' }]}>
             <Ionicons name="school" size={24} color="#B45309" />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.scanBadgeRow}>
-              <Text
-                style={[
-                  styles.scanBadge,
-                  { backgroundColor: '#FEF3C7', color: '#B45309' },
-                ]}>
+              <Text style={[styles.scanBadge, { backgroundColor: '#FEF3C7', color: '#B45309' }]}>
                 CONTRIBUTORS GRADING • Q53 & Q54
               </Text>
             </View>
@@ -121,7 +112,8 @@ export default function PracticeScreen() {
               Contributors Essay Reviews
             </Text>
             <Text style={[styles.scanCardDesc, { color: '#92400E' }]}>
-              သင်ရေးထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများအတွက် Contributors များ၏ အမှတ်ပေးစစ်ဆေးချက်များကို ကြည့်ပါ။
+              သင်ရေးထားသော Graph Writing (Q53) နှင့် Long Essay (Q54) စာမူများအတွက် Contributors
+              များ၏ အမှတ်ပေးစစ်ဆေးချက်များကို ကြည့်ပါ။
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color="#B45309" />
@@ -129,10 +121,8 @@ export default function PracticeScreen() {
 
         {/* Q53 Card */}
         <View
-          style={[
-            styles.topicCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.topicCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <View style={styles.topicHeader}>
             <View style={[styles.qTag, { backgroundColor: colors.accentLight }]}>
               <Text style={[styles.qTagText, { color: colors.accent }]}>QUESTION 53</Text>
@@ -157,14 +147,13 @@ export default function PracticeScreen() {
                 handleStartPractice(
                   'Q53',
                   activeQ53 ? activeQ53.title : '인터넷 이용 현황 (Internet Usage)',
-                  '200-300'
+                  '200-300',
                 )
               }
-              style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}>
+              style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}
+            >
               <Ionicons name="create-outline" size={16} color={colors.text} />
-              <Text style={[styles.openEditorText, { color: colors.text }]}>
-                Wongoji Editor
-              </Text>
+              <Text style={[styles.openEditorText, { color: colors.text }]}>Wongoji Editor</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -172,10 +161,11 @@ export default function PracticeScreen() {
                 handleStartPractice(
                   'Q53',
                   activeQ53 ? activeQ53.title : '인터넷 이용 현황 (Internet Usage)',
-                  '200-300'
+                  '200-300',
                 )
               }
-              style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}>
+              style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}
+            >
               <Ionicons name="play" size={14} color="#FFFFFF" />
               <Text style={styles.startTimedText}>Start Timed</Text>
             </TouchableOpacity>
@@ -184,10 +174,8 @@ export default function PracticeScreen() {
 
         {/* Q54 Card */}
         <View
-          style={[
-            styles.topicCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.topicCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <View style={styles.topicHeader}>
             <View style={[styles.qTag, { backgroundColor: colors.streakLight }]}>
               <Text style={[styles.qTagText, { color: colors.streak }]}>QUESTION 54</Text>
@@ -212,14 +200,13 @@ export default function PracticeScreen() {
                 handleStartPractice(
                   'Q54',
                   activeQ54 ? activeQ54.title : '평생 교육의 필요성 (Lifelong Learning)',
-                  '600-700'
+                  '600-700',
                 )
               }
-              style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}>
+              style={[styles.openEditorBtn, { backgroundColor: colors.cardMuted }]}
+            >
               <Ionicons name="create-outline" size={16} color={colors.text} />
-              <Text style={[styles.openEditorText, { color: colors.text }]}>
-                Wongoji Editor
-              </Text>
+              <Text style={[styles.openEditorText, { color: colors.text }]}>Wongoji Editor</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -227,10 +214,11 @@ export default function PracticeScreen() {
                 handleStartPractice(
                   'Q54',
                   activeQ54 ? activeQ54.title : '평생 교육의 필요성 (Lifelong Learning)',
-                  '600-700'
+                  '600-700',
                 )
               }
-              style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}>
+              style={[styles.startTimedBtn, { backgroundColor: colors.accent }]}
+            >
               <Ionicons name="play" size={14} color="#FFFFFF" />
               <Text style={styles.startTimedText}>Start Timed</Text>
             </TouchableOpacity>
@@ -240,24 +228,21 @@ export default function PracticeScreen() {
         {/* University Personal Statements (자기소개서) Card */}
         <TouchableOpacity
           onPress={() => router.push('/modal/admissions')}
-          style={[
-            styles.topicCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}>
+          style={[styles.topicCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
           <View style={styles.topicHeader}>
             <View style={[styles.qTag, { backgroundColor: colors.accentLight }]}>
               <Text style={[styles.qTagText, { color: colors.accent }]}>ADMISSIONS</Text>
             </View>
-            <Text style={[styles.charTarget, { color: colors.textSecondary }]}>
-              4-STEP WIZARD
-            </Text>
+            <Text style={[styles.charTarget, { color: colors.textSecondary }]}>4-STEP WIZARD</Text>
           </View>
 
           <Text style={[styles.topicTitle, { color: colors.text }]}>
             University Personal Statements (자기소개서)
           </Text>
           <Text style={[styles.topicDesc, { color: colors.textSecondary }]}>
-            ကိုရီးယား တက္ကသိုလ်နဲ့ ပညာသင်ဆု လျှောက်လွှာတွေအတွက် ကိုယ့်ရဲ့ story ကိုတင်ပြပါ။ AI ရဲ့ လမ်းညွှန်မှုနဲ့အတူ အဆင့်ဆင့် ရေးသားပါ။
+            ကိုရီးယား တက္ကသိုလ်နဲ့ ပညာသင်ဆု လျှောက်လွှာတွေအတွက် ကိုယ့်ရဲ့ story ကိုတင်ပြပါ။ AI ရဲ့
+            လမ်းညွှန်မှုနဲ့အတူ အဆင့်ဆင့် ရေးသားပါ။
           </Text>
 
           <View style={[styles.statementBuilderBtn, { backgroundColor: colors.primary }]}>
@@ -464,4 +449,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

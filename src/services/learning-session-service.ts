@@ -12,6 +12,10 @@ export const LearningSessionService = {
     if (!raw) return null;
     const value = JSON.parse(raw);
     return value?.version === 1 &&
+      (value.attemptId === undefined ||
+        (typeof value.attemptId === 'string' &&
+          value.attemptId.length > 0 &&
+          value.attemptId.length <= 128)) &&
       typeof value.topicId === 'string' &&
       typeof value.stepId === 'string' &&
       typeof value.title === 'string' &&

@@ -1,3 +1,4 @@
+import { LearningHubCard } from '@/components/LearningHubCard';
 import { ContinueLearningCard } from '@/components/ContinueLearningCard';
 import { CurriculumStatus } from '@/components/CurriculumStatus';
 import { useLearningPreferences } from '@/context/learning-preferences-context';
@@ -96,6 +97,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
         <ContinueLearningCard />
+        <LearningHubCard />
         <CurriculumStatus />
         {/* Guest Reminder Banner */}
         {(!user || isGuest) && (

@@ -1,5 +1,6 @@
 import type { QuizStepItem } from '@/data/quiz-data';
 export interface QuizSession {
+  attemptId?: string;
   version: 1;
   topicId: string;
   stepId: string;
@@ -23,9 +24,11 @@ export function createQuizSession(
   step: QuizStepItem,
   questionIndex: number,
   answers: number[],
+  attemptId?: string,
 ): QuizSession {
   return {
     version: 1,
+    attemptId,
     topicId: step.topicId,
     stepId: step.id,
     title: step.title,

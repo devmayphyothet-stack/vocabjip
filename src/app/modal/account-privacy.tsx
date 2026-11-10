@@ -1,3 +1,4 @@
+import { LearningLogService } from '@/services/learning-log-service';
 import React, { useState } from 'react';
 import {
   View,
@@ -41,6 +42,12 @@ export default function AccountPrivacyModal() {
         exportText += `[Draft #${idx + 1}] ${d.title} (${d.type})\nCharacters: ${d.charCount}\nUpdated: ${d.updatedAt}\n\n${d.content}\n\n--------------------\n\n`;
       });
 
+      const history = await LearningLogService.read(user?.id);
+      exportText += `--- LEARNING HISTORY (THIS DEVICE) ---\n${JSON.stringify(history, null, 2)}\n\n`;
+      const revisionSources = drafts
+        .filter((draft) => draft.metadata?.revision)
+        .map((draft) => ({ draftId: draft.id, ...draft.metadata?.revision }));
+      exportText += `--- REVISION ORIGINALS & FEEDBACK ---\n${JSON.stringify(revisionSources, null, 2)}\n`;
       await Share.share({
         title: 'VocabJip Essay Drafts Export',
         message: exportText,

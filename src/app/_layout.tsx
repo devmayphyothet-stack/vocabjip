@@ -39,6 +39,12 @@ export default function RootLayout() {
         <AuthProvider>
           <AccountProviders>
             <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="modal/learning-hub" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="modal/vocab-review" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="modal/mistakes" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="modal/progress" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="modal/writing-revision" options={{ presentation: 'modal' }} />
+
               <Stack.Screen name="modal/get-started" options={{ presentation: 'modal' }} />
               <Stack.Screen name="modal/edit-profile" options={{ presentation: 'modal' }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -1,3 +1,4 @@
+import type { WritingReview } from '@/types/learning';
 import * as Crypto from 'expo-crypto';
 
 export const createDraftId = () => Crypto.randomUUID();
@@ -5,6 +6,7 @@ export const isUuid = (id: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 export interface DraftMetadata {
+  revision?: { review: WritingReview; appliedCorrections: string[] };
   university?: string;
   major?: string;
   sections?: Record<string, string>;
